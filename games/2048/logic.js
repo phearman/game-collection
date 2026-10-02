@@ -113,3 +113,97 @@ export function overlayFor({ over, won, keepPlaying }) {
   if (over) return 'over';
   return null;
 }
+
+// ---- 狀態轉移(IR2:從 ui.js 移入,純函式)----
+// state = { board, score, prev, won, everWon, keepPlaying, over, moves, fresh }
+//   prev   上一步快照 { board, score, won, keepPlaying },復原一次只退一步
+//   won    遮罩用:目前盤面已達成(復原可清掉)
+//   everWon 本局曾勝利(復原不清掉;結算 win/lose 依它)
+//   moves  本局有效操作次數(§4.2 判斷「新遊戲」要不要記錄)
+//   fresh  剛冒出的新方塊位置 'r,c'(畫面動畫用)
+
+export function maxTile(board) {
+  return Math.max(0, ...board.flat());
+}
+
+export function initState(rng = Math.random) {
+  return { board: newBoard(rng), score: 0, prev: null, won: false, everWon: false, keepPlaying: false, over: false, moves: 0, fresh: null };
+}
+
+function findNewTile(beforeAdd, afterAdd) {
+  for (let r = 0; r < afterAdd.length; r++) {
+    for (let c = 0; c < afterAdd.length; c++) {
+      if (beforeAdd[r][c] === 0 && afterAdd[r][c] !== 0) return `${r},${c}`;
+    }
+  }
+  return null;
+}
+
+// 有效移動 → 新 state;遊戲已結束、勝利遮罩未選繼續、或無效移動 → 原 state(同一物件)。
+export function stepState(state, dir, rng = Math.random) {
+  if (state.over || (state.won && !state.keepPlaying)) return state;
+  const r = move(state.board, dir);
+  if (!r.moved) return state;
+  const placed = addRandomTile(r.board, rng);
+  const won = state.won || hasWon(placed);
+  return {
+    ...state,
+    board: placed,
+    score: state.score + r.gained,
+    prev: { board: cloneBoard(state.board), score: state.score, won: state.won, keepPlaying: state.keepPlaying },
+    won,
+    everWon: !!state.everWon || won,
+    over: !canMove(placed),
+    moves: state.moves + 1,
+    fresh: findNewTile(r.board, placed),
+  };
+}
+
+export function undoState(state) {
+  if (!state.prev) return state;
+  const { board, score, won, keepPlaying } = state.prev;
+  return { ...state, board: cloneBoard(board), score, won, keepPlaying, over: false, prev: null, fresh: null };
+}
+
+export function continueState(state) {
+  return { ...state, keepPlaying: true };
+}
+
+// 存檔(續玩):只存可序列化欄位;over 由棋盤重算。
+export function toSave(state) {
+  const { board, score, prev, won, everWon, keepPlaying, moves } = state;
+  return { board, score, prev, won, everWon, keepPlaying, moves };
+}
+
+export function fromSave(saved) {
+  const prev = saved.prev
+    ? { board: saved.prev.board, score: saved.prev.score, won: !!saved.prev.won, keepPlaying: !!saved.prev.keepPlaying }
+    : null;
+  return {
+    board: saved.board,
+    score: saved.score,
+    prev,
+    won: !!saved.won,
+    everWon: !!(saved.everWon ?? saved.won),
+    keepPlaying: !!saved.keepPlaying,
+    over: !canMove(saved.board),
+    moves: saved.moves ?? 0,
+    fresh: null,
+  };
+}
+
+// 存檔 state 格式檢查(匯入驗證與載入防呆;不合格的存檔不還原)。
+const isBool = (v) => typeof v === 'boolean';
+const isCount = (v) => Number.isInteger(v) && v >= 0;
+const isBoard = (b) => Array.isArray(b) && b.length === SIZE
+  && b.every((row) => Array.isArray(row) && row.length === SIZE && row.every(isCount));
+
+export function isValidState(s) {
+  if (!s || typeof s !== 'object' || Array.isArray(s)) return false;
+  if (!isBoard(s.board) || !isCount(s.score) || !isBool(s.won) || !isBool(s.keepPlaying)) return false;
+  if (s.everWon !== undefined && !isBool(s.everWon)) return false;
+  if (s.moves !== undefined && !isCount(s.moves)) return false;
+  if (s.prev === null || s.prev === undefined) return true;
+  const p = s.prev;
+  return typeof p === 'object' && isBoard(p.board) && isCount(p.score) && isBool(p.won) && isBool(p.keepPlaying);
+}

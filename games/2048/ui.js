@@ -1,52 +1,125 @@
-// 2048 畫面層:狀態、渲染、輸入。規則一律呼叫 logic.js,這裡不寫規則。
-import { move, newBoard, addRandomTile, canMove, hasWon, cloneBoard, overlayFor } from './logic.js';
-import { getBest, updateBest } from '../../shared/storage.js';
+// 2048 畫面層:狀態、渲染、輸入。規則一律呼叫 logic.js(遊戲)與 shared/profile.js(紀錄),這裡不寫規則。
+import {
+  move, initState, stepState, undoState, continueState, toSave, fromSave, maxTile, overlayFor, isValidState,
+} from './logic.js';
+import { createProfile } from '../../shared/profile.js';
+import { LocalStore } from '../../shared/stores/local.js';
+import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
 
 const GAME_ID = '2048';
 const $ = (id) => document.getElementById(id);
+const profile = await createProfile({ store: new LocalStore() });
 
 let state;
+let best = 0; // 本局開始前的最佳分數(profile 管)
+let ended = null; // 本局已結算:{ xp, newAchievements, isBest, bestBefore, score };結算中為 { pending: true }
+let settle = false; // 勝利後按「新遊戲」:先顯示結算遮罩,按「確定」才開新局
+let live = { xp: 0, achievements: [] }; // 本局局中即時解開的成就(profile 隨存檔保存)
+let gameNo = 0; // 每開一局 +1;非同步結算回來時,局號不同就不動畫面
 
-function start() {
-  state = { board: newBoard(), score: 0, prev: null, won: false, keepPlaying: false, over: false, fresh: null };
+// 紀錄寫入依序執行,避免連按時存檔與結算交錯。
+let queue = Promise.resolve();
+const run = (fn) => { queue = queue.then(fn).catch((e) => console.error(e)); return queue; };
+
+async function startNew() {
+  state = initState();
+  gameNo++;
+  ended = null;
+  settle = false;
+  live = { xp: 0, achievements: [] };
   render();
+  await run(async () => {
+    best = await profile.best(GAME_ID);
+    profile.startTimer(GAME_ID);
+  });
+  render();
+}
+
+// 一局結束:依 §4.2 結算(每局只執行一次),結果顯示在遮罩。結算後不可復原、不可再移動。
+function finish(result) {
+  const snap = { score: state.score, max_tile: maxTile(state.board) };
+  ended = { pending: true };
+  const no = gameNo;
+  render();
+  return run(async () => {
+    const bestBefore = best;
+    const out = await profile.finishPlay(GAME_ID, {
+      result, score: snap.score, difficulty: 'normal', detail: { max_tile: snap.max_tile },
+    });
+    best = Math.max(best, snap.score);
+    if (no !== gameNo) return;
+    ended = {
+      xp: out.xpGained, // 已含局中即時成就 XP(profile 不重複加總)
+      newAchievements: out.newAchievements,
+      isBest: out.play.is_best,
+      bestBefore,
+      score: snap.score,
+    };
+    render();
+  });
+}
+
+function newGame() {
+  if (settle) return; // 結算遮罩只能按「確定」開新局
+  if (ended) {
+    if (!ended.pending) startNew(); // 已結算:直接開新局;結算中:忽略連點
+    return;
+  }
+  const result = resultOnNewGame(state);
+  if (result === 'win') {
+    settle = true; // 先看結算,按「確定」再開新局
+    finish(result);
+    return;
+  }
+  if (result) finish(result);
+  startNew();
+}
+
+function afterChange(prevWon) {
+  render();
+  if (state.won && !prevWon) {
+    const max_tile = maxTile(state.board);
+    const no = gameNo;
+    run(async () => {
+      await profile.unlock(GAME_ID, { max_tile });
+      if (no !== gameNo) return;
+      live = profile.liveRewards(GAME_ID);
+      renderOverlay();
+    });
+  }
+  if (state.over) {
+    finish(resultOnGameOver(state));
+  } else {
+    const saved = toSave(state);
+    run(() => profile.saveState(GAME_ID, saved));
+  }
 }
 
 function step(dir) {
-  if (state.over || (state.won && !state.keepPlaying)) return;
-  const r = move(state.board, dir);
-  if (!r.moved) return;
-  const before = cloneBoard(state.board);
-  const placed = addRandomTile(r.board);
-  state.prev = { board: before, score: state.score, won: state.won };
-  state.board = placed;
-  state.score += r.gained;
-  state.fresh = findNewTile(r.board, placed);
-  if (!state.won && hasWon(placed)) state.won = true;
-  state.over = !canMove(placed);
-  render();
-}
-
-function findNewTile(beforeAdd, afterAdd) {
-  for (let r = 0; r < afterAdd.length; r++) {
-    for (let c = 0; c < afterAdd.length; c++) {
-      if (beforeAdd[r][c] === 0 && afterAdd[r][c] !== 0) return `${r},${c}`;
-    }
-  }
-  return null;
+  profile.input();
+  if (ended) return;
+  const next = stepState(state, dir);
+  if (next === state) return;
+  const prevWon = state.won;
+  state = next;
+  afterChange(prevWon);
 }
 
 function undo() {
-  if (!state.prev) return;
-  state.board = state.prev.board;
-  state.score = state.prev.score;
-  state.won = state.prev.won;
-  state.over = false;
-  state.prev = null;
-  state.fresh = null;
-  render();
+  profile.input();
+  if (!state.prev || ended) return;
+  const prevWon = state.won;
+  state = undoState(state);
+  afterChange(prevWon);
+}
+
+function keepPlaying() {
+  profile.input();
+  if (ended) return;
+  state = continueState(state);
+  afterChange(state.won);
 }
 
 function tileClass(v) {
@@ -61,16 +134,40 @@ function render() {
     return `<div class="${tileClass(v)}${pop}" role="gridcell">${v || ''}</div>`;
   })).join('');
   $('score').textContent = state.score.toLocaleString();
-  $('best').textContent = updateBest(GAME_ID, state.score).toLocaleString();
-  $('undo').disabled = !state.prev;
+  $('best').textContent = Math.max(best, state.score).toLocaleString();
+  $('undo').disabled = !state.prev || !!ended;
   renderOverlay();
+}
+
+// 成就 id 可能來自匯入檔:只顯示白名單名稱,其餘一律 escape。
+const esc = (v) => String(v).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const achName = (id) => {
+  const a = ACHIEVEMENTS.find((x) => x.id === id);
+  return esc(a ? `${a.icon} ${a.name}` : id);
+};
+
+function infoHtml(kind) {
+  if (!ended) {
+    if (kind !== 'won' || live.achievements.length === 0) return '';
+    return `<p>解開成就:${live.achievements.map(achName).join('、')}(+${Number(live.xp) || 0} XP)</p>`;
+  }
+  if (ended.pending) return '<p>結算中…</p>';
+  const lines = [`<p class="overlay-xp">本局 +${ended.xp} XP</p>`];
+  if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
+  lines.push(ended.isBest
+    ? '<p>🎉 新的最佳分數!</p>'
+    : `<p>距最佳 ${ended.bestBefore.toLocaleString()} 還差 ${(ended.bestBefore - ended.score).toLocaleString()}</p>`);
+  return lines.join('');
 }
 
 function renderOverlay() {
   const overlay = $('overlay');
   const actions = $('overlay-actions');
-  const kind = overlayFor(state);
-  if (kind === 'over') {
+  const kind = settle ? 'settle' : overlayFor(state);
+  if (kind === 'settle') {
+    $('overlay-title').textContent = '本局結算';
+    actions.innerHTML = `<button class="btn" data-act="confirm"${ended?.pending ? ' disabled' : ''}>確定</button>`;
+  } else if (kind === 'over') {
     $('overlay-title').textContent = '遊戲結束';
     actions.innerHTML = '<button class="btn" data-act="new">再玩一次</button>';
   } else if (kind === 'won') {
@@ -83,6 +180,7 @@ function renderOverlay() {
     overlay.hidden = true;
     return;
   }
+  $('overlay-info').innerHTML = infoHtml(kind);
   overlay.hidden = false;
 }
 
@@ -110,17 +208,29 @@ $('board').addEventListener('pointerup', (e) => {
   step(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
 });
 
-$('new').addEventListener('click', start);
+$('new').addEventListener('click', newGame);
 $('undo').addEventListener('click', undo);
 $('overlay-actions').addEventListener('click', (e) => {
   const act = e.target.dataset.act;
-  if (act === 'new') start();
-  if (act === 'continue') { state.keepPlaying = true; render(); }
+  if (act === 'new') newGame();
+  if (act === 'continue') keepPlaying();
+  if (act === 'confirm' && ended && !ended.pending) startNew();
 });
 
 bindThemeToggle($('theme'));
-$('best').textContent = getBest(GAME_ID).toLocaleString();
-start();
+
+// 載入:有存檔就自動還原(§4.1),否則開新局。
+const saved = await profile.loadSave(GAME_ID);
+if (saved && isValidState(saved)) {
+  state = fromSave(saved);
+  live = profile.liveRewards(GAME_ID);
+  best = await profile.best(GAME_ID);
+  profile.startTimer(GAME_ID);
+  render();
+  if (state.over) finish(resultOnGameOver(state));
+} else {
+  await startNew();
+}
 
 // 示範用固定盤面:直接呼叫 logic.move,示範結果與實際規則一致(不放新方塊,避免畫面跳動)。
 const row = (cells) => [cells, [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];

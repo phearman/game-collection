@@ -1,0 +1,254 @@
+// 個人紀錄 API(RS1):遊戲與畫面只用這裡。規則一律呼叫 progress.js,這裡只串接 store。
+import { GAMES } from './games.js';
+import {
+  emptyProfile, migrateLegacyBest, applyFinish, applyUnlock, levelProgress, ACHIEVEMENTS, recentOrder,
+  timerInit, timerEvent, timerSeconds, validateImport, isValidGameSave, pushPlay, exportData, exportFileName, iso, PLAYS_LIMIT,
+} from './progress.js';
+import { isValidState as valid2048 } from '../games/2048/logic.js';
+
+// 各遊戲存檔 state 的格式檢查(匯入驗證用)。
+export const STATE_VALIDATORS = { 2048: valid2048 };
+
+// randomUUID 只在安全來源(https / localhost)可用;其他情況退回 getRandomValues 組 v4 UUID。
+function uuid() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  const b = globalThis.crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+const noLive = () => ({ xp: 0, achievements: [] });
+
+// store:store 介面實作;now:時鐘(毫秒,可注入)。
+// doc / win:有 document / window 時自動接 visibilitychange / pagehide(測試可注入假物件或傳 null)。
+export async function createProfile({
+  store, now = Date.now, gameList = GAMES, doc = globalThis.document, win = globalThis.window,
+  stateValidators = STATE_VALIDATORS,
+} = {}) {
+  // 首次載入(尚無 profile)才做舊資料遷移;之後的匯入覆蓋不會被舊 key 再蓋回去。
+  let mem = await store.getProfile();
+  let memDirty = false; // profile 最近一次寫入失敗 ⇒ 以記憶體為準(避免讀回舊資料重複發成就/XP)
+  const statsMem = {}; // 寫入失敗的 stats,以記憶體為準
+  const putProfile = async (profile) => {
+    mem = profile;
+    memDirty = (await store.putProfile(profile)) === false;
+  };
+  const putStats = async (stats) => {
+    if ((await store.putStats(stats)) === false) statsMem[stats.game_id] = stats;
+    else delete statsMem[stats.game_id];
+  };
+  const playsMem = []; // 寫入失敗的局紀錄(新到舊)
+  const getProfile = async () => (memDirty ? mem : ((await store.getProfile()) ?? mem));
+  const listStats = async () => ({ ...(await store.listStats()), ...statsMem });
+  const addPlay = async (play) => {
+    if ((await store.addPlay(play)) === false) playsMem.unshift(play);
+  };
+  const listPlays = async () => {
+    const stored = await store.listPlays();
+    const ids = new Set(stored.map((p) => p.id));
+    return [...playsMem.filter((p) => !ids.has(p.id)), ...stored]
+      .sort((a, b) => Date.parse(b.ended_at) - Date.parse(a.ended_at))
+      .reduceRight((list, p) => pushPlay(list, p), []);
+  };
+
+  if (!mem) {
+    let stats = await store.listStats();
+    for (const g of gameList) stats = migrateLegacyBest(stats, g.id, await store.legacyBest(g.id));
+    for (const s of Object.values(stats)) await putStats(s);
+    await putProfile(emptyProfile(uuid()));
+  }
+
+  // 計時:一次只計一款遊戲(一頁一款)。
+  let timer = null; // { gameId, startedAt, t: progress timer }
+  const loaded = new Map(); // gameId → 最近一次讀到/寫入的存檔(接續秒數與開局時間;寫入失敗時以它為準)
+  const live = new Map(); // gameId → 本局即時獎勵明細 { xp, achievements }(隨存檔保存)
+  const listSaves = async () => {
+    const all = new Map((await store.listSaves()).map((sv) => [sv.game_id, sv]));
+    for (const [id, sv] of loaded) all.set(id, sv);
+    return [...all.values()];
+  };
+
+  // summary 與匯出共用的一致快照:store 內容疊上寫入失敗而只在記憶體的資料。
+  const snapshot = async () => ({
+    profile: await getProfile(),
+    stats: await listStats(),
+    plays: await listPlays(),
+    saves: await listSaves(),
+  });
+
+  const event = (type) => {
+    if (timer) timer.t = timerEvent(timer.t, { t: now(), type });
+  };
+  const elapsed = () => (timer ? timerSeconds(timer.t, now()) : 0);
+
+  const writeSave = async (gameId, state) => {
+    const prev = loaded.get(gameId);
+    const t = now();
+    const running = timer?.gameId === gameId;
+    const save = {
+      game_id: gameId,
+      state,
+      active_sec: running ? elapsed() : (prev?.active_sec ?? 0),
+      started_at: running ? iso(timer.startedAt) : (prev?.started_at ?? iso(t)),
+      updated_at: iso(t),
+      version: (prev?.version ?? 0) + 1,
+    };
+    if (live.get(gameId)?.achievements.length) save.live = live.get(gameId);
+    loaded.set(gameId, save);
+    await store.putSave(save);
+  };
+
+  // 分頁隱藏或離頁時,把最新秒數寫進存檔(還沒有存檔 = 還沒有效操作,不寫)。
+  const flush = () => {
+    const save = timer && loaded.get(timer.gameId);
+    if (save) writeSave(timer.gameId, save.state);
+  };
+
+  doc?.addEventListener?.('visibilitychange', () => {
+    const hidden = doc.visibilityState === 'hidden';
+    event(hidden ? 'hidden' : 'visible');
+    if (hidden) flush();
+  });
+  win?.addEventListener?.('pagehide', flush);
+
+  const api = {
+    async loadSave(gameId) {
+      const save = await store.getSave(gameId);
+      if (!isValidGameSave(save, stateValidators)) return null; // 沒有或壞掉的存檔 ⇒ 開新局
+      loaded.set(gameId, save);
+      live.set(gameId, save.live ?? noLive());
+      return save.state;
+    },
+
+    saveState(gameId, state) {
+      return writeSave(gameId, state);
+    },
+
+    // 開始計時:有載入的存檔就接著它的秒數與開局時間,否則從 0 起算。分頁目前隱藏就先暫停。
+    startTimer(gameId) {
+      const save = loaded.get(gameId);
+      const t = now();
+      timer = {
+        gameId,
+        startedAt: save ? Date.parse(save.started_at) : t,
+        t: timerInit(t, save?.active_sec ?? 0),
+      };
+      if (doc?.visibilityState === 'hidden') event('hidden');
+    },
+
+    input() { event('input'); },
+
+    // 外部通知分頁可見性(瀏覽器會自動接 visibilitychange;測試或特殊頁面可手動呼叫)。
+    setVisible(visible) {
+      event(visible ? 'visible' : 'hidden');
+      if (!visible) flush();
+    },
+
+    // 本局已即時入帳的獎勵(續玩還原後也在)。
+    liveRewards(gameId) {
+      return structuredClone(live.get(gameId) ?? noLive());
+    },
+
+    async finishPlay(gameId, { result, score = 0, difficulty = 'normal', detail = {} }) {
+      const t = now();
+      const save = loaded.get(gameId);
+      const running = timer?.gameId === gameId;
+      const out = applyFinish({
+        profile: await getProfile(),
+        stats: await listStats(),
+        gameId, result, score, difficulty, detail,
+        startedAt: running ? timer.startedAt : (save ? Date.parse(save.started_at) : t),
+        endedAt: t,
+        durationSec: running ? elapsed() : (save?.active_sec ?? 0),
+        id: uuid(),
+        live: live.get(gameId),
+      });
+      await putProfile(out.profile);
+      await putStats(out.stats[gameId]);
+      await addPlay(out.play);
+      await store.deleteSave(gameId);
+      loaded.delete(gameId);
+      live.delete(gameId);
+      if (running) timer = null;
+      return { play: out.play, xpGained: out.xpGained, newAchievements: out.newAchievements, level: out.level };
+    },
+
+    async unlock(gameId, ev) {
+      const out = applyUnlock({ profile: await getProfile(), stats: await listStats(), gameId, event: ev, now: now() });
+      if (out.newAchievements.length) {
+        await putProfile(out.profile);
+        const cur = live.get(gameId) ?? noLive();
+        live.set(gameId, { xp: cur.xp + out.xpGained, achievements: [...cur.achievements, ...out.newAchievements] });
+        const save = loaded.get(gameId);
+        if (save) await writeSave(gameId, save.state);
+      }
+      return { xpGained: out.xpGained, newAchievements: out.newAchievements, level: out.level };
+    },
+
+    async best(gameId) {
+      return (await listStats())[gameId]?.best_score ?? 0;
+    },
+
+    async summary() {
+      const { profile, stats, plays, saves } = await snapshot();
+      const all = Object.values(stats);
+      return {
+        device_id: profile.device_id,
+        xp: profile.xp,
+        ...levelProgress(profile.xp),
+        plays_count: all.reduce((n, s) => n + s.plays_count, 0),
+        total_sec: all.reduce((n, s) => n + s.total_sec, 0),
+        streak: profile.streak,
+        achievements: ACHIEVEMENTS.map(({ id, name, icon, cond }) => ({ id, name, icon, cond, unlocked_at: profile.achievements[id] ?? null })),
+        games: gameList.map((g) => ({ ...g, stats: stats[g.id] ?? null })),
+        recent: recentOrder(gameList, stats, Object.fromEntries(saves.map((s) => [s.game_id, s]))).map((g) => g.id),
+        plays: plays.slice(0, PLAYS_LIMIT),
+        saves: saves.map((s) => s.game_id),
+      };
+    },
+
+    async exportFile() {
+      const t = now();
+      return { name: exportFileName(t), data: exportData({ ...(await snapshot()), now: t }) };
+    },
+
+    // 只驗證、不寫入:→ { ok, error } 或 { ok, summary, data }
+    checkImport(json) {
+      let data;
+      try {
+        data = typeof json === 'string' ? JSON.parse(json) : json;
+      } catch {
+        return { ok: false, error: '檔案不是有效的 JSON' };
+      }
+      return validateImport(data, stateValidators);
+    },
+
+    // 驗證通過才整份覆蓋;不合格或寫入失敗都不動現有資料。
+    async importFile(json) {
+      const check = api.checkImport(json);
+      if (!check.ok) return check;
+      const { profile, stats, plays, saves } = check.data;
+      try {
+        await store.importAll({ profile, stats, plays, saves });
+      } catch (err) {
+        return {
+          ok: false,
+          error: err?.rollbackFailed
+            ? '寫入失敗,且原紀錄無法完整還原(儲存空間不足或無法寫入)'
+            : '寫入失敗(儲存空間不足或無法寫入),目前紀錄未變動',
+        };
+      }
+      mem = profile;
+      memDirty = false;
+      for (const k of Object.keys(statsMem)) delete statsMem[k];
+      playsMem.length = 0;
+      loaded.clear();
+      live.clear();
+      timer = null;
+      return check;
+    },
+  };
+  return api;
+}

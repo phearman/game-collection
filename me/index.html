@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>我的紀錄 · 遊戲集錦</title>
+  <link rel="stylesheet" href="../shared/style.css">
+  <style>
+    .me-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; }
+    .me-level { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .me-lv { font-size: 22px; font-weight: 700; }
+    .me-bar { flex: 1; min-width: 120px; height: 10px; background: var(--surface-sub); border-radius: 5px; overflow: hidden; }
+    .me-bar > span { display: block; height: 100%; background: var(--accent); }
+    .me-xp { font-size: 13px; color: var(--text-sub); }
+    .me-sub { font-size: 14px; color: var(--text-sub); margin: 8px 0 0; }
+    .me h2 { font-size: 16px; margin: 20px 0 8px; }
+    .ach { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .ach-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 6px; text-align: center; min-width: 0; }
+    .ach-icon { font-size: 24px; line-height: 1.2; }
+    .ach-name { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+    .ach-note { font-size: 11px; color: var(--text-muted); overflow-wrap: anywhere; }
+    .ach-item.is-locked { background: var(--surface-sub); color: var(--text-muted); }
+    .ach-item.is-locked .ach-icon { filter: grayscale(1); opacity: 0.5; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+    .me table { border-collapse: collapse; width: 100%; font-size: 14px; white-space: nowrap; }
+    .me th, .me td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+    .me th { font-weight: 600; color: var(--text-sub); background: var(--surface-sub); }
+    .me td.num, .me th.num { text-align: right; }
+    .me tr:last-child td { border-bottom: 0; }
+    .me-empty { color: var(--text-muted); font-size: 14px; padding: 10px; }
+    .me-io { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+    .me-msg { font-size: 14px; margin: 8px 0 0; min-height: 1.6em; }
+    .me-msg.is-error { color: #d85a30; }
+    .import-dlg { width: min(400px, calc(100vw - 32px)); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); }
+    .import-dlg::backdrop { background: rgba(0, 0, 0, 0.45); }
+    .import-dlg h2 { font-size: 18px; margin: 0 0 8px; }
+    .import-dlg .warn { color: #d85a30; font-weight: 600; }
+    .import-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; margin-top: 12px; }
+    @media (max-width: 480px) { .ach { grid-template-columns: repeat(3, 1fr); } }
+  </style>
+</head>
+<body>
+  <main class="page me">
+    <header class="topbar">
+      <a class="btn" href="../">← 大廳</a>
+      <button class="btn" id="theme" type="button"></button>
+    </header>
+    <section class="me-card" aria-label="等級">
+      <div class="me-level">
+        <span class="me-lv" id="lv"></span>
+        <div class="me-bar" role="progressbar" aria-label="升級進度" id="bar"><span></span></div>
+        <span class="me-xp" id="xp"></span>
+      </div>
+      <p class="me-sub" id="sub"></p>
+    </section>
+    <h2 id="ach-title">成就</h2>
+    <section class="ach" id="ach" aria-labelledby="ach-title"></section>
+    <h2>各遊戲</h2>
+    <div class="table-wrap" id="games"></div>
+    <h2>最近 50 局</h2>
+    <div class="table-wrap" id="plays"></div>
+    <div class="me-io">
+      <button class="btn" id="export" type="button">⬇ 匯出紀錄</button>
+      <button class="btn" id="import" type="button">⬆ 匯入紀錄</button>
+      <input type="file" id="file" accept="application/json,.json" hidden>
+    </div>
+    <p class="me-msg" id="msg" role="status"></p>
+  </main>
+  <dialog class="import-dlg" id="import-dlg">
+    <h2>匯入紀錄</h2>
+    <div id="import-summary"></div>
+    <p class="warn">將覆蓋目前紀錄(含續玩中的存檔),無法復原。</p>
+    <div class="import-actions">
+      <button class="btn" type="button" data-act="export">⬇ 先匯出目前紀錄</button>
+      <button class="btn" type="button" data-act="cancel">取消</button>
+      <button class="btn" type="button" data-act="confirm">確認覆蓋</button>
+    </div>
+  </dialog>
+  <script type="module" src="ui.js"></script>
+</body>
+</html>
