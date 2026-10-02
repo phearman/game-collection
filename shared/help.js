@@ -1,0 +1,102 @@
+// 共用「? 玩法」說明與示範(RS3)。每款遊戲提供規則文字與示範步驟,
+// 第一次進入該遊戲自動開啟一次;之後由頂列的「? 玩法」按鈕開啟。
+import { load, save } from './storage.js';
+
+// opts:
+//   gameId     遊戲 id,用來記「看過說明了」
+//   title      對話框標題
+//   rules      規則 HTML(條列)
+//   demo       選用:{ steps: [{ before, after, caption }], render(state) → HTML }
+//   mountAfter 「? 玩法」按鈕插在哪個元素後面
+export function setupHelp({ gameId, title, rules, demo, mountAfter }) {
+  const btn = document.createElement('button');
+  btn.className = 'btn';
+  btn.type = 'button';
+  btn.textContent = '? 玩法';
+  btn.title = '玩法說明與示範';
+  mountAfter.after(btn);
+
+  const dlg = document.createElement('dialog');
+  dlg.className = 'help';
+  dlg.innerHTML = `
+    <div class="help-head">
+      <h2 class="help-title">${title}</h2>
+      <button class="btn" type="button" data-close aria-label="關閉">✕</button>
+    </div>
+    <div class="help-rules">${rules}</div>
+    ${demo ? `
+      <div class="help-demo">
+        <div class="help-demo-head">
+          <strong>示範</strong>
+          <button class="btn" type="button" data-play>▶ 播放</button>
+        </div>
+        <div class="help-stage" data-stage></div>
+        <p class="help-caption" data-caption></p>
+        <p class="help-step" data-step></p>
+      </div>` : ''}
+    <div class="help-foot"><button class="btn" type="button" data-close>開始玩</button></div>`;
+  document.body.append(dlg);
+
+  const runner = demo ? demoRunner(dlg, demo) : null;
+  const open = () => {
+    dlg.showModal();
+    runner?.reset();
+    runner?.play();
+  };
+  const close = () => {
+    runner?.stop();
+    dlg.close();
+  };
+
+  btn.addEventListener('click', open);
+  dlg.addEventListener('click', (e) => {
+    if (e.target.closest('[data-close]') || e.target === dlg) close();
+  });
+  dlg.addEventListener('cancel', () => runner?.stop());
+
+  const seenKey = `help-seen:${gameId}`;
+  if (!load(seenKey, false)) {
+    save(seenKey, true);
+    open();
+  }
+  return { open };
+}
+
+// 每一步:先顯示 before,停一下,再換成 after,然後進下一步;播完停在最後一格。
+function demoRunner(dlg, { steps, render }) {
+  const stage = dlg.querySelector('[data-stage]');
+  const caption = dlg.querySelector('[data-caption]');
+  const stepNo = dlg.querySelector('[data-step]');
+  const playBtn = dlg.querySelector('[data-play]');
+  let timers = [];
+
+  const show = (i, phase) => {
+    const s = steps[i];
+    stage.innerHTML = render(phase === 'before' ? s.before : s.after);
+    caption.textContent = phase === 'before' ? s.caption : (s.result || s.caption);
+    stepNo.textContent = `${i + 1} / ${steps.length}`;
+  };
+  const stop = () => {
+    timers.forEach(clearTimeout);
+    timers = [];
+    playBtn.textContent = '▶ 重播';
+  };
+  const reset = () => {
+    stop();
+    show(0, 'before');
+  };
+  const play = () => {
+    stop();
+    playBtn.textContent = '■ 停止';
+    let t = 0;
+    steps.forEach((_, i) => {
+      timers.push(setTimeout(() => show(i, 'before'), t));
+      t += 1400;
+      timers.push(setTimeout(() => show(i, 'after'), t));
+      t += 1600;
+    });
+    timers.push(setTimeout(stop, t));
+  };
+  playBtn.addEventListener('click', () => (timers.length ? stop() : play()));
+  return { play, stop, reset };
+}

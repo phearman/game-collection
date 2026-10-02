@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>遊戲集錦</title>
+  <link rel="stylesheet" href="shared/style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <h1 class="brand">🎮 遊戲集錦</h1>
+      <button class="btn" id="theme" type="button"></button>
+    </header>
+    <section class="cards" id="cards" aria-label="遊戲清單"></section>
+  </main>
+  <script type="module">
+    import { GAMES } from './shared/games.js';
+    import { getBest } from './shared/storage.js';
+    import { bindThemeToggle } from './shared/theme.js';
+
+    bindThemeToggle(document.getElementById('theme'));
+
+    document.getElementById('cards').innerHTML = GAMES.map((g) => {
+      const active = g.status === 'active';
+      const best = getBest(g.id);
+      return `
+        <a class="card${active ? ' is-active' : ''}" href="games/${g.id}/">
+          <div class="card-head">
+            <span class="card-icon" aria-hidden="true">${g.icon}</span>
+            <span class="tag${active ? ' is-active' : ''}">${active ? '開發中' : '規劃中'}</span>
+          </div>
+          <p class="card-title">${g.title}</p>
+          <p class="card-desc">${g.desc}</p>
+          ${best ? `<p class="card-meta">最佳 ${best.toLocaleString()}</p>` : ''}
+        </a>`;
+    }).join('');
+  </script>
+</body>
+</html>
