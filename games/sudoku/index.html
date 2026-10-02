@@ -5,22 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>數獨 · 遊戲集錦</title>
   <link rel="stylesheet" href="../../shared/style.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="page page-narrow">
     <header class="topbar">
-      <a class="btn" href="../../">← 大廳</a>
-      <button class="btn" id="theme" type="button"></button>
+      <div class="navigation"><a class="btn" href="../../">← 大廳</a></div>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">分數</div><div class="stat-value" id="score">0</div></div>
+        <div class="stat"><div class="stat-label">最佳</div><div class="stat-value" id="best">0</div></div>
+        <button class="btn" id="theme" type="button"></button>
+      </div>
     </header>
-    <div class="placeholder">
-      <p style="font-size:40px;margin:0" aria-hidden="true">🧩</p>
-      <h1 style="font-size:20px">數獨</h1>
-      <p>規劃中,尚未開發。</p>
+    <div class="actions">
+      <button class="btn" id="new" type="button">↻ 新遊戲</button>
+      <button class="btn" id="undo" type="button">↶ 復原</button>
+      <label class="difficulty">難度
+        <select id="difficulty"><option value="normal">一般 · 40</option><option value="hard">困難 · 32</option><option value="expert">專家 · 26</option></select>
+      </label>
     </div>
+    <div class="heading"><h1>數獨</h1><span>時間 <span id="time">0:00</span> · 提示 <span id="clues">40</span></span></div>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+    <div class="board-wrap">
+      <div class="board" id="board" role="group" aria-label="數獨棋盤" aria-describedby="hint"></div>
+      <div class="overlay" id="overlay" hidden role="region" aria-labelledby="overlay-title" aria-live="polite">
+        <p class="overlay-title" id="overlay-title">完成數獨！</p>
+        <div class="overlay-info" id="overlay-info"></div>
+        <button class="btn" id="again" type="button">確定 · 再玩一次</button>
+      </div>
+    </div>
+    <div class="number-pad" id="number-pad" role="group" aria-label="數字盤"></div>
+    <div class="tools">
+      <button class="btn" id="notes" type="button" aria-pressed="false">✎ 筆記：關</button>
+      <button class="btn" id="clear" type="button">清除</button>
+    </div>
+    <p class="hint" id="hint">方向鍵選格 · 1–9 填入 · 0 / Backspace / Delete 清除<br>N 切換筆記 · Ctrl / ⌘ + Z 復原</p>
   </main>
-  <script type="module">
-    import { bindThemeToggle } from '../../shared/theme.js';
-    bindThemeToggle(document.getElementById('theme'));
-  </script>
+  <script type="module" src="ui.js"></script>
 </body>
 </html>
