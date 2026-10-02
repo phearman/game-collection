@@ -7,9 +7,10 @@ import {
 import { isValidState as valid2048 } from '../games/2048/logic.js';
 import { isValidState as validTictactoe } from '../games/tictactoe/logic.js';
 import { isValidState as validSnake } from '../games/snake/logic.js';
+import { isValidState as validMinesweeper } from '../games/minesweeper/logic.js';
 
 // 各遊戲存檔 state 的格式檢查(匯入驗證用)。
-export const STATE_VALIDATORS = { 2048: valid2048, tictactoe: validTictactoe, snake: validSnake };
+export const STATE_VALIDATORS = { 2048: valid2048, tictactoe: validTictactoe, snake: validSnake, minesweeper: validMinesweeper };
 
 // randomUUID 只在安全來源(https / localhost)可用;其他情況退回 getRandomValues 組 v4 UUID。
 function uuid() {
@@ -24,7 +25,7 @@ function uuid() {
 const noLive = () => ({ xp: 0, achievements: [] });
 
 // store:store 介面實作;now:時鐘(毫秒,可注入)。
-// doc / win:有 document / window 時自動接 visibilitychange / pagehide(測試可注入假物件或傳 null)。
+// doc / win:有 document / window 時自動接 visibilitychange / pagehide / storage(測試可注入假物件或傳 null)。
 export async function createProfile({
   store, now = Date.now, gameList = GAMES, doc = globalThis.document, win = globalThis.window,
   stateValidators = STATE_VALIDATORS,
@@ -64,12 +65,31 @@ export async function createProfile({
 
   // 計時:一次只計一款遊戲(一頁一款)。
   let timer = null; // { gameId, startedAt, t: progress timer }
-  const loaded = new Map(); // gameId → 最近一次讀到/寫入的存檔(接續秒數與開局時間;寫入失敗時以它為準)
+  const loaded = new Map(); // gameId → 最近一次讀到/寫入的存檔(接續秒數與開局時間)
+  const savesDirty = new Set(); // 最近一次寫入失敗的存檔 gameId ⇒ 快照以 loaded 為準
   const live = new Map(); // gameId → 本局即時獎勵明細 { xp, achievements }(隨存檔保存)
+  // 只疊入未成功寫入的存檔;已寫入的以 store 為準(其他分頁可能已覆蓋或刪除,IR3)。
   const listSaves = async () => {
     const all = new Map((await store.listSaves()).map((sv) => [sv.game_id, sv]));
-    for (const [id, sv] of loaded) all.set(id, sv);
+    for (const id of savesDirty) if (loaded.has(id)) all.set(id, loaded.get(id));
     return [...all.values()];
+  };
+
+  // 其他分頁「整份匯入」(或清空 localStorage)⇒ 本頁快取全部作廢:記憶體疊加層、存檔快取、本局即時獎勵,
+  // 計時器改從現在重新起算(IR3、PR #5 F1)。一般跨分頁寫入不走這裡:讀取本來就每次重讀 store,
+  // 再疊上本頁寫入失敗的成果,所以不會丟掉未持久化的資料(F2)。
+  const invalidateAll = () => {
+    memDirty = false;
+    for (const k of Object.keys(statsMem)) delete statsMem[k];
+    playsMem.length = 0;
+    savesDirty.clear();
+    loaded.clear();
+    live.clear();
+    if (timer) {
+      const t = now();
+      timer = { gameId: timer.gameId, startedAt: t, t: timerInit(t, 0) };
+      if (doc?.visibilityState === 'hidden') event('hidden');
+    }
   };
 
   // summary 與匯出共用的一致快照:store 內容疊上寫入失敗而只在記憶體的資料。
@@ -99,13 +119,23 @@ export async function createProfile({
     };
     if (live.get(gameId)?.achievements.length) save.live = live.get(gameId);
     loaded.set(gameId, save);
-    await store.putSave(save);
+    if ((await store.putSave(save)) === false) savesDirty.add(gameId);
+    else savesDirty.delete(gameId);
   };
 
   // 分頁隱藏或離頁時,把最新秒數寫進存檔(還沒有存檔 = 還沒有效操作,不寫)。
-  const flush = () => {
-    const save = timer && loaded.get(timer.gameId);
-    if (save) writeSave(timer.gameId, save.state);
+  // store 裡的存檔若已被其他分頁替換(開局時間不同、版本較新)或刪除,就不寫回,免得舊存檔「復活」(F1)。
+  const flush = async () => {
+    const id = timer?.gameId;
+    const save = id && loaded.get(id);
+    if (!save) return;
+    const cur = await store.getSave(id);
+    if (!cur || cur.started_at !== save.started_at || cur.version > save.version) {
+      loaded.delete(id);
+      savesDirty.delete(id);
+      return;
+    }
+    await writeSave(id, save.state);
   };
 
   doc?.addEventListener?.('visibilitychange', () => {
@@ -114,11 +144,16 @@ export async function createProfile({
     if (hidden) flush();
   });
   win?.addEventListener?.('pagehide', flush);
+  // storage 事件只在「其他」分頁改動時觸發;key 為 null 表示整個 localStorage 被清空。
+  win?.addEventListener?.('storage', (e) => {
+    if (e?.key == null || store.isImportKey?.(e.key)) invalidateAll();
+  });
 
   const api = {
     async loadSave(gameId) {
       const save = await store.getSave(gameId);
-      if (!isValidGameSave(save, stateValidators)) return null; // 沒有或壞掉的存檔 ⇒ 開新局
+      // 沒有、壞掉、或 game_id 與請求不符的存檔 ⇒ 開新局,且不建立 loaded/live 快取(IR3)
+      if (save?.game_id !== gameId || !isValidGameSave(save, stateValidators)) return null;
       loaded.set(gameId, save);
       live.set(gameId, save.live ?? noLive());
       return save.state;
@@ -172,6 +207,7 @@ export async function createProfile({
       await addPlay(out.play);
       await store.deleteSave(gameId);
       loaded.delete(gameId);
+      savesDirty.delete(gameId);
       live.delete(gameId);
       if (running) timer = null;
       return { play: out.play, xpGained: out.xpGained, newAchievements: out.newAchievements, level: out.level };
@@ -247,6 +283,7 @@ export async function createProfile({
       for (const k of Object.keys(statsMem)) delete statsMem[k];
       playsMem.length = 0;
       loaded.clear();
+      savesDirty.clear();
       live.clear();
       timer = null;
       return check;

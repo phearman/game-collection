@@ -119,6 +119,7 @@ export function overlayFor({ over, won, keepPlaying }) {
 //   prev   上一步快照 { board, score, won, keepPlaying },復原一次只退一步
 //   won    遮罩用:目前盤面已達成(復原可清掉)
 //   everWon 本局曾勝利(復原不清掉;結算 win/lose 依它)
+//   settled 本局已結算(不存檔;結算後不可移動、不可復原)
 //   moves  本局有效操作次數(§4.2 判斷「新遊戲」要不要記錄)
 //   fresh  剛冒出的新方塊位置 'r,c'(畫面動畫用)
 
@@ -139,9 +140,19 @@ function findNewTile(beforeAdd, afterAdd) {
   return null;
 }
 
-// 有效移動 → 新 state;遊戲已結束、勝利遮罩未選繼續、或無效移動 → 原 state(同一物件)。
+// 還能移動:未結算、未結束、不在「勝利遮罩未選繼續」。
+export function isPlayable(state) {
+  return !state.settled && !state.over && !(state.won && !state.keepPlaying);
+}
+
+// 無效移動(可玩但這個方向棋盤不變)⇒ 畫面給回饋、不新增方塊(RS4)。
+export function isInvalidMove(state, dir) {
+  return isPlayable(state) && !move(state.board, dir).moved;
+}
+
+// 有效移動 → 新 state;不可玩或無效移動 → 原 state(同一物件)。
 export function stepState(state, dir, rng = Math.random) {
-  if (state.over || (state.won && !state.keepPlaying)) return state;
+  if (!isPlayable(state)) return state;
   const r = move(state.board, dir);
   if (!r.moved) return state;
   const placed = addRandomTile(r.board, rng);
@@ -159,14 +170,30 @@ export function stepState(state, dir, rng = Math.random) {
   };
 }
 
+// 復原:一次只退一步;結算後不可復原,未結算的勝利遮罩狀態仍可(RS1 起)。
+export function canUndo(state) {
+  return !!state.prev && !state.settled;
+}
+
 export function undoState(state) {
-  if (!state.prev) return state;
+  if (!canUndo(state)) return state;
   const { board, score, won, keepPlaying } = state.prev;
   return { ...state, board: cloneBoard(board), score, won, keepPlaying, over: false, prev: null, fresh: null };
 }
 
 export function continueState(state) {
+  if (state.settled) return state;
   return { ...state, keepPlaying: true };
+}
+
+// 結算後鎖定(不可移動、不可復原)。
+export function settleState(state) {
+  return { ...state, settled: true };
+}
+
+// 頂列顯示的最佳分數:已存的最佳與本局分數取大者。
+export function shownBest(best, score) {
+  return Math.max(Number(best) || 0, score);
 }
 
 // 存檔(續玩):只存可序列化欄位;over 由棋盤重算。

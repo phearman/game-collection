@@ -1,0 +1,115 @@
+.topbar { gap: 6px; }
+.topbar .btn { white-space: nowrap; padding: 6px 10px; }
+.stats { display: flex; gap: 6px; align-items: stretch; }
+.stats .stat { min-width: 52px; padding: 2px 8px; }
+.actions { display: flex; gap: 8px; margin-bottom: 8px; }
+.actions .btn { flex: 1 1 auto; white-space: nowrap; padding: 6px 8px; min-width: 0; }
+.actions select.btn { appearance: none; text-align: center; text-align-last: center; }
+#flag-mode.is-on { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+
+.status { font-size: 13px; color: var(--text-sub); text-align: center; margin: 0 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.board-wrap { position: relative; }
+.board {
+  --gap: 3px;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 9), minmax(0, 1fr));
+  gap: var(--gap);
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  touch-action: manipulation; /* 允許上下捲動(高級直式),長按插旗另行處理 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.board[data-size="hard"], .board[data-size="expert"] { --gap: 2px; padding: 4px; }
+
+.cell {
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-weight: 700;
+  font-size: clamp(11px, 4.6vw, 20px);
+  line-height: 1;
+  background: var(--accent-bg);
+  color: var(--text);
+  cursor: pointer;
+}
+.board[data-size="hard"] .cell, .board[data-size="expert"] .cell { font-size: clamp(10px, 3.4vw, 15px); border-radius: 2px; }
+.cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; position: relative; z-index: 1; }
+.cell.open { background: var(--surface-sub); cursor: default; }
+.cell.is-mine, .cell.is-wrong { background: var(--surface-sub); }
+.cell.is-exploded { background: #e24b4a; }
+
+.n1 { color: #185fa5; }
+.n2 { color: #3b6d11; }
+.n3 { color: #c0392b; }
+.n4 { color: #3c3489; }
+.n5 { color: #8a3b12; }
+.n6 { color: #0f6e56; }
+.n7 { color: #2c2c2a; }
+.n8 { color: #5f5e5a; }
+:root[data-theme="dark"] .n1 { color: #85b7eb; }
+:root[data-theme="dark"] .n2 { color: #97c459; }
+:root[data-theme="dark"] .n3 { color: #f09595; }
+:root[data-theme="dark"] .n4 { color: #afa9ec; }
+:root[data-theme="dark"] .n5 { color: #ef9f27; }
+:root[data-theme="dark"] .n6 { color: #5dcaa5; }
+:root[data-theme="dark"] .n7 { color: #f1efe8; }
+:root[data-theme="dark"] .n8 { color: #b4b2a9; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .n1 { color: #85b7eb; }
+  :root:not([data-theme="light"]) .n2 { color: #97c459; }
+  :root:not([data-theme="light"]) .n3 { color: #f09595; }
+  :root:not([data-theme="light"]) .n4 { color: #afa9ec; }
+  :root:not([data-theme="light"]) .n5 { color: #ef9f27; }
+  :root:not([data-theme="light"]) .n6 { color: #5dcaa5; }
+  :root:not([data-theme="light"]) .n7 { color: #f1efe8; }
+  :root:not([data-theme="light"]) .n8 { color: #b4b2a9; }
+}
+
+/* 示範盤(說明對話框內) */
+.board.demo { --gap: 2px; padding: 4px; }
+.board.demo .cell { font-size: 14px; cursor: default; }
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px 12px;
+}
+.overlay[hidden] { display: none; }
+.overlay-card {
+  position: sticky; /* 高級盤面很長:捲動時結算卡片留在畫面上 */
+  top: 16px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+}
+.overlay-title { font-size: 22px; font-weight: 700; margin: 0; }
+.overlay-info { text-align: center; font-size: 14px; }
+.overlay-info p { margin: 2px 0; }
+.overlay-info .overlay-xp { font-size: 18px; font-weight: 700; }
+.overlay-actions { display: flex; gap: 8px; }
+.overlay-actions .btn { white-space: nowrap; }
+
+.hint { font-size: 13px; color: var(--text-sub); text-align: center; margin: 12px 0 0; }

@@ -10,6 +10,7 @@ const KEY = {
   save: (gameId) => `${V1}save:${gameId}`,
   plays: `${V1}plays`,
   stats: `${V1}stats`,
+  imported: `${V1}imported`,
 };
 
 export class LocalStore {
@@ -119,7 +120,12 @@ export class LocalStore {
       }
       throw err;
     }
+    // 通知其他分頁「整份換掉了」(值每次不同才會觸發 storage 事件);寫不進去不影響匯入結果。
+    this.write(KEY.imported, `${Date.now()}-${Math.random()}`);
   }
+
+  // 整份匯入成功後寫入的標記 key:其他分頁收到它的 storage 事件就讓 profile 快取全部作廢。
+  isImportKey(key) { return key === KEY.imported; }
 
   // RS1 前的舊最佳分數(shared/storage.js 的 best:{game}),只讀不刪。
   async legacyBest(gameId) { return Number(this.read(`${PREFIX}best:${gameId}`, 0)) || 0; }

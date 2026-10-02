@@ -46,7 +46,7 @@
   position: absolute;
   inset: 0;
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.72); /* 加深,避免底下數字透出干擾(RS4) */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -59,6 +59,36 @@
 .overlay-actions { display: flex; gap: 8px; }
 
 .hint { font-size: 13px; color: var(--text-sub); text-align: center; margin: 12px 0 0; }
+.overlay-title { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+/* 小字加半透明底板,不受底下方塊與格線干擾(RS4) */
 .overlay-info { text-align: center; font-size: 14px; padding: 0 16px; }
+.overlay-info:not(:empty) { background: rgba(0, 0, 0, 0.6); border-radius: 8px; padding: 8px 14px; margin: 0 12px; }
 .overlay-info p { margin: 2px 0; }
 .overlay-info .overlay-xp { font-size: 18px; font-weight: 700; }
+
+/* 無效移動回饋(RS4):水平抖動 150ms;減少動態時改為邊框閃一下 */
+.board.shake { animation: shake 150ms ease-in-out; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board.shake { animation: flash 150ms linear; }
+  @keyframes flash {
+    0%, 100% { border-color: var(--border); }
+    50% { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  }
+}
+
+.confirm p { margin: 8px 0 0; }
+.confirm-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 16px; }
+
+/* 窄螢幕頂列(RS4):5 位數分數時「← 大廳」「? 玩法」仍不被擠壓;更長時頂列換行(shared .topbar) */
+@media (max-width: 400px) {
+  .topbar { gap: 8px; }
+  .topbar .btn { padding: 6px 10px; }
+  .stats { gap: 6px; }
+  .stat { min-width: 0; padding: 2px 8px; }
+  .stat-value { font-size: 14px; }
+}

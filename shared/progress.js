@@ -153,6 +153,11 @@ export function resultOnNewGame({ everWon, moves }) {
   return moves > 0 ? 'quit' : null;
 }
 
+// 按「新遊戲」要不要先確認(RS4):會記為放棄(quit)才問;不記錄或會結算為 win 的直接處理。
+export function needsQuitConfirm({ everWon, moves, settled }) {
+  return !settled && resultOnNewGame({ everWon, moves }) === 'quit';
+}
+
 // ---- 大廳排序(§10)----
 
 // 最近活動時間 = 最後結算時間與存檔 updated_at 較新者;都沒有 → null。

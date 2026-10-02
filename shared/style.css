@@ -4,7 +4,7 @@
   --surface-sub: #efede6;
   --text: #2c2c2a;
   --text-sub: #5f5e5a;
-  --text-muted: #888780;
+  --text-muted: #6b6a65; /* 對比 ≥4.5:bg 4.97、surface 5.42、surface-sub 4.63(IR5) */
   --border: rgba(0, 0, 0, 0.12);
   --accent: #185fa5;
   --accent-bg: #e6f1fb;
@@ -21,7 +21,7 @@
     --surface-sub: #30302e;
     --text: #f1efe8;
     --text-sub: #b4b2a9;
-    --text-muted: #888780;
+    --text-muted: #a09f97; /* 對比 ≥4.5:bg 6.42、surface 5.70、surface-sub 4.98(IR5) */
     --border: rgba(255, 255, 255, 0.14);
     --accent: #85b7eb;
     --accent-bg: #0c447c;
@@ -35,7 +35,7 @@
   --surface-sub: #30302e;
   --text: #f1efe8;
   --text-sub: #b4b2a9;
-  --text-muted: #888780;
+  --text-muted: #a09f97; /* 對比 ≥4.5:bg 6.42、surface 5.70、surface-sub 4.98(IR5) */
   --border: rgba(255, 255, 255, 0.14);
   --accent: #85b7eb;
   --accent-bg: #0c447c;
@@ -55,7 +55,7 @@ body {
 .page { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
 .page-narrow { max-width: 420px; }
 
-.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
 .brand { display: flex; align-items: center; gap: 8px; font-size: 22px; font-weight: 600; margin: 0; }
 
 .btn {
@@ -66,6 +66,10 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 6px 14px;
+  min-height: 40px; /* 點擊區高、寬皆 ≥ 40px,文字不換行(評估準則 B4,RS4) */
+  min-width: 40px;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   text-decoration: none;
   display: inline-flex;

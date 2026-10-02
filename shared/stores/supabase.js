@@ -9,6 +9,7 @@
 //   getStats(gameId) → stats | null        putStats(stats)   listStats() → { [game_id]: stats }
 //   exportAll() → { profile, stats, plays, saves }
 //   importAll(data)                        整份覆蓋;失敗須丟錯且原資料不變
+//   isImportKey(key) → boolean(選填,同步)  storage 事件的 key 是否為「整份匯入」標記;profile 據此讓快取全部作廢
 //   legacyBest(gameId) → number            RS1 前舊最佳分數(只有本機有;雲端實作回 0)
 //
 // 資料欄位(snake_case,與第二期 Postgres 欄位同名)見 workbook/plans/profile.md §3。

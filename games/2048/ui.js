@@ -1,10 +1,11 @@
 // 2048 畫面層:狀態、渲染、輸入。規則一律呼叫 logic.js(遊戲)與 shared/profile.js(紀錄),這裡不寫規則。
 import {
-  move, initState, stepState, undoState, continueState, toSave, fromSave, maxTile, overlayFor, isValidState,
+  move, initState, stepState, undoState, continueState, settleState, canUndo, isInvalidMove, shownBest,
+  toSave, fromSave, maxTile, overlayFor, isValidState,
 } from './logic.js';
 import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
-import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js';
+import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
 
@@ -40,6 +41,7 @@ async function startNew() {
 // 一局結束:依 §4.2 結算(每局只執行一次),結果顯示在遮罩。結算後不可復原、不可再移動。
 function finish(result) {
   const snap = { score: state.score, max_tile: maxTile(state.board) };
+  state = settleState(state); // 結算後不可移動、不可復原
   ended = { pending: true };
   const no = gameNo;
   render();
@@ -65,6 +67,10 @@ function newGame() {
   if (settle) return; // 結算遮罩只能按「確定」開新局
   if (ended) {
     if (!ended.pending) startNew(); // 已結算:直接開新局;結算中:忽略連點
+    return;
+  }
+  if (needsQuitConfirm(state)) {
+    $('quit-dlg').showModal(); // 防誤觸:會記為放棄的才問(RS4)
     return;
   }
   const result = resultOnNewGame(state);
@@ -97,11 +103,21 @@ function afterChange(prevWon) {
   }
 }
 
+// 無效移動回饋:棋盤水平抖動(減少動態時改為邊框閃一下,見 style.css)。
+function shake() {
+  const board = $('board');
+  board.classList.remove('shake');
+  void board.offsetWidth; // 重新觸發動畫
+  board.classList.add('shake');
+}
+
 function step(dir) {
   profile.input();
-  if (ended) return;
   const next = stepState(state, dir);
-  if (next === state) return;
+  if (next === state) {
+    if (isInvalidMove(state, dir)) shake();
+    return;
+  }
   const prevWon = state.won;
   state = next;
   afterChange(prevWon);
@@ -109,7 +125,7 @@ function step(dir) {
 
 function undo() {
   profile.input();
-  if (!state.prev || ended) return;
+  if (!canUndo(state)) return;
   const prevWon = state.won;
   state = undoState(state);
   afterChange(prevWon);
@@ -117,7 +133,7 @@ function undo() {
 
 function keepPlaying() {
   profile.input();
-  if (ended) return;
+  if (state.settled) return;
   state = continueState(state);
   afterChange(state.won);
 }
@@ -134,8 +150,8 @@ function render() {
     return `<div class="${tileClass(v)}${pop}" role="gridcell">${v || ''}</div>`;
   })).join('');
   $('score').textContent = state.score.toLocaleString();
-  $('best').textContent = Math.max(best, state.score).toLocaleString();
-  $('undo').disabled = !state.prev || !!ended;
+  $('best').textContent = shownBest(best, state.score).toLocaleString();
+  $('undo').disabled = !canUndo(state);
   renderOverlay();
 }
 
@@ -209,6 +225,16 @@ $('board').addEventListener('pointerup', (e) => {
 });
 
 $('new').addEventListener('click', newGame);
+$('board').addEventListener('animationend', () => $('board').classList.remove('shake'));
+$('quit-dlg').addEventListener('click', (e) => {
+  const act = e.target.closest('[data-act]')?.dataset.act;
+  if (!act) return;
+  $('quit-dlg').close();
+  if (act === 'quit' && !state.settled) {
+    finish('quit');
+    startNew();
+  }
+});
 $('undo').addEventListener('click', undo);
 $('overlay-actions').addEventListener('click', (e) => {
   const act = e.target.dataset.act;

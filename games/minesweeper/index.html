@@ -5,22 +5,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>踩地雷 · 遊戲集錦</title>
   <link rel="stylesheet" href="../../shared/style.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="page page-narrow">
     <header class="topbar">
       <a class="btn" href="../../">← 大廳</a>
-      <button class="btn" id="theme" type="button"></button>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">時間</div><div class="stat-value" id="seconds">0</div></div>
+        <div class="stat"><div class="stat-label">最佳</div><div class="stat-value" id="best">0</div></div>
+        <button class="btn" id="theme" type="button"></button>
+      </div>
     </header>
-    <div class="placeholder">
-      <p style="font-size:40px;margin:0" aria-hidden="true">💣</p>
-      <h1 style="font-size:20px">踩地雷</h1>
-      <p>規劃中,尚未開發。</p>
+    <div class="actions">
+      <button class="btn" id="new" type="button">↻ 新遊戲</button>
+      <select class="btn" id="difficulty" aria-label="難度">
+        <option value="normal">初級 9×9</option>
+        <option value="hard">中級 16×16</option>
+        <option value="expert">高級 16×30</option>
+      </select>
+      <button class="btn" id="flag-mode" type="button" aria-pressed="false">🚩 插旗模式</button>
     </div>
+    <p class="status" id="status" aria-live="polite"></p>
+    <div class="board-wrap">
+      <div class="board" id="board" role="grid" aria-label="踩地雷棋盤"></div>
+      <div class="overlay" id="overlay" hidden>
+        <div class="overlay-card">
+          <p class="overlay-title" id="overlay-title"></p>
+          <div class="overlay-info" id="overlay-info"></div>
+          <div class="overlay-actions" id="overlay-actions"></div>
+        </div>
+      </div>
+    </div>
+    <p class="hint">點擊翻開 · 右鍵 / 長按插旗 · 鍵盤:方向鍵移動、Enter 翻開、F 插旗</p>
   </main>
-  <script type="module">
-    import { bindThemeToggle } from '../../shared/theme.js';
-    bindThemeToggle(document.getElementById('theme'));
-  </script>
+  <script type="module" src="ui.js"></script>
 </body>
 </html>

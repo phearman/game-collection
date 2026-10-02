@@ -31,6 +31,14 @@
     </div>
     <p class="hint">方向鍵 / WASD · 手機滑動</p>
   </main>
+  <dialog class="help confirm" id="quit-dlg" aria-labelledby="quit-title">
+    <h2 class="help-title" id="quit-title">放棄這局?</h2>
+    <p>會記為放棄、不給 XP。</p>
+    <div class="confirm-actions">
+      <button class="btn" type="button" data-act="quit">放棄並重開</button>
+      <button class="btn" type="button" data-act="keep" autofocus>繼續玩</button>
+    </div>
+  </dialog>
   <script type="module" src="ui.js"></script>
 </body>
 </html>
