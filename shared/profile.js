@@ -5,9 +5,11 @@ import {
   timerInit, timerEvent, timerSeconds, validateImport, isValidGameSave, pushPlay, exportData, exportFileName, iso, PLAYS_LIMIT,
 } from './progress.js';
 import { isValidState as valid2048 } from '../games/2048/logic.js';
+import { isValidState as validTictactoe } from '../games/tictactoe/logic.js';
+import { isValidState as validSnake } from '../games/snake/logic.js';
 
 // 各遊戲存檔 state 的格式檢查(匯入驗證用)。
-export const STATE_VALIDATORS = { 2048: valid2048 };
+export const STATE_VALIDATORS = { 2048: valid2048, tictactoe: validTictactoe, snake: validSnake };
 
 // randomUUID 只在安全來源(https / localhost)可用;其他情況退回 getRandomValues 組 v4 UUID。
 function uuid() {

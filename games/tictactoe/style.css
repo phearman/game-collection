@@ -1,0 +1,28 @@
+.btn { white-space: nowrap; }
+.topbar { flex-wrap: wrap; gap: 10px; }
+.navigation, .stats { display: flex; gap: 8px; align-items: center; }
+.stats { margin-left: auto; }
+.stat { min-width: 60px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.actions .btn { flex: 1; }
+.difficulty { display: flex; gap: 6px; align-items: center; font-size: 14px; white-space: nowrap; }
+select { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px; }
+select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1 { font-size: 22px; margin: 20px 0 0; }
+h1 span { font-size: 13px; font-weight: 400; color: var(--text-sub); white-space: nowrap; }
+.status { color: var(--text-sub); min-height: 26px; margin: 4px 0 12px; }
+.board-wrap { position: relative; }
+.board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.cell { aspect-ratio: 1; min-width: 0; border: 2px solid transparent; border-radius: 8px; font: inherit; font-size: clamp(32px, 12vw, 56px); line-height: 1; font-weight: 700; display: flex; align-items: center; justify-content: center; color: var(--text); background: var(--surface-sub); cursor: pointer; touch-action: manipulation; }
+.cell.player { color: var(--accent); }
+.cell.winner { border-color: var(--accent); background: var(--accent-bg); }
+.cell:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+.cell[aria-disabled="true"] { cursor: default; }
+.cell:not([aria-disabled="true"]):hover { border-color: var(--accent); }
+.overlay { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; background: rgba(0, 0, 0, 0.86); color: #fff; text-align: center; }
+.overlay[hidden] { display: none; }
+.overlay-title { font-size: 26px; font-weight: 700; margin: 0; }
+.overlay-info p { margin: 4px 0; }
+.overlay-xp { font-size: 18px; font-weight: 700; }
+.hint { font-size: 13px; text-align: center; color: var(--text-sub); }
+.demo-board .cell { cursor: default; font-size: 32px; }

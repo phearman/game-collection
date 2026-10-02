@@ -11,7 +11,7 @@ export const IDLE_MS = 60_000;
 export const ACHIEVEMENT_XP = 30;
 export const DAILY_FIRST_XP = 5;
 
-export const RESULTS = ['win', 'lose', 'quit'];
+export const RESULTS = ['win', 'lose', 'quit', 'draw'];
 export const DIFFICULTY_MULT = { normal: 1, hard: 1.5, expert: 2 };
 
 // ---- 日期 ----
@@ -133,7 +133,7 @@ export function migrateLegacyBest(stats, gameId, legacyBest) {
 
 // 各遊戲累計在 stats.detail 的欄位(只在完成局更新)。
 function nextDetail(gameId, detail, result) {
-  if (gameId === 'tictactoe' && result !== 'quit') {
+  if (gameId === 'tictactoe' && ['win', 'draw', 'lose'].includes(result)) {
     return { ...detail, unbeaten: result === 'lose' ? 0 : (detail.unbeaten ?? 0) + 1 };
   }
   return detail;

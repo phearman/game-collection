@@ -5,22 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>貪食蛇 · 遊戲集錦</title>
   <link rel="stylesheet" href="../../shared/style.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="page page-narrow">
     <header class="topbar">
       <a class="btn" href="../../">← 大廳</a>
-      <button class="btn" id="theme" type="button"></button>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">分數</div><div class="stat-value" id="score">0</div></div>
+        <div class="stat"><div class="stat-label">最佳</div><div class="stat-value" id="best">0</div></div>
+        <button class="btn" id="theme" type="button"></button>
+      </div>
     </header>
-    <div class="placeholder">
-      <p style="font-size:40px;margin:0" aria-hidden="true">🐍</p>
-      <h1 style="font-size:20px">貪食蛇</h1>
-      <p>規劃中,尚未開發。</p>
+    <div class="actions">
+      <button class="btn" id="new" type="button">↻ 新遊戲</button>
+      <button class="btn" id="pause" type="button">⏸ 暫停</button>
+      <select class="btn" id="difficulty" aria-label="難度">
+        <option value="normal">普通</option>
+        <option value="hard">困難</option>
+        <option value="expert">專家</option>
+      </select>
     </div>
+    <div class="board-wrap" id="board-wrap">
+      <div class="board" id="board" role="grid" aria-label="貪食蛇棋盤"></div>
+      <div class="overlay" id="overlay" hidden>
+        <p class="overlay-title" id="overlay-title"></p>
+        <div class="overlay-info" id="overlay-info"></div>
+        <div class="overlay-actions" id="overlay-actions"></div>
+      </div>
+    </div>
+    <p class="hint">方向鍵 / WASD · 手機滑動 · P 暫停</p>
   </main>
-  <script type="module">
-    import { bindThemeToggle } from '../../shared/theme.js';
-    bindThemeToggle(document.getElementById('theme'));
-  </script>
+  <script type="module" src="ui.js"></script>
 </body>
 </html>
