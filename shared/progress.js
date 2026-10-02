@@ -131,10 +131,18 @@ export function migrateLegacyBest(stats, gameId, legacyBest) {
   return { ...stats, [gameId]: { ...cur, best_score: best } };
 }
 
-// 各遊戲累計在 stats.detail 的欄位(只在完成局更新)。
-function nextDetail(gameId, detail, result) {
+export const WORDLE_RECENT = 10;
+
+// 各遊戲累計在 stats.detail 的欄位。play = 本局 detail。
+//   tictactoe:unbeaten 連續不敗(只算完成局)
+//   wordle:recent 最近 WORDLE_RECENT 局的答案(新到舊,含 quit;出題時避開)
+function nextDetail(gameId, detail, result, play = {}) {
   if (gameId === 'tictactoe' && ['win', 'draw', 'lose'].includes(result)) {
     return { ...detail, unbeaten: result === 'lose' ? 0 : (detail.unbeaten ?? 0) + 1 };
+  }
+  if (gameId === 'wordle' && typeof play.answer === 'string') {
+    const prev = Array.isArray(detail.recent) ? detail.recent.filter((w) => typeof w === 'string') : [];
+    return { ...detail, recent: [play.answer, ...prev].slice(0, WORDLE_RECENT) };
   }
   return detail;
 }
@@ -194,7 +202,7 @@ export function applyFinish(input) {
     best_score: Math.max(prev.best_score || 0, score),
     total_sec: prev.total_sec + durationSec,
     last_played_at: iso(endedAt),
-    detail: nextDetail(gameId, prev.detail ?? {}, result),
+    detail: nextDetail(gameId, prev.detail ?? {}, result, detail),
   };
   const stats = { ...input.stats, [gameId]: gameStats };
 
