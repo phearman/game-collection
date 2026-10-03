@@ -1,7 +1,7 @@
 // 2048 畫面層:狀態、渲染、輸入。規則一律呼叫 logic.js(遊戲)與 shared/profile.js(紀錄),這裡不寫規則。
 import {
   move, initState, stepState, undoState, continueState, settleState, canUndo, isInvalidMove, shownBest,
-  toSave, fromSave, maxTile, overlayFor, isValidState,
+  toSave, fromSave, maxTile, overlayFor, isValidState, suggestMove,
 } from './logic.js';
 import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
@@ -10,8 +10,12 @@ import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
 import { xpBreakdownHtml } from '../../shared/xp-explain.js';
 import { DEMO_STUCK_LEFT, DEMO_FULL } from './demo.js';
+import { load, save } from '../../shared/storage.js';
 
 const GAME_ID = '2048';
+const MODE_KEY = 'mode:2048'; // 上次選的模式:normal / kids(RS6 小朋友模式 = 輔助局)
+const modePref = () => (load(MODE_KEY, 'normal') === 'kids' ? 'kids' : 'normal');
+let pendingMode = null; // 確認放棄後要切換的模式
 const $ = (id) => document.getElementById(id);
 const profile = await createProfile({ store: new LocalStore() });
 
@@ -26,8 +30,8 @@ let gameNo = 0; // 每開一局 +1;非同步結算回來時,局號不同就不�
 let queue = Promise.resolve();
 const run = (fn) => { queue = queue.then(fn).catch((e) => console.error(e)); return queue; };
 
-async function startNew() {
-  state = initState();
+async function startNew(mode = modePref()) {
+  state = initState(Math.random, { kids: mode === 'kids' });
   gameNo++;
   ended = null;
   settle = false;
@@ -42,7 +46,7 @@ async function startNew() {
 
 // 一局結束:依 §4.2 結算(每局只執行一次),結果顯示在遮罩。結算後不可復原、不可再移動。
 function finish(result) {
-  const snap = { score: state.score, max_tile: maxTile(state.board) };
+  const snap = { score: state.score, max_tile: maxTile(state.board), assist: !!state.kids };
   state = settleState(state); // 結算後不可移動、不可復原
   ended = { pending: true };
   const no = gameNo;
@@ -50,15 +54,16 @@ function finish(result) {
   return run(async () => {
     const bestBefore = best;
     const out = await profile.finishPlay(GAME_ID, {
-      result, score: snap.score, difficulty: 'normal', detail: { max_tile: snap.max_tile },
+      result, score: snap.score, difficulty: 'normal', detail: { max_tile: snap.max_tile }, assist: snap.assist,
     });
-    best = Math.max(best, snap.score);
+    if (!snap.assist) best = Math.max(best, snap.score); // 輔助局不刷新最佳
     if (no !== gameNo) return;
     ended = {
       xp: out.xpGained, // 已含局中即時成就 XP(profile 不重複加總)
       xpBreakdown: out.xpBreakdown,
       newAchievements: out.newAchievements,
       isBest: out.play.is_best,
+      assist: snap.assist,
       bestBefore,
       score: snap.score,
     };
@@ -66,13 +71,15 @@ function finish(result) {
   });
 }
 
-function newGame() {
+// mode:切換模式時帶入(normal / kids);沒帶就沿用上次的模式。
+function newGame(mode) {
   if (settle) return; // 結算遮罩只能按「確定」開新局
   if (ended) {
-    if (!ended.pending) startNew(); // 已結算:直接開新局;結算中:忽略連點
+    if (!ended.pending) startNew(mode); // 已結算:直接開新局;結算中:忽略連點
     return;
   }
   if (needsQuitConfirm(state)) {
+    pendingMode = mode ?? null;
     $('quit-dlg').showModal(); // 防誤觸:會記為放棄的才問(RS4)
     return;
   }
@@ -83,7 +90,7 @@ function newGame() {
     return;
   }
   if (result) finish(result);
-  startNew();
+  startNew(mode);
 }
 
 function afterChange(prevWon) {
@@ -92,7 +99,7 @@ function afterChange(prevWon) {
     const max_tile = maxTile(state.board);
     const no = gameNo;
     run(async () => {
-      await profile.unlock(GAME_ID, { max_tile });
+      await profile.unlock(GAME_ID, { max_tile, assist: !!state.kids }); // 小朋友模式不解 2048 專屬成就
       if (no !== gameNo) return;
       live = profile.liveRewards(GAME_ID);
       renderOverlay();
@@ -147,13 +154,27 @@ function tileClass(v) {
   return `tile ${color}${v >= 1024 ? ' big' : ''}`;
 }
 
+const ARROW = { left: '⬅', right: '➡', up: '⬆', down: '⬇' };
+
+// 小朋友模式:建議方向 + 只標建議方向實際會合併的方塊(依真實滑動規則,見 logic.suggestMove)。
+function suggestion() {
+  if (!state.kids || state.settled || state.over || (state.won && !state.keepPlaying)) return null;
+  return suggestMove(state.board);
+}
+
 function render() {
+  const hint = suggestion();
+  const marked = new Set((hint?.pairs ?? []).flat().map(([r, c]) => `${r},${c}`));
   $('board').innerHTML = state.board.flatMap((row, r) => row.map((v, c) => {
     const pop = state.fresh === `${r},${c}` ? ' pop' : '';
-    return `<div class="${tileClass(v)}${pop}" role="gridcell">${v || ''}</div>`;
+    const mark = marked.has(`${r},${c}`) ? ' merge-hint' : '';
+    return `<div class="${tileClass(v)}${pop}${mark}" role="gridcell">${v || ''}</div>`;
   })).join('');
+  $('suggest').hidden = !hint;
+  $('suggest').innerHTML = hint ? `<span class="arrow" aria-hidden="true">${ARROW[hint.dir]}</span><span>建議:${hint.reason}</span>` : '';
+  $('mode').value = state.kids ? 'kids' : 'normal';
   $('score').textContent = state.score.toLocaleString();
-  $('best').textContent = shownBest(best, state.score).toLocaleString();
+  $('best').textContent = (state.kids ? best : shownBest(best, state.score)).toLocaleString(); // 小朋友模式不刷新最佳
   $('undo').disabled = !canUndo(state);
   renderOverlay();
 }
@@ -173,9 +194,12 @@ function infoHtml(kind) {
   if (ended.pending) return '<p>結算中…</p>';
   const lines = [`<p class="overlay-xp">本局 +${ended.xp} XP</p>`, xpBreakdownHtml(ended.xpBreakdown)];
   if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
-  lines.push(ended.isBest
-    ? '<p>🎉 新的最佳分數!</p>'
-    : `<p>距最佳 ${ended.bestBefore.toLocaleString()} 還差 ${(ended.bestBefore - ended.score).toLocaleString()}</p>`);
+  if (ended.assist) lines.push('<p class="overlay-assist">🧸 小朋友模式(輔助局):不刷新最佳</p>');
+  else {
+    lines.push(ended.isBest
+      ? '<p>🎉 新的最佳分數!</p>'
+      : `<p>距最佳 ${ended.bestBefore.toLocaleString()} 還差 ${(ended.bestBefore - ended.score).toLocaleString()}</p>`);
+  }
   return lines.join('');
 }
 
@@ -227,16 +251,33 @@ $('board').addEventListener('pointerup', (e) => {
   step(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
 });
 
-$('new').addEventListener('click', newGame);
+$('new').addEventListener('click', () => newGame()); // ⛔ 直接傳 newGame:click 事件會被當成模式參數(H2)
 $('board').addEventListener('animationend', () => $('board').classList.remove('shake'));
 $('quit-dlg').addEventListener('click', (e) => {
   const act = e.target.closest('[data-act]')?.dataset.act;
   if (!act) return;
   $('quit-dlg').close();
+  const mode = pendingMode;
+  pendingMode = null;
   if (act === 'quit' && !state.settled) {
     finish('quit');
-    startNew();
+    startNew(mode ?? undefined);
+  } else {
+    $('mode').value = state.kids ? 'kids' : 'normal'; // 不放棄:模式選單還原
   }
+});
+$('quit-dlg').addEventListener('cancel', () => {
+  pendingMode = null;
+  $('mode').value = state.kids ? 'kids' : 'normal';
+});
+$('mode').addEventListener('change', (e) => {
+  const mode = e.target.value === 'kids' ? 'kids' : 'normal';
+  if (ended?.pending || settle) {
+    e.target.value = state.kids ? 'kids' : 'normal';
+    return;
+  }
+  save(MODE_KEY, mode);
+  newGame(mode);
 });
 $('undo').addEventListener('click', undo);
 $('overlay-actions').addEventListener('click', (e) => {
@@ -277,7 +318,8 @@ setupHelp({
       <li>「復原」可退回上一步;「新遊戲」重新開局。</li>
       <li><b>勝利</b>:合出一個 2048 方塊(可選擇繼續玩)。<b>分數</b> = 每次合併出的數字加總(2+2→4 得 4 分);<b>最佳</b> = 單局最高分;步數、時間都不計分。</li>
     </ol>
-    <p>訣竅:把最大的方塊固定在一個角落,盡量只用兩、三個方向。</p>`,
+    <p>訣竅:把最大的方塊固定在一個角落,盡量只用兩、三個方向。</p>
+    <p>小朋友模式:棋盤上方會提示建議方向,並框出往那邊會合併的方塊;復原可以一直按。這是<b>輔助局</b>:不刷新最佳、XP 打對折。</p>`,
   demo: {
     render: (board) => `<div class="board">${board.flatMap((r) => r.map((v) => `<div class="${tileClass(v)}">${v || ''}</div>`)).join('')}</div>`,
     steps: [

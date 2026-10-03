@@ -92,3 +92,10 @@
   .stat { min-width: 0; padding: 2px 8px; }
   .stat-value { font-size: 14px; }
 }
+
+/* 小朋友模式(RS6):建議方向與會合併的方塊 */
+#mode { flex: 0 0 auto; }
+.suggest { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 32px; margin: 0 0 8px; font-size: 15px; color: var(--text); }
+.suggest .arrow { font-size: 22px; line-height: 1; color: var(--accent); }
+.tile.merge-hint { outline: 3px solid var(--accent); outline-offset: -3px; }
+.suggest[hidden] { display: none; }

@@ -3,7 +3,7 @@ import { createProfile } from '../shared/profile.js';
 import { LocalStore } from '../shared/stores/local.js';
 import { bindThemeToggle } from '../shared/theme.js';
 import { ACHIEVEMENTS, xpBreakdown } from '../shared/progress.js';
-import { XP_EXAMPLES } from '../shared/xp-explain.js';
+import { XP_EXAMPLES, signedXp } from '../shared/xp-explain.js';
 
 const $ = (id) => document.getElementById(id);
 const profile = await createProfile({ store: new LocalStore() });
@@ -55,7 +55,7 @@ async function render() {
   $('plays').innerHTML = table(
     [['時間'], ['遊戲'], ['結果'], ['分數', 1], ['時長', 1], ['XP', 1]],
     s.plays.map((p) => [
-      mdhm(p.ended_at), titles[p.game_id] ?? esc(p.game_id), (RESULT[p.result] ?? esc(p.result)) + (p.is_best ? ' 🎉' : ''),
+      mdhm(p.ended_at), titles[p.game_id] ?? esc(p.game_id), (RESULT[p.result] ?? esc(p.result)) + (p.is_best ? ' 🎉' : '') + (p.detail?.assist ? ' · 輔助' : ''),
       p.score.toLocaleString(), ms(p.duration_sec), `+${p.xp_gained}`,
     ]),
     '還沒有紀錄。',
@@ -115,7 +115,7 @@ await render();
 // 「XP 怎麼算?」(RS5):範例由 xpBreakdown 實算;網址帶 #xp 時自動展開並捲到該處。
 $('xp-examples').innerHTML = XP_EXAMPLES.map(({ title, args }) => {
   const b = xpBreakdown(args);
-  return `<li>${title}<br><span class="xp-help-calc">${b.items.map((it) => `${it.label} +${it.xp}`).join(' + ')} = <b>${b.total} XP</b></span></li>`;
+  return `<li>${title}<br><span class="xp-help-calc">${b.items.map((it) => `${it.label} ${signedXp(it.xp)}`).join(' + ')} = <b>${b.total} XP</b></span></li>`;
 }).join('');
 const openXpHelp = () => {
   if (location.hash !== '#xp') return;

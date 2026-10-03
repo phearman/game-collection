@@ -127,8 +127,12 @@ export function maxTile(board) {
   return Math.max(0, ...board.flat());
 }
 
-export function initState(rng = Math.random) {
-  return { board: newBoard(rng), score: 0, prev: null, won: false, everWon: false, keepPlaying: false, over: false, moves: 0, fresh: null };
+// kids = 小朋友模式(RS6,輔助局):復原不限步(history,上限 HISTORY_LIMIT)、顯示建議方向。一般模式維持只退一步。
+export const HISTORY_LIMIT = 500;
+
+export function initState(rng = Math.random, { kids = false } = {}) {
+  const state = { board: newBoard(rng), score: 0, prev: null, won: false, everWon: false, keepPlaying: false, over: false, moves: 0, fresh: null };
+  return kids ? { ...state, kids: true, history: [] } : state;
 }
 
 function findNewTile(beforeAdd, afterAdd) {
@@ -157,11 +161,13 @@ export function stepState(state, dir, rng = Math.random) {
   if (!r.moved) return state;
   const placed = addRandomTile(r.board, rng);
   const won = state.won || hasWon(placed);
+  const snap = { board: cloneBoard(state.board), score: state.score, won: state.won, keepPlaying: state.keepPlaying };
   return {
     ...state,
+    ...(state.kids ? { history: [...(state.history ?? []), snap].slice(-HISTORY_LIMIT) } : {}),
     board: placed,
     score: state.score + r.gained,
-    prev: { board: cloneBoard(state.board), score: state.score, won: state.won, keepPlaying: state.keepPlaying },
+    prev: snap,
     won,
     everWon: !!state.everWon || won,
     over: !canMove(placed),
@@ -170,13 +176,19 @@ export function stepState(state, dir, rng = Math.random) {
   };
 }
 
-// 復原:一次只退一步;結算後不可復原,未結算的勝利遮罩狀態仍可(RS1 起)。
+// 復原:一般模式一次只退一步;小朋友模式可連續退到 history 用完。結算後不可復原,未結算的勝利遮罩狀態仍可(RS1 起)。
 export function canUndo(state) {
-  return !!state.prev && !state.settled;
+  if (state.settled) return false;
+  return state.kids ? (state.history?.length ?? 0) > 0 : !!state.prev;
 }
 
 export function undoState(state) {
   if (!canUndo(state)) return state;
+  if (state.kids) {
+    const history = state.history.slice(0, -1);
+    const { board, score, won, keepPlaying } = state.history.at(-1);
+    return { ...state, board: cloneBoard(board), score, won, keepPlaying, over: false, history, prev: history.at(-1) ?? null, fresh: null };
+  }
   const { board, score, won, keepPlaying } = state.prev;
   return { ...state, board: cloneBoard(board), score, won, keepPlaying, over: false, prev: null, fresh: null };
 }
@@ -199,14 +211,15 @@ export function shownBest(best, score) {
 // 存檔(續玩):只存可序列化欄位;over 由棋盤重算。
 export function toSave(state) {
   const { board, score, prev, won, everWon, keepPlaying, moves } = state;
-  return { board, score, prev, won, everWon, keepPlaying, moves };
+  const saved = { board, score, prev, won, everWon, keepPlaying, moves };
+  return state.kids ? { ...saved, kids: true, history: state.history ?? [] } : saved;
 }
 
 export function fromSave(saved) {
   const prev = saved.prev
     ? { board: saved.prev.board, score: saved.prev.score, won: !!saved.prev.won, keepPlaying: !!saved.prev.keepPlaying }
     : null;
-  return {
+  const state = {
     board: saved.board,
     score: saved.score,
     prev,
@@ -217,6 +230,8 @@ export function fromSave(saved) {
     moves: saved.moves ?? 0,
     fresh: null,
   };
+  // 小朋友模式(輔助局)標記續玩後仍在
+  return saved.kids ? { ...state, kids: true, history: (saved.history ?? []).map((h) => ({ ...h, board: cloneBoard(h.board) })) } : state;
 }
 
 // 存檔 state 格式檢查(匯入驗證與載入防呆;不合格的存檔不還原)。
@@ -225,12 +240,77 @@ const isCount = (v) => Number.isInteger(v) && v >= 0;
 const isBoard = (b) => Array.isArray(b) && b.length === SIZE
   && b.every((row) => Array.isArray(row) && row.length === SIZE && row.every(isCount));
 
+const isSnap = (p) => !!p && typeof p === 'object' && isBoard(p.board) && isCount(p.score) && isBool(p.won) && isBool(p.keepPlaying);
+
 export function isValidState(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return false;
   if (!isBoard(s.board) || !isCount(s.score) || !isBool(s.won) || !isBool(s.keepPlaying)) return false;
   if (s.everWon !== undefined && !isBool(s.everWon)) return false;
   if (s.moves !== undefined && !isCount(s.moves)) return false;
+  if (s.kids !== undefined && !isBool(s.kids)) return false;
+  if (s.history !== undefined && !(s.kids === true && Array.isArray(s.history) && s.history.length <= HISTORY_LIMIT && s.history.every(isSnap))) return false;
   if (s.prev === null || s.prev === undefined) return true;
-  const p = s.prev;
-  return typeof p === 'object' && isBoard(p.board) && isCount(p.score) && isBool(p.won) && isBool(p.keepPlaying);
+  return isSnap(s.prev);
+}
+
+// ---- 小朋友模式的建議方向(RS6 §3.2)----
+
+const DIRS = ['left', 'down', 'right', 'up']; // 同分時的優先序
+const EMPTY_WEIGHT = 2;
+const CORNER_BONUS = 8;
+const DIR_NAME = { left: '左', right: '右', up: '上', down: '下' };
+
+// 某方向上每一條線的格子座標,依滑動方向由前到後(最靠牆的在前)。
+function lines(n, dir) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const line = [];
+    for (let j = 0; j < n; j++) {
+      if (dir === 'left') line.push([i, j]);
+      if (dir === 'right') line.push([i, n - 1 - j]);
+      if (dir === 'up') line.push([j, i]);
+      if (dir === 'down') line.push([n - 1 - j, i]);
+    }
+    out.push(line);
+  }
+  return out;
+}
+
+// 這個方向實際會合併的方塊對 [[r,c],[r,c]];依真實規則:靠移動方向的先合、每塊每回合只合一次。
+export function mergePairs(board, dir) {
+  const pairs = [];
+  for (const line of lines(board.length, dir)) {
+    const cells = line.filter(([r, c]) => board[r][c] !== 0);
+    for (let i = 0; i + 1 < cells.length; i++) {
+      const [a, b] = [cells[i], cells[i + 1]];
+      if (board[a[0]][a[1]] === board[b[0]][b[1]]) {
+        pairs.push([a, b]);
+        i++;
+      }
+    }
+  }
+  return pairs;
+}
+
+function cornerMax(board) {
+  const n = board.length;
+  const m = maxTile(board);
+  return [[0, 0], [0, n - 1], [n - 1, 0], [n - 1, n - 1]].some(([r, c]) => board[r][c] === m);
+}
+
+// 建議方向:四個有效方向各模擬一步,評分 = 合併得分 + 空格數 × EMPTY_WEIGHT + 最大方塊在角落 CORNER_BONUS;
+// 同分依 左 > 下 > 右 > 上。→ { dir, pairs, gained, reason } | null(沒有有效方向)
+export function suggestMove(board) {
+  let best = null;
+  for (const dir of DIRS) {
+    const r = move(board, dir);
+    if (!r.moved) continue;
+    const score = r.gained + emptyCells(r.board).length * EMPTY_WEIGHT + (cornerMax(r.board) ? CORNER_BONUS : 0);
+    if (!best || score > best.score) best = { dir, score, gained: r.gained };
+  }
+  if (!best) return null;
+  const pairs = mergePairs(board, best.dir);
+  const name = DIR_NAME[best.dir];
+  const reason = pairs.length ? `往${name}可以合 ${pairs.length} 組` : `往${name}走(這步沒有可以合的)`;
+  return { dir: best.dir, pairs, gained: best.gained, reason };
 }

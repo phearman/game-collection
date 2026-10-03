@@ -121,3 +121,23 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
   .stat { min-width: 0; padding: 2px 8px; }
   .stat-value { font-size: 14px; }
 }
+
+/* 提示(RS9):輔助局才顯示。精簡成分頁式:三鈕 + 一格固定高度的內容(只顯示最後按的那種)(H4) */
+.hints { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 8px; margin: 0 0 8px; }
+.hint-buttons { display: flex; gap: 6px; }
+.hint-buttons .btn { flex: 1 1 0; min-width: 0; min-height: 40px; padding: 4px 6px; font-size: 13px; }
+.hint-buttons .btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.hint-body { min-height: 40px; margin-top: 6px; display: flex; align-items: center; justify-content: center; }
+.hint-body > [hidden] { display: none; }
+.hint-letters { font-family: var(--mono); font-size: 20px; font-weight: 700; letter-spacing: 6px; text-transform: uppercase; margin: 0; }
+.hint-sentence { margin: 0; font-size: 13px; line-height: 1.4; text-align: center; overflow-wrap: anywhere; }
+.hint-sentence .zh { color: var(--text-sub); margin-left: 6px; white-space: nowrap; }
+.hint-candidates { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; }
+.hint-candidates .btn { min-height: 40px; padding: 2px 8px; font-size: 13px; text-transform: uppercase; font-family: var(--mono); }
+.hint-note { flex-basis: 100%; margin: 0; font-size: 11px; color: var(--text-sub); text-align: center; }
+#hint[hidden] { display: none; } /* .btn 的 display 會蓋過 hidden 屬性 */
+/* 提示開著時縮小格子、鍵盤略矮,讓 375×667 也看得到整個鍵盤 */
+.page.hinting .board-wrap { max-width: min(300px, calc((100vh - 450px) * 0.8)); max-width: min(300px, calc((100dvh - 450px) * 0.8)); }
+.page.hinting .board-wrap .cell { font-size: clamp(14px, 6vw, 26px); }
+.page.hinting .keyboard { margin-top: 10px; }
+.page.hinting .key { min-height: 40px; }

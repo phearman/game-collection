@@ -167,6 +167,15 @@ export async function createProfile({
       return writeSave(gameId, state);
     },
 
+    // 丟棄不記錄的局(例:Wordle 只用了提示、沒猜過就重開):刪存檔、清快取與計時,下一局從 0 起算。
+    async discardSave(gameId) {
+      loaded.delete(gameId);
+      savesDirty.delete(gameId);
+      live.delete(gameId);
+      if (timer?.gameId === gameId) timer = null;
+      await store.deleteSave(gameId);
+    },
+
     // 開始計時:有載入的存檔就接著它的秒數與開局時間,否則從 0 起算。分頁目前隱藏就先暫停。
     startTimer(gameId) {
       const save = loaded.get(gameId);
@@ -192,14 +201,14 @@ export async function createProfile({
       return structuredClone(live.get(gameId) ?? noLive());
     },
 
-    async finishPlay(gameId, { result, score = 0, difficulty = 'normal', detail = {} }) {
+    async finishPlay(gameId, { result, score = 0, difficulty = 'normal', detail = {}, assist = false }) {
       const t = now();
       const save = loaded.get(gameId);
       const running = timer?.gameId === gameId;
       const out = applyFinish({
         profile: await getProfile(),
         stats: await listStats(),
-        gameId, result, score, difficulty, detail,
+        gameId, result, score, difficulty, detail, assist,
         startedAt: running ? timer.startedAt : (save ? Date.parse(save.started_at) : t),
         endedAt: t,
         durationSec: running ? elapsed() : (save?.active_sec ?? 0),

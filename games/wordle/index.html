@@ -22,10 +22,24 @@
       <select class="btn" id="difficulty" aria-label="難度">
         <option value="normal">普通</option>
         <option value="hard">困難</option>
+        <option value="assist">輔助</option>
       </select>
+      <button class="btn" id="hint" type="button" hidden>💡 提示</button>
       <button class="btn" id="contrast" type="button" aria-pressed="false">◐ 高對比</button>
     </div>
     <p class="toast" id="toast" role="status" aria-live="polite"></p>
+    <section class="hints" id="hints" aria-label="提示" hidden>
+      <div class="hint-buttons">
+        <button class="btn" type="button" data-hint="letters">🔤 字母</button>
+        <button class="btn" type="button" data-hint="sentence">📖 例句</button>
+        <button class="btn" type="button" data-hint="candidates">🎯 候選</button>
+      </div>
+      <div class="hint-body" id="hint-body">
+        <p class="hint-letters" id="hint-letters" hidden></p>
+        <p class="hint-sentence" id="hint-sentence" hidden></p>
+        <div class="hint-candidates" id="hint-candidates" hidden></div>
+      </div>
+    </section>
     <div class="board-wrap" id="board-wrap" tabindex="-1">
       <div class="board" id="board" role="grid" aria-label="Wordle 猜字格"></div>
       <div class="overlay" id="overlay" hidden>
@@ -42,6 +56,14 @@
     <div class="confirm-actions">
       <button class="btn" type="button" data-act="quit">放棄並重開</button>
       <button class="btn" type="button" data-act="keep" autofocus>繼續玩</button>
+    </div>
+  </dialog>
+  <dialog class="help confirm" id="assist-dlg" aria-labelledby="assist-title">
+    <h2 class="help-title" id="assist-title">使用提示?</h2>
+    <p>使用提示後本局改為輔助局(不刷新最佳、XP 打對折),確定?</p>
+    <div class="confirm-actions">
+      <button class="btn" type="button" data-act="assist">確定使用提示</button>
+      <button class="btn" type="button" data-act="keep" autofocus>先不要</button>
     </div>
   </dialog>
   <script type="module" src="ui.js"></script>

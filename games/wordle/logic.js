@@ -65,8 +65,9 @@ export function pickAnswer(rng = Math.random, recent = [], answers = ANSWERS) {
 //   guesses 已送出的猜測(皆為合法單字)
 //   current 輸入中的字母(未送出,不存檔)
 
-export function initState(rng = Math.random, difficulty = 'normal', recent = []) {
-  return {
+// assist = 輔助局(RS9):選「輔助」模式開局,或一般/困難局確認使用提示後轉入;一旦成立維持到局末。
+export function initState(rng = Math.random, difficulty = 'normal', recent = [], { assist = false } = {}) {
+  const state = {
     answer: pickAnswer(rng, recent),
     guesses: [],
     current: '',
@@ -74,6 +75,7 @@ export function initState(rng = Math.random, difficulty = 'normal', recent = [])
     over: false,
     won: false,
   };
+  return assist ? { ...state, assist: true, revealed: [], candidates: null } : state;
 }
 
 // 輸入字母 / 刪除:結束後或已滿 5 字 ⇒ 原 state。
@@ -131,14 +133,87 @@ export function overlayFor({ over, won }) {
   return null;
 }
 
+// ---- 提示與輔助局(RS9 §2)----
+
+// 轉為輔助局(不可逆;已是輔助局則原樣回傳)。困難模式的限制不變。
+export function assistState(state) {
+  if (state.assist) return state;
+  return { ...state, assist: true, revealed: [], candidates: null };
+}
+
+// 已確定的位置:任何一次猜測得到綠色的位置。
+function greenPositions({ guesses, answer }) {
+  const set = new Set();
+  for (const g of guesses) evaluate(g, answer).forEach((m, i) => { if (m === 'correct') set.add(i); });
+  return set;
+}
+
+// 字母挖空:回傳 5 格,已綠或已揭露的顯示字母,其餘為 null(畫面顯示 _)。
+export function letterHint(state) {
+  const known = greenPositions(state);
+  for (const i of state.revealed ?? []) known.add(i);
+  return [...state.answer].map((ch, i) => (known.has(i) ? ch : null));
+}
+
+// 還能再揭露:至少要留 1 格不揭。
+export function canReveal(state) {
+  return !!state.assist && !state.over && letterHint(state).filter((x) => x === null).length > 1;
+}
+
+// 多揭露一個「還沒猜綠、也還沒揭露」的字母(由左而右)。
+export function revealState(state) {
+  if (!canReveal(state)) return state;
+  const hint = letterHint(state);
+  const i = hint.findIndex((x) => x === null);
+  return { ...state, revealed: [...(state.revealed ?? []), i] };
+}
+
+// 符合目前所有線索:對每個已猜的字,w 當答案時著色要與真實著色完全相同;困難模式另須合困難限制。
+export function fitsClues(w, { guesses, answer, difficulty }) {
+  if (!guesses.every((g) => evaluate(g, w).join() === evaluate(g, answer).join())) return false;
+  return difficulty !== 'hard' || hardModeError(guesses, answer, w) === null;
+}
+
+export const CANDIDATE_COUNT = 4;
+
+// 候選單字:答案 + 最多 3 個符合線索、還沒猜過的 ANSWERS;不足就少列(⛔ 用矛盾字湊數)。
+// 同一局固定:已有 candidates 就原樣回傳(重開提示不重抽)。rng 可注入。
+export function candidatesState(state, rng = Math.random, answers = ANSWERS) {
+  if (!state.assist || state.over || state.candidates) return state;
+  const tried = new Set(state.guesses);
+  const pool = answers.filter((w) => w !== state.answer && !tried.has(w) && fitsClues(w, state));
+  const picked = [state.answer];
+  while (picked.length < CANDIDATE_COUNT && pool.length) picked.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
+  for (let i = picked.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [picked[i], picked[j]] = [picked[j], picked[i]];
+  }
+  return { ...state, candidates: picked };
+}
+
+// 顯示用的候選:固定池與順序,依「目前」線索(含困難限制)過濾掉已不可能、或已猜過的字;答案永遠保留,⛔ 重抽補位。
+export function visibleCandidates(state) {
+  const tried = new Set(state.guesses);
+  return (state.candidates ?? []).filter((w) => w === state.answer || (!tried.has(w) && fitsClues(w, state)));
+}
+
+// 點候選 = 填入輸入列(送出仍算一次猜測)。
+export function fillState(state, word) {
+  if (state.over || !isWordShape(word)) return state;
+  return { ...state, current: word };
+}
+
 // ---- 存檔(續玩)----
 
-export function toSave({ answer, guesses, difficulty }) {
-  return { answer, guesses, difficulty };
+export function toSave({ answer, guesses, difficulty, assist, revealed, candidates }) {
+  const saved = { answer, guesses, difficulty };
+  return assist ? { ...saved, assist: true, revealed: revealed ?? [], candidates: candidates ?? null } : saved;
 }
 
 export function fromSave(saved) {
-  return { answer: saved.answer, guesses: [...saved.guesses], current: '', difficulty: saved.difficulty, over: false, won: false };
+  const state = { answer: saved.answer, guesses: [...saved.guesses], current: '', difficulty: saved.difficulty, over: false, won: false };
+  // 輔助局標記與提示進度續玩後仍在
+  return saved.assist ? { ...state, assist: true, revealed: [...(saved.revealed ?? [])], candidates: saved.candidates ? [...saved.candidates] : null } : state;
 }
 
 // 存檔 state 格式檢查:只存「進行中」的局(結束就結算並刪檔)。
@@ -146,12 +221,24 @@ export function fromSave(saved) {
 //   困難模式時每個猜測都符合當時的限制(與實際送出時的規則一致)。
 const ANSWER_SET = new Set(ANSWERS);
 
+// 輔助局欄位:assist 為布林;revealed / candidates 只能出現在輔助局。
+function validAssist({ assist, revealed, candidates, answer }) {
+  if (assist !== undefined && typeof assist !== 'boolean') return false;
+  if (assist !== true) return revealed === undefined && (candidates === undefined || candidates === null);
+  if (revealed !== undefined && !(Array.isArray(revealed) && revealed.length < WORD_LEN
+    && revealed.every((i) => Number.isInteger(i) && i >= 0 && i < WORD_LEN) && new Set(revealed).size === revealed.length)) return false;
+  if (candidates !== undefined && candidates !== null && !(Array.isArray(candidates) && candidates.length >= 1
+    && candidates.length <= CANDIDATE_COUNT && candidates.includes(answer) && candidates.every((w) => ANSWER_SET.has(w)))) return false;
+  return true;
+}
+
 export function isValidState(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return false;
   const { answer, guesses, difficulty } = s;
   if (!isWordShape(answer) || !ANSWER_SET.has(answer) || !DIFFICULTIES.includes(difficulty)) return false;
   if (!Array.isArray(guesses) || guesses.length >= MAX_GUESSES) return false;
   if (!guesses.every((g) => isWord(g) && g !== answer)) return false;
+  if (!validAssist(s)) return false;
   if (difficulty === 'hard') {
     return guesses.every((g, i) => hardModeError(guesses.slice(0, i), answer, g) === null);
   }

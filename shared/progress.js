@@ -56,11 +56,15 @@ export function nextStreak(streak, day) {
 
 // ---- XP(§5)----
 
+// 輔助局(RS9 RS6):用了提示的 Wordle、2048 小朋友模式。不刷新最佳、不解遊戲專屬成就、(完成+勝利)× 難度 × 0.5。
+export const ASSIST_MULT = 0.5;
+
 // newAchievements = 本局結束時新解開的成就數(局中即時解開的另計,見 applyUnlock)。
-export function playXp({ result, difficulty = 'normal', isBest = false, dailyFirst = false, newAchievements = 0 }) {
+// assist = 輔助局:最佳加成一律為 0,(完成 + 勝利)× 難度倍率後再 × ASSIST_MULT;當日首局與成就照常。
+export function playXp({ result, difficulty = 'normal', isBest = false, dailyFirst = false, newAchievements = 0, assist = false }) {
   if (result === 'quit') return 0;
-  const base = 10 + (result === 'win' ? 20 : 0) + (isBest ? 10 : 0);
-  const mult = DIFFICULTY_MULT[difficulty] ?? 1;
+  const base = 10 + (result === 'win' ? 20 : 0) + (isBest && !assist ? 10 : 0);
+  const mult = (DIFFICULTY_MULT[difficulty] ?? 1) * (assist ? ASSIST_MULT : 1);
   return Math.round(base * mult) + (dailyFirst ? DAILY_FIRST_XP : 0) + ACHIEVEMENT_XP * newAchievements;
 }
 
@@ -68,15 +72,17 @@ const DIFFICULTY_LABEL = { hard: '困難', expert: '專家' };
 
 // XP 明細(RS5):同 playXp 的參數,拆成畫面用的項目;total 一律取 playXp(⛔ 不另算一套)。
 // 難度倍率項的 xp = 乘上倍率後多出來的部分,所以 items 加總 = total。quit ⇒ 空明細。
-export function xpBreakdown({ result, difficulty = 'normal', isBest = false, dailyFirst = false, newAchievements = 0 }) {
-  const total = playXp({ result, difficulty, isBest, dailyFirst, newAchievements });
+// 輔助局多一項「輔助 ×0.5」,xp 為負(打對折扣掉的部分)。
+export function xpBreakdown({ result, difficulty = 'normal', isBest = false, dailyFirst = false, newAchievements = 0, assist = false }) {
+  const total = playXp({ result, difficulty, isBest, dailyFirst, newAchievements, assist });
   if (result === 'quit') return { items: [], total };
   const items = [{ label: '完成', xp: 10 }];
   if (result === 'win') items.push({ label: '勝利', xp: 20 });
-  if (isBest) items.push({ label: '新最佳', xp: 10 });
+  if (isBest && !assist) items.push({ label: '新最佳', xp: 10 });
   const base = items.reduce((n, it) => n + it.xp, 0);
   const mult = DIFFICULTY_MULT[difficulty] ?? 1;
   if (mult !== 1) items.push({ label: `${DIFFICULTY_LABEL[difficulty] ?? difficulty} ×${mult}`, xp: Math.round(base * mult) - base });
+  if (assist) items.push({ label: `輔助 ×${ASSIST_MULT}`, xp: Math.round(base * mult * ASSIST_MULT) - Math.round(base * mult) });
   if (dailyFirst) items.push({ label: '今日首局', xp: DAILY_FIRST_XP });
   if (newAchievements > 0) items.push({ label: `成就 ×${newAchievements}`, xp: ACHIEVEMENT_XP * newAchievements });
   return { items, total };
@@ -94,21 +100,21 @@ export const ACHIEVEMENTS = [
   { id: 'games_3', name: '玩過 3 款', icon: '🎲', cond: '完成過 3 款遊戲', test: ({ stats }) => gamesPlayed(stats) >= 3 },
   { id: 'games_6', name: '六款全玩', icon: '🌈', cond: '6 款遊戲都完成過', test: ({ stats }) => gamesPlayed(stats) >= 6 },
   {
-    id: 'tile_2048', name: '合出 2048', icon: '🔢', cond: '2048 合出 2048 方塊',
+    id: 'tile_2048', name: '合出 2048', icon: '🔢', cond: '2048 合出 2048 方塊', game: '2048',
     test: ({ play, gameId, event }) => (play
       ? play.game_id === '2048' && (play.detail?.max_tile ?? 0) >= 2048
       : gameId === '2048' && (event?.max_tile ?? 0) >= 2048),
   },
   {
-    id: 'mines_expert', name: '踩地雷高級通關', icon: '💣', cond: '踩地雷高級難度勝利',
+    id: 'mines_expert', name: '踩地雷高級通關', icon: '💣', cond: '踩地雷高級難度勝利', game: 'minesweeper',
     test: ({ play }) => play?.game_id === 'minesweeper' && play.difficulty === 'expert' && play.result === 'win',
   },
   {
-    id: 'wordle_2', name: 'Wordle 2 次猜中', icon: '🔤', cond: 'Wordle 2 次內猜中',
+    id: 'wordle_2', name: 'Wordle 2 次猜中', icon: '🔤', cond: 'Wordle 2 次內猜中', game: 'wordle',
     test: ({ play }) => play?.game_id === 'wordle' && play.result === 'win' && (play.detail?.guesses ?? Infinity) <= 2,
   },
   {
-    id: 'ttt_10', name: '井字棋 10 連不敗', icon: '⭕', cond: '井字棋連續 10 局不輸',
+    id: 'ttt_10', name: '井字棋 10 連不敗', icon: '⭕', cond: '井字棋連續 10 局不輸', game: 'tictactoe',
     test: ({ stats }) => (stats.tictactoe?.detail?.unbeaten ?? 0) >= 10,
   },
   { id: 'streak_3', name: '連玩 3 天', icon: '🔥', cond: '連續 3 天完成遊戲', test: ({ profile }) => (profile.streak?.current ?? 0) >= 3 },
@@ -118,9 +124,11 @@ export const ACHIEVEMENTS = [
 ];
 
 // 回傳 ctx 下成立、但 profile 尚未解開的成就 id。
+// ctx.assist = 輔助局:該局遊戲的專屬成就(a.game 相同)不解,通用與其他遊戲的成就照常。
 export function newlyUnlocked(ctx) {
   const have = ctx.profile.achievements ?? {};
-  return ACHIEVEMENTS.filter((a) => !have[a.id] && a.test(ctx)).map((a) => a.id);
+  const assistGame = ctx.assist ? (ctx.play?.game_id ?? ctx.gameId) : null;
+  return ACHIEVEMENTS.filter((a) => !have[a.id] && !(assistGame && a.game === assistGame) && a.test(ctx)).map((a) => a.id);
 }
 
 // ---- 資料初值 ----
@@ -201,23 +209,26 @@ export function recentOrder(gameList, stats, saves) {
 
 // ---- 一局結束:統計、XP、成就 ----
 
-// in: { profile, stats(map), gameId, result, score, difficulty, detail, startedAt, endedAt, durationSec, id, live }
+// in: { profile, stats(map), gameId, result, score, difficulty, detail, startedAt, endedAt, durationSec, id, live, assist }
+//   assist = 輔助局(RS9 RS6):不刷新最佳、不解該遊戲專屬成就、XP 打對折;detail.assist = true。
 //   live = 本局局中已即時入帳的獎勵 { xp, achievements }:併入 play 紀錄與回傳的明細,但⛔ 不再加進總 XP。
 // out: { profile, stats, play, xpGained, xpBreakdown, newAchievements, level }(皆為新物件,不改動輸入)
 //   xpGained / newAchievements = 本局合計(含 live);profile.xp 只加結算當下的部分。
 export function applyFinish(input) {
-  const { gameId, result, score = 0, difficulty = 'normal', detail = {}, startedAt, endedAt, durationSec = 0, id } = input;
+  const { gameId, result, score = 0, difficulty = 'normal', startedAt, endedAt, durationSec = 0, id } = input;
+  const assist = input.assist === true;
+  const detail = assist ? { ...(input.detail ?? {}), assist: true } : (input.detail ?? {});
   const live = { xp: input.live?.xp ?? 0, achievements: input.live?.achievements ?? [] };
   if (!RESULTS.includes(result)) throw new Error(`unknown result: ${result}`);
   const completed = result !== 'quit';
   const prev = input.stats[gameId] ?? emptyStats(gameId);
-  const isBest = score > (prev.best_score || 0);
+  const isBest = !assist && score > (prev.best_score || 0); // 輔助局不刷新最佳
 
   const gameStats = {
     ...prev,
     plays_count: prev.plays_count + (completed ? 1 : 0),
     wins_count: prev.wins_count + (result === 'win' ? 1 : 0),
-    best_score: Math.max(prev.best_score || 0, score),
+    best_score: assist ? (prev.best_score || 0) : Math.max(prev.best_score || 0, score),
     total_sec: prev.total_sec + durationSec,
     last_played_at: iso(endedAt),
     detail: nextDetail(gameId, prev.detail ?? {}, result, detail),
@@ -247,8 +258,8 @@ export function applyFinish(input) {
     detail,
   };
 
-  const unlocked = completed ? newlyUnlocked({ stats, profile, play }) : [];
-  const finishXp = playXp({ result, difficulty, isBest, dailyFirst, newAchievements: unlocked.length });
+  const unlocked = completed ? newlyUnlocked({ stats, profile, play, assist }) : [];
+  const finishXp = playXp({ result, difficulty, isBest, dailyFirst, newAchievements: unlocked.length, assist });
   play.xp_gained = finishXp + live.xp;
 
   profile.achievements = { ...profile.achievements };
@@ -259,15 +270,16 @@ export function applyFinish(input) {
   // 明細:局中即時成就併入「成就」項(與 xpGained 一致,不重複計)
   const liveCount = live.achievements.length;
   const xpDetail = completed
-    ? xpBreakdown({ result, difficulty, isBest, dailyFirst, newAchievements: unlocked.length + liveCount })
+    ? xpBreakdown({ result, difficulty, isBest, dailyFirst, newAchievements: unlocked.length + liveCount, assist })
     // 放棄局本身 0 XP,但局中已入帳的成就仍列出,與 xp_gained 一致
     : liveCount ? { items: [{ label: `成就 ×${liveCount}`, xp: ACHIEVEMENT_XP * liveCount }], total: ACHIEVEMENT_XP * liveCount } : xpBreakdown({ result });
   return { profile, stats, play, xpGained: play.xp_gained, xpBreakdown: xpDetail, newAchievements: [...live.achievements, ...unlocked], level: profile.level };
 }
 
 // 局中事件即時判定(如合出 2048):XP 當下入帳,之後不重複計。
+// event.assist = 輔助局:遊戲專屬成就不即時解開。
 export function applyUnlock({ profile, stats, gameId, event, now }) {
-  const newAchievements = newlyUnlocked({ stats, profile, gameId, event });
+  const newAchievements = newlyUnlocked({ stats, profile, gameId, event, assist: event?.assist === true });
   if (newAchievements.length === 0) return { profile, newAchievements, xpGained: 0, level: profile.level };
   const xpGained = ACHIEVEMENT_XP * newAchievements.length;
   const next = { ...profile, achievements: { ...profile.achievements } };

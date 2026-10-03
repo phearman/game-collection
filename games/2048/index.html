@@ -20,7 +20,12 @@
     <div class="actions">
       <button class="btn" id="new" type="button">↻ 新遊戲</button>
       <button class="btn" id="undo" type="button">↶ 復原</button>
+      <select class="btn" id="mode" aria-label="模式">
+        <option value="normal">一般</option>
+        <option value="kids">小朋友</option>
+      </select>
     </div>
+    <p class="suggest" id="suggest" role="status" aria-live="polite" hidden></p>
     <div class="board-wrap">
       <div class="board" id="board" role="grid" aria-label="2048 棋盤"></div>
       <div class="overlay" id="overlay" hidden>

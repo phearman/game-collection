@@ -3,10 +3,13 @@
 
 const ME_XP = '../../me/#xp';
 
+// 明細金額帶正負號(輔助局的「輔助 ×0.5」為負)。
+export const signedXp = (xp) => (xp < 0 ? `−${-xp}` : `+${xp}`);
+
 export function xpBreakdownText(breakdown) {
   if (!breakdown) return '';
   if (breakdown.items.length === 0) return '放棄的局不計 XP';
-  return breakdown.items.map((it) => `${it.label} +${it.xp}`).join(' · ');
+  return breakdown.items.map((it) => `${it.label} ${signedXp(it.xp)}`).join(' · ');
 }
 
 export function xpBreakdownHtml(breakdown) {
