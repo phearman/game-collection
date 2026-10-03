@@ -100,6 +100,15 @@ a.card:hover { border-color: var(--accent); }
 
 .tag { font-size: 12px; padding: 2px 10px; border-radius: var(--radius); background: var(--surface-sub); color: var(--text-sub); white-space: nowrap; }
 .tag.is-active { background: var(--accent-bg); color: var(--accent); }
+/* 遊戲編號(DV11):大廳卡片標題前、遊戲頁頂列;小字、不搶標題 */
+.card-code, .game-code { font-size: 11px; font-weight: 600; line-height: 1.4; color: var(--text-sub); background: var(--surface-sub); border-radius: var(--radius); padding: 0 4px; white-space: nowrap; }
+.topbar .navigation { display: flex; gap: 4px; align-items: center; }
+/* 頂列已偏滿,加了編號後左組按鈕收窄內距(點擊區仍 ≥ 40px);窄螢幕再縮字級 */
+.topbar .navigation .btn { padding-inline: 10px; }
+@media (max-width: 400px) {
+  .topbar .navigation .btn { padding-inline: 8px; font-size: 13px; }
+}
+.card-code { margin-right: 6px; vertical-align: 1px; }
 
 .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2px 12px; text-align: center; min-width: 72px; }
 .stat-label { font-size: 11px; color: var(--text-muted); }

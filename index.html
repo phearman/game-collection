@@ -45,7 +45,7 @@
               <span class="tag${active ? ' is-active' : ''}">${active ? '開發中' : '規劃中'}</span>
             </span>
           </div>
-          <p class="card-title">${g.title}</p>
+          <p class="card-title">${g.code ? `<span class="card-code">${g.code}</span>` : ''}${g.title}</p>
           <p class="card-desc">${g.desc}</p>
           ${best ? `<p class="card-meta">最佳 ${best.toLocaleString()}</p>` : ''}
         </a>`;

@@ -1,0 +1,47 @@
+.topbar { gap: 8px; }
+.topbar .btn { white-space: nowrap; padding-left: 10px; padding-right: 10px; }
+.stats { display: flex; gap: 6px; align-items: stretch; }
+.stats .stat { min-width: 56px; padding: 2px 8px; }
+.actions { display: flex; gap: 6px; margin-bottom: 12px; }
+.actions .btn { flex: 1 1 0; min-width: 0; white-space: nowrap; padding-left: 4px; padding-right: 4px; }
+select.btn { appearance: auto; }
+select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.board-wrap { position: relative; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.field {
+  display: block;
+  width: 100%;
+  aspect-ratio: 360 / 420;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #3f8f3a;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #fff;
+}
+.overlay[hidden] { display: none; }
+.overlay-title { font-size: 26px; font-weight: 700; margin: 0; }
+.overlay-actions { display: flex; gap: 8px; }
+.overlay-info { text-align: center; font-size: 14px; padding: 0 16px; }
+.overlay-info p { margin: 2px 0; }
+.overlay-info .overlay-xp { font-size: 18px; font-weight: 700; }
+
+.tally { text-align: center; font-size: 15px; font-weight: 600; margin: 10px 0 8px; font-variant-numeric: tabular-nums; }
+
+.pad { display: flex; gap: 8px; touch-action: manipulation; -webkit-touch-callout: none; }
+.pad-btn { flex: 1; min-height: 52px; font-size: 17px; font-weight: 600; user-select: none; -webkit-user-select: none; }
+.pad-btn:active { background: var(--accent-bg); }
+
+.hint { font-size: 13px; color: var(--text-sub); text-align: center; margin: 12px 0 0; }
+
+.demo-field { display: block; width: 100%; border-radius: 8px; }

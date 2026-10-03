@@ -1,6 +1,12 @@
 // 共用「? 玩法」說明與示範(RS3)。每款遊戲提供規則文字與示範步驟,
 // 第一次進入該遊戲自動開啟一次;之後由頂列的「? 玩法」按鈕開啟。
 import { load, save } from './storage.js';
+import { GAMES } from './games.js';
+
+// 依遊戲 id 取編號(DV11;code 依 games.js 順序固定 G1 起、新遊戲往後編、不重排)。沒有 code 或查無此遊戲回 null。
+export function gameCode(id) {
+  return GAMES.find((g) => g.id === id)?.code ?? null;
+}
 
 // opts:
 //   gameId     遊戲 id,用來記「看過說明了」
@@ -15,6 +21,24 @@ export function setupHelp({ gameId, title, rules, demo, mountAfter }) {
   btn.textContent = '? 玩法';
   btn.title = '玩法說明與示範';
   mountAfter.after(btn);
+
+  // 遊戲編號(DV11):依 gameId 查 games.js,放在「← 大廳」與「? 玩法」之間;沒有編號就不顯示。
+  // 頂列是 space-between,多一個項目會多佔一份間距而折行 ⇒ 三者包成同一組(頁面已有 .navigation 群組就直接放進去)。
+  const code = gameCode(gameId);
+  if (code) {
+    const tag = document.createElement('span');
+    tag.className = 'game-code';
+    tag.textContent = code;
+    tag.title = `遊戲編號 ${code}`;
+    let group = mountAfter.parentElement;
+    if (!group.classList.contains('navigation')) {
+      group = document.createElement('div');
+      group.className = 'navigation';
+      mountAfter.before(group);
+      group.append(mountAfter, btn);
+    }
+    mountAfter.after(tag);
+  }
 
   const dlg = document.createElement('dialog');
   dlg.className = 'help';

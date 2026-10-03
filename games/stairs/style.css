@@ -1,0 +1,109 @@
+.topbar { gap: 8px; }
+.topbar .btn { white-space: nowrap; padding-left: 10px; padding-right: 10px; }
+.stats { display: flex; gap: 6px; align-items: stretch; }
+.stats .stat { min-width: 52px; padding: 2px 8px; }
+.actions { display: flex; gap: 8px; margin-bottom: 12px; }
+.actions .btn { flex: 1; white-space: nowrap; padding-left: 8px; padding-right: 8px; }
+select.btn { appearance: auto; }
+select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* 場地色票(畫布讀這些變數繪圖) */
+:root {
+  --st-bg: #fbfaf6;
+  --st-wall: #d9d6cc;
+  --st-normal: #185fa5;
+  --st-spike: #c0392b;
+  --st-bounce: #1d9e75;
+  --st-flip: #d08a1e;
+  --st-player: #2c2c2a;
+  --st-eye: #ffffff;
+  --st-text: #2c2c2a;
+}
+:root[data-theme="dark"] {
+  --st-bg: #232321;
+  --st-wall: #3d3d3a;
+  --st-normal: #85b7eb;
+  --st-spike: #f07a6a;
+  --st-bounce: #5dcaa5;
+  --st-flip: #f2b45a;
+  --st-player: #f1efe8;
+  --st-eye: #1c1c1b;
+  --st-text: #f1efe8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --st-bg: #232321;
+    --st-wall: #3d3d3a;
+    --st-normal: #85b7eb;
+    --st-spike: #f07a6a;
+    --st-bounce: #5dcaa5;
+    --st-flip: #f2b45a;
+    --st-player: #f1efe8;
+    --st-eye: #1c1c1b;
+    --st-text: #f1efe8;
+  }
+}
+
+/* 整頁剛好一個視窗高:頂列、操作列、提示之外的高度全給場地,不捲動(要看得到底部)。 */
+.page-fit {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  padding-top: 16px;
+  padding-bottom: 12px;
+}
+.page-fit .topbar { margin-bottom: 12px; }
+.page-fit .hint { flex: none; margin-top: 8px; }
+
+/* 9:16 直式場地:依剩餘空間的寬、高取小者縮放。 */
+.stage-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  container-type: size;
+  display: flex;
+  justify-content: center;
+}
+.stage {
+  position: relative;
+  aspect-ratio: 9 / 16;
+  width: min(100cqw, 100cqh * 9 / 16);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--st-bg);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #fff;
+}
+.overlay[hidden] { display: none; }
+.overlay-title { font-size: 26px; font-weight: 700; margin: 0; }
+.overlay-actions { display: flex; gap: 8px; }
+.overlay-actions .btn { min-height: 48px; min-width: 120px; }
+.overlay-info { text-align: center; font-size: 14px; padding: 0 16px; }
+.overlay-info p { margin: 2px 0; }
+.overlay-info .overlay-xp { font-size: 18px; font-weight: 700; }
+
+.hint { font-size: 13px; color: var(--text-sub); text-align: center; margin: 12px 0 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* 說明示範(SVG 由 logic 實算的場面畫出) */
+.demo-field { display: block; width: 100%; max-width: 150px; margin: 0 auto; border: 1px solid var(--border); border-radius: 8px; background: var(--st-bg); }

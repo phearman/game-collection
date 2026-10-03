@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>足球守門員 · 遊戲集錦</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page page-narrow">
+    <header class="topbar">
+      <a class="btn" href="../../">← 大廳</a>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">分數</div><div class="stat-value" id="score">0</div></div>
+        <div class="stat"><div class="stat-label">最佳</div><div class="stat-value" id="best">0</div></div>
+        <button class="btn" id="theme" type="button"></button>
+      </div>
+    </header>
+    <div class="actions">
+      <button class="btn" id="new" type="button">↻ 新遊戲</button>
+      <button class="btn" id="pause" type="button">⏸ 暫停</button>
+      <select class="btn" id="difficulty" aria-label="難度">
+        <option value="normal">簡單</option>
+        <option value="hard">普通</option>
+        <option value="expert">困難</option>
+      </select>
+      <select class="btn" id="shots" aria-label="球數"></select>
+    </div>
+    <div class="board-wrap" id="board-wrap">
+      <canvas class="field" id="field" aria-label="球場:上方球門與守門員,下方射手"></canvas>
+      <div class="overlay" id="overlay" hidden>
+        <p class="overlay-title" id="overlay-title"></p>
+        <div class="overlay-info" id="overlay-info"></div>
+        <div class="overlay-actions" id="overlay-actions"></div>
+      </div>
+    </div>
+    <p class="tally" id="tally" aria-live="polite"></p>
+    <div class="pad" role="group" aria-label="守門員動作">
+      <button class="btn pad-btn" type="button" data-act="diveL">◀ 撲</button>
+      <button class="btn pad-btn" type="button" data-act="jump">跳</button>
+      <button class="btn pad-btn" type="button" data-act="diveR">撲 ▶</button>
+    </div>
+    <p class="hint">← → / A D 移動 · ↑ / W 跳 · Z 左撲 · X 右撲 · 空白鍵開始 · P 暫停<br>手機:左右滑動移動 · 點上半跳 · 往左上/右上快滑撲</p>
+  </main>
+  <script type="module" src="ui.js"></script>
+</body>
+</html>

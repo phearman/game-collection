@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>下樓梯 · 遊戲集錦</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page page-narrow page-fit">
+    <header class="topbar">
+      <a class="btn" href="../../">← 大廳</a>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">層數</div><div class="stat-value" id="score">0</div></div>
+        <div class="stat"><div class="stat-label">最佳</div><div class="stat-value" id="best">0</div></div>
+        <button class="btn" id="pause" type="button" aria-label="暫停" title="暫停(P)">⏸</button>
+        <button class="btn" id="theme" type="button"></button>
+      </div>
+    </header>
+    <div class="actions">
+      <button class="btn" id="new" type="button">↻ 新遊戲</button>
+      <select class="btn" id="difficulty" aria-label="難度">
+        <option value="normal">普通</option>
+        <option value="hard">困難</option>
+        <option value="expert">專家</option>
+      </select>
+    </div>
+    <div class="stage-area">
+      <div class="stage" id="stage">
+        <canvas id="field" role="img" aria-label="下樓梯場地"></canvas>
+        <p class="sr-only" id="status" aria-live="polite"></p>
+        <div class="overlay" id="overlay" hidden>
+          <p class="overlay-title" id="overlay-title"></p>
+          <div class="overlay-info" id="overlay-info"></div>
+          <div class="overlay-actions" id="overlay-actions"></div>
+        </div>
+      </div>
+    </div>
+    <p class="hint">← → / A D 移動 · 手機按住左半邊/右半邊 · P 暫停</p>
+  </main>
+  <script type="module" src="ui.js"></script>
+</body>
+</html>
