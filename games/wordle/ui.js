@@ -8,6 +8,7 @@ import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
+import { xpBreakdownHtml } from '../../shared/xp-explain.js';
 import { load, save } from '../../shared/storage.js';
 
 const GAME_ID = 'wordle';
@@ -74,6 +75,7 @@ function finish(result) {
     if (no !== gameNo) return;
     ended = {
       xp: out.xpGained,
+      xpBreakdown: out.xpBreakdown,
       newAchievements: out.newAchievements,
       isBest: out.play.is_best,
       bestBefore,
@@ -195,7 +197,7 @@ const achName = (id) => {
 function infoHtml() {
   if (!ended) return '';
   if (ended.pending) return '<p>結算中…</p>';
-  const lines = [`<p class="overlay-xp">本局 +${ended.xp} XP</p>`];
+  const lines = [`<p class="overlay-xp">本局 +${ended.xp} XP</p>`, xpBreakdownHtml(ended.xpBreakdown)];
   if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
   lines.push(ended.isBest
     ? '<p>🎉 新的最佳分數!</p>'
@@ -341,10 +343,11 @@ setupHelp({
       {
         before: demoRows(['angle', 'paper'], zz),
         after: demoRows(['angle', 'paper'], isWord(zz) ? zz : ''),
+        kind: 'fail',
         caption: '亂打 ZZZZZ 送出…',
         result: '…不在字庫,這次不算,可以重打',
       },
-      { before: demoRows(['angle', 'paper'], 'apple'), after: demoRows(['angle', 'paper', 'apple'], null), caption: '猜 APPLE…', result: `…全綠猜中!第 3 次,得 ${scoreFor({ won: true, guesses: ['angle', 'paper', 'apple'] })} 分` },
+      { before: demoRows(['angle', 'paper'], 'apple'), after: demoRows(['angle', 'paper', 'apple'], null), kind: 'ok', caption: '猜 APPLE…', result: `…全綠猜中!第 3 次,得 ${scoreFor({ won: true, guesses: ['angle', 'paper', 'apple'] })} 分` },
     ],
   },
 });

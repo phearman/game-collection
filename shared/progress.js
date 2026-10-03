@@ -64,6 +64,24 @@ export function playXp({ result, difficulty = 'normal', isBest = false, dailyFir
   return Math.round(base * mult) + (dailyFirst ? DAILY_FIRST_XP : 0) + ACHIEVEMENT_XP * newAchievements;
 }
 
+const DIFFICULTY_LABEL = { hard: '困難', expert: '專家' };
+
+// XP 明細(RS5):同 playXp 的參數,拆成畫面用的項目;total 一律取 playXp(⛔ 不另算一套)。
+// 難度倍率項的 xp = 乘上倍率後多出來的部分,所以 items 加總 = total。quit ⇒ 空明細。
+export function xpBreakdown({ result, difficulty = 'normal', isBest = false, dailyFirst = false, newAchievements = 0 }) {
+  const total = playXp({ result, difficulty, isBest, dailyFirst, newAchievements });
+  if (result === 'quit') return { items: [], total };
+  const items = [{ label: '完成', xp: 10 }];
+  if (result === 'win') items.push({ label: '勝利', xp: 20 });
+  if (isBest) items.push({ label: '新最佳', xp: 10 });
+  const base = items.reduce((n, it) => n + it.xp, 0);
+  const mult = DIFFICULTY_MULT[difficulty] ?? 1;
+  if (mult !== 1) items.push({ label: `${DIFFICULTY_LABEL[difficulty] ?? difficulty} ×${mult}`, xp: Math.round(base * mult) - base });
+  if (dailyFirst) items.push({ label: '今日首局', xp: DAILY_FIRST_XP });
+  if (newAchievements > 0) items.push({ label: `成就 ×${newAchievements}`, xp: ACHIEVEMENT_XP * newAchievements });
+  return { items, total };
+}
+
 // ---- 成就(§6)----
 
 const sum = (stats, key) => Object.values(stats).reduce((n, s) => n + (Number(s?.[key]) || 0), 0);
@@ -185,7 +203,7 @@ export function recentOrder(gameList, stats, saves) {
 
 // in: { profile, stats(map), gameId, result, score, difficulty, detail, startedAt, endedAt, durationSec, id, live }
 //   live = 本局局中已即時入帳的獎勵 { xp, achievements }:併入 play 紀錄與回傳的明細,但⛔ 不再加進總 XP。
-// out: { profile, stats, play, xpGained, newAchievements, level }(皆為新物件,不改動輸入)
+// out: { profile, stats, play, xpGained, xpBreakdown, newAchievements, level }(皆為新物件,不改動輸入)
 //   xpGained / newAchievements = 本局合計(含 live);profile.xp 只加結算當下的部分。
 export function applyFinish(input) {
   const { gameId, result, score = 0, difficulty = 'normal', detail = {}, startedAt, endedAt, durationSec = 0, id } = input;
@@ -238,7 +256,13 @@ export function applyFinish(input) {
   profile.xp = (profile.xp ?? 0) + finishXp;
   profile.level = levelFor(profile.xp);
 
-  return { profile, stats, play, xpGained: play.xp_gained, newAchievements: [...live.achievements, ...unlocked], level: profile.level };
+  // 明細:局中即時成就併入「成就」項(與 xpGained 一致,不重複計)
+  const liveCount = live.achievements.length;
+  const xpDetail = completed
+    ? xpBreakdown({ result, difficulty, isBest, dailyFirst, newAchievements: unlocked.length + liveCount })
+    // 放棄局本身 0 XP,但局中已入帳的成就仍列出,與 xp_gained 一致
+    : liveCount ? { items: [{ label: `成就 ×${liveCount}`, xp: ACHIEVEMENT_XP * liveCount }], total: ACHIEVEMENT_XP * liveCount } : xpBreakdown({ result });
+  return { profile, stats, play, xpGained: play.xp_gained, xpBreakdown: xpDetail, newAchievements: [...live.achievements, ...unlocked], level: profile.level };
 }
 
 // 局中事件即時判定(如合出 2048):XP 當下入帳,之後不重複計。
@@ -343,6 +367,8 @@ export function isValidSave(s) {
   if (!isNum(s.active_sec) || s.active_sec < 0 || !isNum(s.version)) return false;
   if (!isTime(s.started_at) || !isTime(s.updated_at)) return false;
   if (s.live !== undefined && !(isObj(s.live) && isNum(s.live.xp) && Array.isArray(s.live.achievements) && s.live.achievements.every(isAchievementId))) return false;
+  // 局中即時獎勵只來自成就,每個固定 ACHIEVEMENT_XP;數字對不上的存檔一律拒收(RS5 R1,否則明細與紀錄會不一致)。
+  if (s.live !== undefined && s.live.xp !== ACHIEVEMENT_XP * s.live.achievements.length) return false;
   return true;
 }
 

@@ -9,6 +9,7 @@ import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
+import { xpBreakdownHtml } from '../../shared/xp-explain.js';
 import { load, save } from '../../shared/storage.js';
 
 const GAME_ID = 'keeper';
@@ -69,6 +70,7 @@ function finish(info) {
     if (no !== gameNo) return;
     ended = {
       xp: out.xpGained,
+      xpBreakdown: out.xpBreakdown,
       newAchievements: out.newAchievements,
       isBest: out.play.is_best,
       bestBefore,
@@ -390,7 +392,7 @@ function infoHtml() {
   const t = tally(state.log);
   const lines = [`<p>撲救 ${t.saves} / 失分 ${t.conceded} · 最長連續撲救 ${t.bestStreak}</p>`];
   if (ended.pending) return `${lines.join('')}<p>結算中…</p>`;
-  lines.push(`<p class="overlay-xp">本局 +${ended.xp} XP</p>`);
+  lines.push(`<p class="overlay-xp">本局 +${ended.xp} XP</p>`, xpBreakdownHtml(ended.xpBreakdown));
   if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
   if (ended.isBest) lines.push('<p>🎉 新的最佳分數!</p>');
   else if (ended.bestBefore > 0) {
@@ -602,16 +604,16 @@ setupHelp({
   demo: {
     render: demoSvg,
     steps: [
-      demoStep(demoState({ x: 80, y: 40 }, 300), ['right', 'right'], 300,
-        '球往右邊低處飛來,往右移兩步…', '…手套碰到球:撲到了!'),
-      demoStep(demoState({ x: -120, y: 60 }, 300), [], 300,
-        '球往左邊角落飛,守門員站著不動…', '…搆不到:進球(GOAL!)'),
-      demoStep(demoState({ x: 0, y: 115 }, half), ['jump'], half,
-        '高球!在球到之前跳起…', '…跳到最高點剛好碰到:撲到了!'),
-      demoStep(demoState({ x: 0, y: 115 }, 50), [], 50,
-        '同樣的高球,站著不跳…', '…手搆不到那麼高:進球'),
-      demoStep(demoState({ x: 70, y: 90 }, half), ['diveR'], half,
-        '球往右上飛,按「撲 ▶」…', '…撲過去攔住:撲到了!'),
+      { ...demoStep(demoState({ x: 80, y: 40 }, 300), ['right', 'right'], 300,
+        '球往右邊低處飛來,往右移兩步…', '…手套碰到球:撲到了!'), kind: 'ok' },
+      { ...demoStep(demoState({ x: -120, y: 60 }, 300), [], 300,
+        '球往左邊角落飛,守門員站著不動…', '…搆不到:進球(GOAL!)'), kind: 'fail' },
+      { ...demoStep(demoState({ x: 0, y: 115 }, half), ['jump'], half,
+        '高球!在球到之前跳起…', '…跳到最高點剛好碰到:撲到了!'), kind: 'ok' },
+      { ...demoStep(demoState({ x: 0, y: 115 }, 50), [], 50,
+        '同樣的高球,站著不跳…', '…手搆不到那麼高:進球'), kind: 'fail' },
+      { ...demoStep(demoState({ x: 70, y: 90 }, half), ['diveR'], half,
+        '球往右上飛,按「撲 ▶」…', '…撲過去攔住:撲到了!'), kind: 'ok' },
     ],
   },
 });

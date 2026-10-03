@@ -2,7 +2,8 @@
 import { createProfile } from '../shared/profile.js';
 import { LocalStore } from '../shared/stores/local.js';
 import { bindThemeToggle } from '../shared/theme.js';
-import { ACHIEVEMENTS } from '../shared/progress.js';
+import { ACHIEVEMENTS, xpBreakdown } from '../shared/progress.js';
+import { XP_EXAMPLES } from '../shared/xp-explain.js';
 
 const $ = (id) => document.getElementById(id);
 const profile = await createProfile({ store: new LocalStore() });
@@ -30,7 +31,7 @@ async function render() {
   $('bar').firstElementChild.style.width = `${(s.current / s.need) * 100}%`;
   $('bar').setAttribute('aria-valuenow', s.current);
   $('bar').setAttribute('aria-valuemax', s.need);
-  $('xp').textContent = `${s.current} / ${s.need} XP`;
+  $('xp-num').textContent = `${s.current} / ${s.need} XP`;
   $('sub').textContent = `總局數 ${s.plays_count} · 總時間 ${hm(s.total_sec)} · 連玩 ${s.streak.current} 天(最長 ${s.streak.longest})`;
 
   const got = s.achievements.filter((a) => a.unlocked_at).length;
@@ -110,3 +111,16 @@ $('import-dlg').addEventListener('click', async (e) => {
 
 bindThemeToggle($('theme'));
 await render();
+
+// 「XP 怎麼算?」(RS5):範例由 xpBreakdown 實算;網址帶 #xp 時自動展開並捲到該處。
+$('xp-examples').innerHTML = XP_EXAMPLES.map(({ title, args }) => {
+  const b = xpBreakdown(args);
+  return `<li>${title}<br><span class="xp-help-calc">${b.items.map((it) => `${it.label} +${it.xp}`).join(' + ')} = <b>${b.total} XP</b></span></li>`;
+}).join('');
+const openXpHelp = () => {
+  if (location.hash !== '#xp') return;
+  $('xp').open = true;
+  $('xp').scrollIntoView({ block: 'start' });
+};
+openXpHelp();
+addEventListener('hashchange', openXpHelp);

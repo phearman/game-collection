@@ -8,6 +8,7 @@ import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
+import { xpBreakdownHtml } from '../../shared/xp-explain.js';
 import { load, save } from '../../shared/storage.js';
 
 const GAME_ID = 'snake';
@@ -62,6 +63,7 @@ function finish(result) {
     if (no !== gameNo) return;
     ended = {
       xp: out.xpGained,
+      xpBreakdown: out.xpBreakdown,
       newAchievements: out.newAchievements,
       isBest: out.play.is_best,
       bestBefore,
@@ -177,7 +179,7 @@ const achName = (id) => {
 function infoHtml() {
   if (!ended) return '';
   if (ended.pending) return '<p>結算中…</p>';
-  const lines = [`<p class="overlay-xp">本局 +${ended.xp} XP</p>`];
+  const lines = [`<p class="overlay-xp">本局 +${ended.xp} XP</p>`, xpBreakdownHtml(ended.xpBreakdown)];
   if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
   lines.push(ended.isBest
     ? '<p>🎉 新的最佳分數!</p>'
@@ -316,14 +318,14 @@ setupHelp({
   demo: {
     render: (s) => `<div class="board">${cellClasses(s).map((c) => `<div class="${c}"></div>`).join('')}</div>`,
     steps: [
-      demoStep(demoState({ snake: [[7, 7], [7, 6], [7, 5]], food: [7, 8] }), tickOnce,
-        '前方是食物…', '…吃到了:蛇長 1 格,分數 +10'),
-      demoStep(demoState({ snake: [[7, 7], [7, 6], [7, 5]], food: [2, 2] }), (s) => tickOnce(turnState(s, 'left')),
-        '朝右時按 ← …', '…不能回頭,蛇照樣往右'),
+      { ...demoStep(demoState({ snake: [[7, 7], [7, 6], [7, 5]], food: [7, 8] }), tickOnce,
+        '前方是食物…', '…吃到了:蛇長 1 格,分數 +10'), kind: 'ok' },
+      { ...demoStep(demoState({ snake: [[7, 7], [7, 6], [7, 5]], food: [2, 2] }), (s) => tickOnce(turnState(s, 'left')),
+        '朝右時按 ← …', '…不能回頭,蛇照樣往右'), kind: 'fail' },
       demoStep(demoState({ snake: [[7, 7], [7, 6], [7, 5]], food: [2, 2] }), (s) => tickOnce(turnState(s, 'up')),
         '按 ↑ …', '…下一格轉彎往上'),
-      demoStep(demoState({ snake: [[7, 14], [7, 13], [7, 12]], food: [2, 2] }), tickOnce,
-        '前方是牆…', '…撞牆,遊戲結束(撞到自己也一樣)'),
+      { ...demoStep(demoState({ snake: [[7, 14], [7, 13], [7, 12]], food: [2, 2] }), tickOnce,
+        '前方是牆…', '…撞牆,遊戲結束(撞到自己也一樣)'), kind: 'fail' },
     ],
   },
 });

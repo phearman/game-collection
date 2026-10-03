@@ -4,6 +4,7 @@ import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
+import { appendXpBreakdown } from '../../shared/xp-explain.js';
 
 const GAME_ID = 'tictactoe';
 const $ = (id) => document.getElementById(id);
@@ -69,6 +70,7 @@ function render() {
   };
   if (!ended || ended.pending) { add('結算中…'); return; }
   add(`本局 +${ended.xpGained} XP`, 'overlay-xp');
+  appendXpBreakdown(info, ended.xpBreakdown, document);
   if (ended.newAchievements.length) add(`新成就：${ended.newAchievements.map((id) => {
     const a = ACHIEVEMENTS.find((item) => item.id === id);
     return a ? `${a.icon} ${a.name}` : id;
@@ -194,7 +196,7 @@ setupHelp({
     <li>橫、直、斜三子連線勝；滿盤無連線平手。勝 3 分、平手 1 分、敗 0 分；最佳為單局最高分。</li>
   </ol>`,
   demo: {
-    steps: demoSteps(),
+    steps: demoSteps().map((s, i) => ({ ...s, kind: ['fail', undefined, 'ok'][i] })), // RS5:已占格=失敗、連線=成功
     render: (board) => `<div class="board demo-board">${board.map((mark) => `<div class="cell${mark === PLAYER ? ' player' : ''}">${symbols[mark] ?? ''}</div>`).join('')}</div>`,
   },
 });

@@ -8,6 +8,8 @@ import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
+import { xpBreakdownHtml } from '../../shared/xp-explain.js';
+import { DEMO_STUCK_LEFT, DEMO_FULL } from './demo.js';
 
 const GAME_ID = '2048';
 const $ = (id) => document.getElementById(id);
@@ -54,6 +56,7 @@ function finish(result) {
     if (no !== gameNo) return;
     ended = {
       xp: out.xpGained, // 已含局中即時成就 XP(profile 不重複加總)
+      xpBreakdown: out.xpBreakdown,
       newAchievements: out.newAchievements,
       isBest: out.play.is_best,
       bestBefore,
@@ -168,7 +171,7 @@ function infoHtml(kind) {
     return `<p>解開成就:${live.achievements.map(achName).join('、')}(+${Number(live.xp) || 0} XP)</p>`;
   }
   if (ended.pending) return '<p>結算中…</p>';
-  const lines = [`<p class="overlay-xp">本局 +${ended.xp} XP</p>`];
+  const lines = [`<p class="overlay-xp">本局 +${ended.xp} XP</p>`, xpBreakdownHtml(ended.xpBreakdown)];
   if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
   lines.push(ended.isBest
     ? '<p>🎉 新的最佳分數!</p>'
@@ -270,17 +273,20 @@ setupHelp({
       <li>按方向鍵或 W/A/S/D(手機在棋盤上滑動),<b>所有方塊</b>一起往該方向滑到底。</li>
       <li>兩個<b>相同數字</b>撞在一起會合成一個(2+2→4),合出的數字加進分數。</li>
       <li>每移動一次,空格會冒出一個新的 2(偶爾是 4)。</li>
-      <li>合出 <b>2048</b> 就勝利,可以選擇繼續玩;棋盤滿了又無法合併,遊戲結束。</li>
+      <li>棋盤滿了又無法合併,遊戲結束。</li>
       <li>「復原」可退回上一步;「新遊戲」重新開局。</li>
+      <li><b>勝利</b>:合出一個 2048 方塊(可選擇繼續玩)。<b>分數</b> = 每次合併出的數字加總(2+2→4 得 4 分);<b>最佳</b> = 單局最高分;步數、時間都不計分。</li>
     </ol>
     <p>訣竅:把最大的方塊固定在一個角落,盡量只用兩、三個方向。</p>`,
   demo: {
     render: (board) => `<div class="board">${board.flatMap((r) => r.map((v) => `<div class="${tileClass(v)}">${v || ''}</div>`)).join('')}</div>`,
     steps: [
-      demoStep(row([2, 2, 0, 0]), 'left', '按 ← :兩個 2 往左滑…', '…撞在一起合成 4,分數 +4'),
-      demoStep(row([2, 2, 2, 2]), 'left', '四個 2 往左…', '…兩兩合併成 4、4,不會一次合成 8'),
-      demoStep(row([4, 0, 4, 4]), 'left', '4、空、4、4 往左…', '…先合靠左的兩個 4,得到 8、4'),
-      demoStep([[0, 0, 0, 2], [0, 0, 0, 2], [0, 0, 0, 4], [0, 0, 0, 8]], 'down', '按 ↓ :直的一排也能合…', '…2+2→4,大數字留在右下角'),
+      { ...demoStep(row([2, 2, 0, 0]), 'left', '按 ← :兩個 2 往左滑…', '…撞在一起合成 4,分數 +4'), kind: 'ok' },
+      { ...demoStep(row([2, 2, 2, 2]), 'left', '四個 2 往左…', '…兩兩合併成 4、4,不會一次合成 8'), kind: 'ok' },
+      { ...demoStep(row([4, 0, 4, 4]), 'left', '4、空、4、4 往左…', '…先合靠左的兩個 4,得到 8、4'), kind: 'ok' },
+      { ...demoStep([[0, 0, 0, 2], [0, 0, 0, 2], [0, 0, 0, 4], [0, 0, 0, 8]], 'down', '按 ↓ :直的一排也能合…', '…2+2→4,大數字留在右下角'), kind: 'ok' },
+      { ...demoStep(DEMO_STUCK_LEFT, 'left', '方塊都已靠左、相鄰沒有相同數字,按 ← …', '…什麼都沒動,也不會冒新方塊(畫面抖一下)'), kind: 'fail' },
+      { ...demoStep(DEMO_FULL, 'left', '棋盤滿了,上下左右都沒有相同數字相鄰…', '…哪個方向都動不了:遊戲結束'), kind: 'fail' },
     ],
   },
 });

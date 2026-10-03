@@ -4,6 +4,7 @@ import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
+import { appendXpBreakdown } from '../../shared/xp-explain.js';
 
 const GAME_ID = 'sudoku';
 const $ = (id) => document.getElementById(id);
@@ -83,6 +84,7 @@ function render() {
   };
   if (!ended || ended.pending) { add('結算中…'); return; }
   add(`本局 +${ended.xpGained} XP`, 'overlay-xp');
+  appendXpBreakdown(info, ended.xpBreakdown, document);
   add(`${secondsFor(state)} 秒 · ${state.score} 分`);
   if (ended.newAchievements.length) add(`新成就：${ended.newAchievements.map((id) => {
     const a = ACHIEVEMENTS.find((item) => item.id === id);
@@ -196,7 +198,7 @@ setupHelp({
     <li>重開／切難度：已操作未完成記退出；第一次輸入開始計時。</li>
     <li>填滿且無衝突即勝；分數=max(1,10000−秒數)，最佳為單局最高分。</li>
   </ol>`,
-  demo: { steps: demoSteps(), render: (board) => {
+  demo: { steps: demoSteps().map((s, i) => ({ ...s, kind: ['fail', 'fail', 'ok'][i] })), render: (board) => {
     const bad = new Set(conflicts(board));
     return `<div class="board demo-board">${board.map((v, i) => `<div class="cell${bad.has(i) ? ' conflict' : ''}">${v || ''}</div>`).join('')}</div>`;
   } },

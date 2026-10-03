@@ -8,6 +8,13 @@ export function gameCode(id) {
   return GAMES.find((g) => g.id === id)?.code ?? null;
 }
 
+// 示範步驟的成功/失敗標籤(RS5):kind = 'ok' | 'fail';沒給就不顯示。靠文字與符號區分,不只靠顏色。
+export function kindLabel(kind) {
+  if (kind === 'ok') return '✅ 成功';
+  if (kind === 'fail') return '❌ 失敗';
+  return '';
+}
+
 // opts:
 //   gameId     遊戲 id,用來記「看過說明了」
 //   title      對話框標題
@@ -97,7 +104,9 @@ function demoRunner(dlg, { steps, render }) {
   const show = (i, phase) => {
     const s = steps[i];
     stage.innerHTML = render(phase === 'before' ? s.before : s.after);
-    caption.textContent = phase === 'before' ? s.caption : (s.result || s.caption);
+    const label = kindLabel(s.kind);
+    const text = phase === 'before' ? s.caption : (s.result || s.caption);
+    caption.textContent = label ? `${label} ${text}` : text;
     stepNo.textContent = `${i + 1} / ${steps.length}`;
   };
   const stop = () => {

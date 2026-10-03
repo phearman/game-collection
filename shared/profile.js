@@ -214,7 +214,7 @@ export async function createProfile({
       savesDirty.delete(gameId);
       live.delete(gameId);
       if (running) timer = null;
-      return { play: out.play, xpGained: out.xpGained, newAchievements: out.newAchievements, level: out.level };
+      return { play: out.play, xpGained: out.xpGained, xpBreakdown: out.xpBreakdown, newAchievements: out.newAchievements, level: out.level };
     },
 
     async unlock(gameId, ev) {

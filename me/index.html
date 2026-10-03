@@ -13,6 +13,12 @@
     .me-bar > span { display: block; height: 100%; background: var(--accent); }
     .me-xp { font-size: 13px; color: var(--text-sub); }
     .me-sub { font-size: 14px; color: var(--text-sub); margin: 8px 0 0; }
+    .xp-help { margin-top: 10px; font-size: 14px; color: var(--text-sub); }
+    .xp-help summary { cursor: pointer; color: var(--accent); width: fit-content; }
+    .xp-help ul, .xp-help ol { margin: 8px 0 0; padding-left: 20px; }
+    .xp-help li { margin: 4px 0; }
+    .xp-help-sub { margin: 10px 0 0; font-weight: 600; color: var(--text); }
+    .xp-help-calc { color: var(--text); }
     .me h2 { font-size: 16px; margin: 20px 0 8px; }
     .ach { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
     .ach-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 6px; text-align: center; min-width: 0; }
@@ -57,9 +63,20 @@
       <div class="me-level">
         <span class="me-lv" id="lv"></span>
         <div class="me-bar" role="progressbar" aria-label="升級進度" id="bar"><span></span></div>
-        <span class="me-xp" id="xp"></span>
+        <span class="me-xp" id="xp-num"></span>
       </div>
       <p class="me-sub" id="sub"></p>
+      <details class="xp-help" id="xp">
+        <summary>XP 怎麼算?</summary>
+        <ul>
+          <li>完成一局 <b>10</b>;勝利再 <b>+20</b>;刷新這款遊戲的最佳再 <b>+10</b>。</li>
+          <li>上面三項合計乘上難度倍率:一般 ×1、困難 ×1.5、專家 ×2。</li>
+          <li>當天第一局 <b>+5</b>;每解開一個成就 <b>+30</b>(條件見下方<a href="#ach-title">成就列表</a>)。</li>
+          <li>放棄的局 0 XP。每 <b>100 XP</b> 升一級。</li>
+        </ul>
+        <p class="xp-help-sub">範例</p>
+        <ol id="xp-examples"></ol>
+      </details>
     </section>
     <h2 id="ach-title">成就</h2>
     <section class="ach" id="ach" aria-labelledby="ach-title"></section>

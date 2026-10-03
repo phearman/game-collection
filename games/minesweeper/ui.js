@@ -8,6 +8,7 @@ import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
+import { xpBreakdownHtml } from '../../shared/xp-explain.js';
 
 const GAME_ID = 'minesweeper';
 const LONG_PRESS_MS = 400;
@@ -58,6 +59,7 @@ function finish(result) {
     ended = {
       result,
       xp: out.xpGained,
+      xpBreakdown: out.xpBreakdown,
       newAchievements: out.newAchievements,
       isBest: out.play.is_best,
       bestBefore,
@@ -157,6 +159,7 @@ function infoHtml() {
   const lines = [
     `<p>${ended.seconds.toLocaleString()} 秒 · 分數 ${ended.score.toLocaleString()}</p>`,
     `<p class="overlay-xp">本局 +${ended.xp} XP</p>`,
+    xpBreakdownHtml(ended.xpBreakdown),
   ];
   if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
   if (ended.result !== 'win') lines.push(`<p>勝利才有分數(最佳 ${ended.bestBefore.toLocaleString()})</p>`);
@@ -330,8 +333,8 @@ setupHelp({
     steps: [
       { before: d0, after: d1, caption: '點左下角:第一下必定安全…', result: '…翻到空白,連鎖展開到數字為止' },
       { before: d1, after: d2, caption: '數字推得出雷在哪…', result: '…右上兩顆雷插上旗' },
-      { before: d2, after: d3, caption: '成功:點「2」,周圍已有 2 面旗…', result: '…其餘鄰格一次翻開,全部找出來,勝利!' },
-      { before: w0, after: w1, caption: '失敗:旗插錯了,又點「2」快速翻開…', result: '…翻到真正的雷,踩雷結束(❌ = 插錯的旗)' },
+      { before: d2, after: d3, kind: 'ok', caption: '點「2」,周圍已有 2 面旗…', result: '…其餘鄰格一次翻開,全部找出來,勝利!' },
+      { before: w0, after: w1, kind: 'fail', caption: '旗插錯了,又點「2」快速翻開…', result: '…翻到真正的雷,踩雷結束(❌ = 插錯的旗)' },
     ],
   },
 });

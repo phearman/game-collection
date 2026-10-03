@@ -8,6 +8,7 @@ import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
+import { xpBreakdownHtml } from '../../shared/xp-explain.js';
 import { load, save } from '../../shared/storage.js';
 
 const GAME_ID = 'stairs';
@@ -68,6 +69,7 @@ function finish(result) {
     if (no !== gameNo) return;
     ended = {
       xp: out.xpGained,
+      xpBreakdown: out.xpBreakdown,
       newAchievements: out.newAchievements,
       isBest: out.play.is_best,
       bestBefore,
@@ -284,7 +286,7 @@ const achName = (id) => {
 function infoHtml() {
   if (!ended) return '';
   if (ended.pending) return '<p>結算中…</p>';
-  const lines = [`<p>下了 ${ended.score.toLocaleString()} 層</p>`, `<p class="overlay-xp">本局 +${ended.xp} XP</p>`];
+  const lines = [`<p>下了 ${ended.score.toLocaleString()} 層</p>`, `<p class="overlay-xp">本局 +${ended.xp} XP</p>`, xpBreakdownHtml(ended.xpBreakdown)];
   if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
   lines.push(ended.isBest
     ? '<p>🎉 新的最佳紀錄!</p>'
@@ -481,18 +483,18 @@ setupHelp({
   demo: {
     render: demoSvg,
     steps: [
-      demoStep(demoState({ x: 4, y: 3 }, [demoPlatform(1, 7), ...below(1)]), landOn,
-        '往下掉到普通平台…', '…站穩了:層數 +1'),
+      { ...demoStep(demoState({ x: 4, y: 3 }, [demoPlatform(1, 7), ...below(1)]), landOn,
+        '往下掉到普通平台…', '…站穩了:層數 +1'), kind: 'ok' },
       demoStep(demoState({ x: 4, y: 3 }, [demoPlatform(1, 7, 'bounce'), ...below(1)]), (s) => steps(stepUntil(s, (x) => x.player.vy < 0), 12),
         '落到彈跳平台…', '…被彈起來,再落回平台'),
-      demoStep(demoState({ x: 4, y: 3 }, [demoPlatform(1, 7, 'spike'), ...below(1)]), landOn,
-        '落到刺平台…', '…扣 1 命(左上愛心少一顆)'),
-      demoStep(demoState({ x: 4, y: 1.2, on: 1 }, [demoPlatform(1, 1.2 + PLAYER), demoPlatform(2, 7, 'normal', 2.5, 4), ...below(2)]),
+      { ...demoStep(demoState({ x: 4, y: 3 }, [demoPlatform(1, 7, 'spike'), ...below(1)]), landOn,
+        '落到刺平台…', '…扣 1 命(左上愛心少一顆)'), kind: 'fail' },
+      { ...demoStep(demoState({ x: 4, y: 1.2, on: 1 }, [demoPlatform(1, 1.2 + PLAYER), demoPlatform(2, 7, 'normal', 2.5, 4), ...below(2)]),
         (s) => steps(stepUntil(s, (x) => x.lives < MAX_LIVES), 20),
-        '平台把你推到頂端…', '…被頂刺扎到扣 1 命,往下掉'),
-      demoStep(demoState({ x: 0.2, y: 9 }, [demoPlatform(1, 4, 'normal', 5, 3), demoPlatform(2, 6, 'normal', 5, 3), demoPlatform(3, 17, 'normal', 5, 3)]),
+        '平台把你推到頂端…', '…被頂刺扎到扣 1 命,往下掉'), kind: 'fail' },
+      { ...demoStep(demoState({ x: 0.2, y: 9 }, [demoPlatform(1, 4, 'normal', 5, 3), demoPlatform(2, 6, 'normal', 5, 3), demoPlatform(3, 17, 'normal', 5, 3)]),
         (s) => stepUntil(s, (x) => x.over),
-        '底下沒有平台…', '…掉出畫面底部,遊戲結束'),
+        '底下沒有平台…', '…掉出畫面底部,遊戲結束'), kind: 'fail' },
     ],
   },
 });
