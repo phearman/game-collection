@@ -77,7 +77,9 @@ body {
   justify-content: center;
   gap: 6px;
 }
-.btn:hover { background: var(--surface-sub); }
+.btn:not(:disabled):hover { background: var(--surface-sub); }
+/* 停用的按鈕(例:即時類遊戲結束後的暫停鈕,IR8)要看得出來按不了 */
+.btn:disabled { opacity: 0.55; cursor: default; }
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
@@ -106,7 +108,13 @@ a.card:hover { border-color: var(--accent); }
 /* 頂列已偏滿,加了編號後左組按鈕收窄內距(點擊區仍 ≥ 40px);窄螢幕再縮字級 */
 .topbar .navigation .btn { padding-inline: 10px; }
 @media (max-width: 400px) {
-  .topbar .navigation .btn { padding-inline: 8px; font-size: 13px; }
+  .topbar .navigation .btn { padding-inline: 6px; font-size: 13px; }
+  /* 窄螢幕頂列(IR11):≥360px 8 款都單行。選擇器加權重,蓋過各款 style.css 的 .topbar / .stats .stat 設定;點擊區仍 ≥ 40px */
+  .page .topbar { gap: 6px; }
+  .topbar .stats { gap: 4px; }
+  .topbar .stats .stat { min-width: 0; padding: 2px 6px; }
+  .topbar .stats .stat-value { font-size: 14px; }
+  .topbar .stats .btn { padding-inline: 8px; }
 }
 .card-code { margin-right: 6px; vertical-align: 1px; }
 
@@ -145,3 +153,8 @@ a.card:hover { border-color: var(--accent); }
 /* 結算遮罩 XP 明細(RS5):小字,可折行 */
 .overlay-xp-detail { font-size: 12px; line-height: 1.5; color: inherit; opacity: .85; margin: 2px 0 6px; }
 .overlay-xp-detail a { color: inherit; text-decoration: underline; white-space: nowrap; }
+
+/* 結算失敗對話框(IR6,shared/settle.js) */
+.settle-fail p { margin: 8px 0 0; }
+.settle-fail .btn[hidden] { display: none; } /* .btn 的 display 會蓋過 hidden */
+.settle-fail .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 16px; }

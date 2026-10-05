@@ -8,7 +8,8 @@ import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
-import { xpBreakdownHtml } from '../../shared/xp-explain.js';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
+import { settlePlay } from '../../shared/settle.js';
 
 const GAME_ID = 'minesweeper';
 const LONG_PRESS_MS = 400;
@@ -51,9 +52,10 @@ function finish(result) {
   render();
   return run(async () => {
     const bestBefore = best;
-    const out = await profile.finishPlay(GAME_ID, {
+    const out = await settlePlay(profile, GAME_ID, {
       result, score: snap.score, difficulty: snap.difficulty, detail: { seconds: snap.seconds, mines: snap.mines },
     });
+    if (!out) { if (no === gameNo) startNew(snap.difficulty); return; } // 結算失敗且選「不存了」:不記錄、開新局(IR6)
     best = Math.max(best, snap.score);
     if (no !== gameNo) return;
     ended = {
@@ -162,9 +164,9 @@ function infoHtml() {
     xpBreakdownHtml(ended.xpBreakdown),
   ];
   if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
-  if (ended.result !== 'win') lines.push(`<p>勝利才有分數(最佳 ${ended.bestBefore.toLocaleString()})</p>`);
-  else if (ended.isBest) lines.push('<p>🎉 新的最佳分數!</p>');
-  else lines.push(`<p>距最佳 ${ended.bestBefore.toLocaleString()} 還差 ${(ended.bestBefore - ended.score).toLocaleString()}</p>`);
+  if (ended.result !== 'win') {
+    lines.push(`<p>勝利才有分數${ended.bestBefore > 0 ? `(最佳 ${ended.bestBefore.toLocaleString()})` : ''}</p>`);
+  } else lines.push(bestLineHtml(ended));
   return lines.join('');
 }
 

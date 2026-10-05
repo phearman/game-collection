@@ -41,5 +41,13 @@ export class MemoryStore {
     this.saves = new Map(copy(saves).map((s) => [s.game_id, s]));
   }
 
+  // 結算一次提交(IR6):記憶體寫入不會失敗。
+  async commitFinish({ gameId, profile, stats, play }) {
+    this.saves.delete(gameId);
+    this.profile = copy(profile);
+    this.stats[stats.game_id] = copy(stats);
+    this.plays = pushPlay(this.plays, copy(play));
+  }
+
   async legacyBest(gameId) { return Number(this.legacy[gameId]) || 0; }
 }

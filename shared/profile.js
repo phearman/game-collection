@@ -1,7 +1,7 @@
 // 個人紀錄 API(RS1):遊戲與畫面只用這裡。規則一律呼叫 progress.js,這裡只串接 store。
 import { GAMES } from './games.js';
 import {
-  emptyProfile, migrateLegacyBest, applyFinish, applyUnlock, levelProgress, ACHIEVEMENTS, recentOrder,
+  emptyProfile, migrateLegacyBest, applyFinish, applyUnlock, levelProgress, ACHIEVEMENTS, ACHIEVEMENT_XP, recentOrder,
   timerInit, timerEvent, timerSeconds, validateImport, isValidGameSave, pushPlay, exportData, exportFileName, iso, PLAYS_LIMIT,
 } from './progress.js';
 import { isValidState as valid2048 } from '../games/2048/logic.js';
@@ -72,6 +72,7 @@ export async function createProfile({
   const loaded = new Map(); // gameId → 最近一次讀到/寫入的存檔(接續秒數與開局時間)
   const savesDirty = new Set(); // 最近一次寫入失敗的存檔 gameId ⇒ 快照以 loaded 為準
   const live = new Map(); // gameId → 本局即時獎勵明細 { xp, achievements }(隨存檔保存)
+  const stored = new Set(); // 存檔曾成功寫入 store(或從 store 讀到)的 gameId:用來區分「從未存成功」與「被其他分頁刪除」(IR9)
   // 只疊入未成功寫入的存檔;已寫入的以 store 為準(其他分頁可能已覆蓋或刪除,IR3)。
   const listSaves = async () => {
     const all = new Map((await store.listSaves()).map((sv) => [sv.game_id, sv]));
@@ -89,6 +90,7 @@ export async function createProfile({
     savesDirty.clear();
     loaded.clear();
     live.clear();
+    stored.clear();
     if (timer) {
       const t = now();
       timer = { gameId: timer.gameId, startedAt: t, t: timerInit(t, 0) };
@@ -124,19 +126,26 @@ export async function createProfile({
     if (live.get(gameId)?.achievements.length) save.live = live.get(gameId);
     loaded.set(gameId, save);
     if ((await store.putSave(save)) === false) savesDirty.add(gameId);
-    else savesDirty.delete(gameId);
+    else {
+      savesDirty.delete(gameId);
+      stored.add(gameId);
+    }
   };
 
   // 分頁隱藏或離頁時,把最新秒數寫進存檔(還沒有存檔 = 還沒有效操作,不寫)。
   // store 裡的存檔若已被其他分頁替換(開局時間不同、版本較新)或刪除,就不寫回,免得舊存檔「復活」(F1)。
+  // 從未成功寫入過的存檔(例:首次寫入就配額不足)store 裡本來就沒有 ⇒ 不是被刪,保留並重試寫入(IR9-1)。
   const flush = async () => {
     const id = timer?.gameId;
     const save = id && loaded.get(id);
     if (!save) return;
     const cur = await store.getSave(id);
-    if (!cur || cur.started_at !== save.started_at || cur.version > save.version) {
+    if (loaded.get(id) !== save) return; // 等待期間已被另一次 flush/結算處理(隱藏與離頁常連發)
+    const removedElsewhere = !cur && stored.has(id);
+    if (removedElsewhere || (cur && (cur.started_at !== save.started_at || cur.version > save.version))) {
       loaded.delete(id);
       savesDirty.delete(id);
+      stored.delete(id);
       return;
     }
     await writeSave(id, save.state);
@@ -160,6 +169,7 @@ export async function createProfile({
       if (save?.game_id !== gameId || !isValidGameSave(save, stateValidators)) return null;
       loaded.set(gameId, save);
       live.set(gameId, save.live ?? noLive());
+      stored.add(gameId);
       return save.state;
     },
 
@@ -171,6 +181,7 @@ export async function createProfile({
     async discardSave(gameId) {
       loaded.delete(gameId);
       savesDirty.delete(gameId);
+      stored.delete(gameId);
       live.delete(gameId);
       if (timer?.gameId === gameId) timer = null;
       await store.deleteSave(gameId);
@@ -201,29 +212,49 @@ export async function createProfile({
       return structuredClone(live.get(gameId) ?? noLive());
     },
 
+    // 結算 = 一次提交(IR6):store.commitFinish 刪存檔並寫 profile/stats/局紀錄,任一步失敗就整批還原並丟錯
+    // (結算路徑不走記憶體備援)。失敗時本頁狀態完全不動,重試會從目前的資料重新計算(其他分頁匯入後也正確)。
+    // 基準一律是「持久」的 profile/stats(R2):其他分頁期間的入帳不會被本頁記憶體裡的舊 profile 蓋掉;
+    // 本局即時成就若當時沒寫進去(持久 profile 裡沒有),就在新基準上補入帳。
     async finishPlay(gameId, { result, score = 0, difficulty = 'normal', detail = {}, assist = false }) {
       const t = now();
       const save = loaded.get(gameId);
       const running = timer?.gameId === gameId;
+      const lv = live.get(gameId);
+      const base = (await store.getProfile()) ?? emptyProfile(mem.device_id);
+      const missing = (lv?.achievements ?? []).filter((id) => !base.achievements?.[id]);
+      const profile = missing.length
+        ? {
+          ...base,
+          achievements: { ...base.achievements, ...Object.fromEntries(missing.map((id) => [id, iso(t)])) },
+          xp: (base.xp ?? 0) + ACHIEVEMENT_XP * missing.length,
+        }
+        : base;
       const out = applyFinish({
-        profile: await getProfile(),
-        stats: await listStats(),
+        profile,
+        stats: await store.listStats(),
         gameId, result, score, difficulty, detail, assist,
         startedAt: running ? timer.startedAt : (save ? Date.parse(save.started_at) : t),
         endedAt: t,
         durationSec: running ? elapsed() : (save?.active_sec ?? 0),
         id: uuid(),
-        live: live.get(gameId),
+        live: lv,
       });
-      await putProfile(out.profile);
-      await putStats(out.stats[gameId]);
-      await addPlay(out.play);
-      await store.deleteSave(gameId);
+      await store.commitFinish({ gameId, profile: out.profile, stats: out.stats[gameId], play: out.play });
+      mem = out.profile;
+      memDirty = false;
+      delete statsMem[gameId];
       loaded.delete(gameId);
       savesDirty.delete(gameId);
+      stored.delete(gameId);
       live.delete(gameId);
-      if (running) timer = null;
+      if (timer?.gameId === gameId) timer = null;
       return { play: out.play, xpGained: out.xpGained, xpBreakdown: out.xpBreakdown, newAchievements: out.newAchievements, level: out.level };
+    },
+
+    // 結算失敗後使用者選「不存了」:紀錄已整批還原(什麼都沒記);丟掉本局存檔與快取,下一局從 0 起算(IR6)。
+    async abandonFinish(gameId) {
+      await api.discardSave(gameId);
     },
 
     async unlock(gameId, ev) {
@@ -297,6 +328,7 @@ export async function createProfile({
       playsMem.length = 0;
       loaded.clear();
       savesDirty.clear();
+      stored.clear();
       live.clear();
       timer = null;
       return check;

@@ -4,7 +4,8 @@ import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
-import { appendXpBreakdown } from '../../shared/xp-explain.js';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js';
+import { settlePlay } from '../../shared/settle.js';
 
 const GAME_ID = 'tictactoe';
 const $ = (id) => document.getElementById(id);
@@ -68,14 +69,15 @@ function render() {
     p.textContent = text;
     info.append(p);
   };
-  if (!ended || ended.pending) { add('結算中…'); return; }
+  if (!ended?.play) { add('結算中…'); return; }
   add(`本局 +${ended.xpGained} XP`, 'overlay-xp');
   appendXpBreakdown(info, ended.xpBreakdown, document);
   if (ended.newAchievements.length) add(`新成就：${ended.newAchievements.map((id) => {
     const a = ACHIEVEMENTS.find((item) => item.id === id);
     return a ? `${a.icon} ${a.name}` : id;
   }).join('、')}`);
-  add(ended.play.is_best ? '🎉 新的最佳分數！' : `距最佳 ${ended.bestBefore} 還差 ${Math.max(0, ended.bestBefore - state.score)} 分`);
+  const bestText = bestLine({ isBest: ended.play.is_best, bestBefore: ended.bestBefore, score: state.score });
+  if (bestText) add(bestText);
 }
 
 function finish(result) {
@@ -86,9 +88,14 @@ function finish(result) {
   render();
   return run(async () => {
     const bestBefore = best;
-    const out = await profile.finishPlay(GAME_ID, {
+    const out = await settlePlay(profile, GAME_ID, {
       result, score: snap.score, difficulty: snap.difficulty, detail: { moves: snap.moves },
     });
+    if (!out) { // 結算失敗且選「不存了」:不記錄、開新局(IR6);開新局流程中則交給它
+      ended = { abandoned: true };
+      if (!restarting) newGame();
+      return;
+    }
     best = Math.max(best, snap.score);
     ended = { ...out, bestBefore };
     render();

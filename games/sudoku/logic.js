@@ -192,6 +192,13 @@ function validSnapshot(s, puzzle) {
     && Array.isArray(s.notes) && s.notes.length === 81 && Array.from(s.notes).every((n, i) => Array.isArray(n)
       && (!s.board[i] || !n.length) && Array.from(n).every((v, j) => Number.isInteger(v) && v >= 1 && v <= 9 && (j === 0 || n[j - 1] < v)));
 }
+// 提示數區間:下限 = 該難度提示數,上限 = 低一級難度的提示數(不含);一般難度無上限。
+export function inClueRange(clues, difficulty) {
+  const min = DIFFICULTIES[difficulty];
+  const easier = Object.values(DIFFICULTIES).filter((n) => n > min);
+  return clues >= min && (!easier.length || clues < Math.min(...easier));
+}
+
 export function isValidState(s) {
   if (!s || !Object.hasOwn(DIFFICULTIES, s.difficulty) || !isBoard(s.puzzle)
     || clueCount(s.puzzle) < DIFFICULTIES[s.difficulty] || !validSnapshot(s, s.puzzle) || !count(s.moves)) return false;
@@ -203,6 +210,11 @@ export function isValidState(s) {
   const result = hasWon(s.board) ? 'win' : null;
   if (s.result !== result || s.score !== scoreFor(result, secondsFor(s))) return false;
   if (s.moves === 0 && (s.history.length || s.board.some((v, i) => v !== s.puzzle[i]) || s.notes.some((n) => n.length))) return false;
+  // IR10:歷史為空 ⇒ 盤面等於題目;有操作(歷史非空或盤面≠題目)⇒ 已開始計時;提示數落在該難度區間(不落在較低難度的區間)
+  const touched = s.board.some((v, i) => v !== s.puzzle[i]);
+  if (!s.history.length && touched) return false;
+  if ((s.history.length || touched) && s.clock === null) return false;
+  if (!inClueRange(clueCount(s.puzzle), s.difficulty)) return false;
   return countSolutions(s.puzzle) === 1;
 }
 

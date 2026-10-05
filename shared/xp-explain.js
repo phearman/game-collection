@@ -41,3 +41,20 @@ export function appendXpBreakdown(container, breakdown, doc = globalThis.documen
   p.append(a);
   container.append(p);
 }
+
+// 結算遮罩「最佳」那一行(IR7)。→ 文字;'' = 不顯示。
+// 先前最佳為 0(第一次玩或從未得分)⇒ 不顯示;本局即新最佳 ⇒ 只顯示 🎉;追平 ⇒「已追平」;落後 ⇒「距最佳 N 還差 M」。
+// 輔助局不刷新最佳,所以不顯示新最佳;超過先前最佳也不顯示(遮罩另有「不刷新最佳」那行)。
+// noun / unit:各款用語(下樓梯 =「紀錄」「 層」);unit 直接接「還差」,預設一個空白。
+export function bestLine({ isBest, bestBefore, score, assist = false, noun = '分數', unit = ' ' }) {
+  if (isBest && !assist) return `🎉 新的最佳${noun}!`;
+  if (!(bestBefore > 0) || score > bestBefore) return '';
+  if (score === bestBefore) return `已追平最佳${noun}!`;
+  return `距最佳 ${bestBefore.toLocaleString()}${unit}還差 ${(bestBefore - score).toLocaleString()}`;
+}
+
+// HTML 版:包成 <p>;不顯示時回 ''。
+export const bestLineHtml = (args) => {
+  const text = bestLine(args);
+  return text ? `<p>${text}</p>` : '';
+};

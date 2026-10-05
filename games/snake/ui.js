@@ -8,7 +8,8 @@ import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
-import { xpBreakdownHtml } from '../../shared/xp-explain.js';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
+import { settlePlay } from '../../shared/settle.js';
 import { load, save } from '../../shared/storage.js';
 
 const GAME_ID = 'snake';
@@ -56,9 +57,10 @@ function finish(result) {
   render();
   return run(async () => {
     const bestBefore = best;
-    const out = await profile.finishPlay(GAME_ID, {
+    const out = await settlePlay(profile, GAME_ID, {
       result, score: snap.score, difficulty: snap.difficulty, detail: { length: snap.length },
     });
+    if (!out) { if (no === gameNo) startNew(); return; } // 結算失敗且選「不存了」:不記錄、開新局(IR6)
     best = Math.max(best, snap.score);
     if (no !== gameNo) return;
     ended = {
@@ -181,9 +183,7 @@ function infoHtml() {
   if (ended.pending) return '<p>結算中…</p>';
   const lines = [`<p class="overlay-xp">本局 +${ended.xp} XP</p>`, xpBreakdownHtml(ended.xpBreakdown)];
   if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
-  lines.push(ended.isBest
-    ? '<p>🎉 新的最佳分數!</p>'
-    : `<p>距最佳 ${ended.bestBefore.toLocaleString()} 還差 ${(ended.bestBefore - ended.score).toLocaleString()}</p>`);
+  lines.push(bestLineHtml(ended));
   return lines.join('');
 }
 

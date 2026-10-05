@@ -9,6 +9,9 @@
 //   getStats(gameId) → stats | null        putStats(stats)   listStats() → { [game_id]: stats }
 //   exportAll() → { profile, stats, plays, saves }
 //   importAll(data)                        整份覆蓋;失敗須丟錯且原資料不變
+//   commitFinish({ gameId, profile, stats, play })  結算一次提交:刪該款存檔 + 寫 profile/stats/局紀錄;
+//                                          任一步失敗須丟錯且四者還原成原值,⛔ 回 false(IR6);還原不了丟
+//                                          rollbackFailed 錯誤並附 retryRestore() → 再還原一次,回傳同規則的錯誤
 //   isImportKey(key) → boolean(選填,同步)  storage 事件的 key 是否為「整份匯入」標記;profile 據此讓快取全部作廢
 //   legacyBest(gameId) → number            RS1 前舊最佳分數(只有本機有;雲端實作回 0)
 //
