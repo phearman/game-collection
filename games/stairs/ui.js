@@ -1,8 +1,9 @@
 // 下樓梯畫面層:requestAnimationFrame 迴圈、輸入收集、Canvas 繪圖。規則一律呼叫 logic.js(遊戲)與 shared/profile.js(紀錄),這裡不寫規則。
 import {
-  W, H, PLAYER, CEIL, DT, MAX_LIVES, FLIP_DELAY, DIFFICULTIES, initState, stepState, pauseState, resumeState, overlayFor,
+  W, H, PLAYER, DT, MAX_LIVES, DIFFICULTIES, initState, stepState, pauseState, resumeState, overlayFor,
   toSave, fromSave, isValidState,
 } from './logic.js';
+import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js';
 import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js';
@@ -23,6 +24,8 @@ let state;
 let best = 0; // 本局開始前的最佳分數(profile 管)
 let ended = null; // 本局已結算:{ xp, newAchievements, isBest, bestBefore, score };結算中為 { pending: true }
 let gameNo = 0; // 每開一局 +1;非同步結算回來時,局號不同就不動畫面
+let fx = createFx(); // 畫面特效(RS11;不進存檔)
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 // 紀錄寫入依序執行,避免存檔與結算交錯。
 let queue = Promise.resolve();
@@ -45,6 +48,7 @@ function persist() {
 
 async function startNew(difficulty = difficultyPref()) {
   state = initState(Math.random, difficulty);
+  fx = createFx();
   gameNo++;
   ended = null;
   render();
@@ -58,14 +62,14 @@ async function startNew(difficulty = difficultyPref()) {
 
 // 一局結束:依 §4.2 結算(每局只執行一次),結果顯示在遮罩。
 function finish(result) {
-  const snap = { score: state.floors, difficulty: state.difficulty };
+  const snap = { score: state.floors, difficulty: state.difficulty, hearts: state.hearts ?? 0 };
   ended = { pending: true };
   const no = gameNo;
   render();
   return run(async () => {
     const bestBefore = best;
     const out = await settlePlay(profile, GAME_ID, {
-      result, score: snap.score, difficulty: snap.difficulty, detail: { floors: snap.score },
+      result, score: snap.score, difficulty: snap.difficulty, detail: { floors: snap.score, hearts: snap.hearts },
     });
     if (!out) { if (no === gameNo) startNew(); return; } // 結算失敗且選「不存了」:不記錄、開新局(IR6)
     if (out.play.is_best) best = Math.max(best, snap.score);
@@ -145,54 +149,59 @@ function inputDir() {
   return (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
 }
 
-// ---- 迴圈:固定步長累積,只在進行中跑 ----
+// ---- 迴圈:固定步長累積;進行中,或特效/結束動畫還沒播完時跑 ----
 
 let running = false;
 let last = 0;
 let acc = 0;
 const playing = () => !confirmingQuit && !state.paused && !state.over && !ended;
+const animating = () => fxBusy(fx);
 
 function frame(t) {
-  if (!playing()) {
+  if (!playing() && !animating()) {
     running = false;
     return;
   }
-  acc += Math.min(0.25, (t - last) / 1000); // 切回分頁或卡頓時不一次追太多步
+  const dt = Math.max(0, Math.min(0.25, (t - last) / 1000)); // 切回分頁或卡頓時不一次追太多步;時間戳倒退時不倒轉特效
   last = t;
-  if (inputDir() !== 0 && t - lastInputAt >= HOLD_INPUT_MS) noteInput(t);
-  while (acc >= DT && playing()) {
-    acc -= DT;
-    state = stepState(state, { dir: inputDir() });
-    if (state.over) {
-      finish(resultOnGameOver({ everWon: false }));
-    } else if (state.ticks % SAVE_EVERY === 0) {
-      persist();
+  if (playing()) {
+    acc += dt;
+    if (inputDir() !== 0 && t - lastInputAt >= HOLD_INPUT_MS) noteInput(t);
+    while (acc >= DT && playing()) {
+      acc -= DT;
+      const prev = state;
+      const dir = inputDir();
+      state = stepState(state, { dir });
+      fxEvents(fx, prev, state, { dir, reduced: reducedMotion.matches });
+      if (state.over) {
+        finish(resultOnGameOver({ everWon: false }));
+      } else if (state.ticks % SAVE_EVERY === 0) {
+        persist();
+      }
     }
   }
+  const wasEnding = !endingDone(fx);
+  fxUpdate(fx, dt, playing() ? state.speed : 0);
+  if (wasEnding && endingDone(fx)) shownKind = null; // 結束動畫播完:顯示結算遮罩
   render();
   requestAnimationFrame(frame);
 }
 
-// 只在「進行中且未結算」時跑迴圈;暫停後下一張 frame 自行停下。
+// 只在「進行中」或「特效未播完」時跑迴圈;都停了下一張 frame 自行停下。
 function syncLoop() {
-  if (!playing() || running) return;
+  if ((!playing() && !animating()) || running) return;
   running = true;
   last = performance.now();
   acc = 0;
   requestAnimationFrame(frame);
 }
 
-// ---- 繪圖 ----
+// ---- 繪圖(美術在 draw.js)----
 
 const canvas = $('field');
 const ctx = canvas.getContext('2d');
-let colors = {};
-function readColors() {
-  const cs = getComputedStyle(document.documentElement);
-  for (const k of ['bg', 'wall', 'normal', 'spike', 'bounce', 'flip', 'player', 'eye', 'text']) {
-    colors[k] = cs.getPropertyValue(`--st-${k}`).trim();
-  }
-}
+let pal = {};
+const readColors = () => { pal = readPalette(getComputedStyle(document.documentElement)); };
 
 function resize() {
   const dpr = window.devicePixelRatio || 1;
@@ -205,73 +214,11 @@ function resize() {
   draw();
 }
 
-const THICK = 0.3; // 平台厚度(只影響畫面)
-
-function spikesRow(c, x0, x1, base, tip, n) {
-  const step = (x1 - x0) / n;
-  c.beginPath();
-  for (let i = 0; i < n; i++) {
-    c.moveTo(x0 + i * step, base);
-    c.lineTo(x0 + (i + 0.5) * step, tip);
-    c.lineTo(x0 + (i + 1) * step, base);
-  }
-  c.closePath();
-  c.fill();
-}
-
 function draw() {
   if (!state) return;
   const s = canvas.width / W;
   ctx.setTransform(s, 0, 0, s, 0, 0);
-  ctx.fillStyle = colors.bg;
-  ctx.fillRect(0, 0, W, H);
-
-  for (const p of state.platforms) {
-    ctx.globalAlpha = p.flip === null ? 1 : Math.max(0.2, 1 - p.flip / FLIP_DELAY);
-    if (p.kind === 'spike') {
-      ctx.fillStyle = colors.spike;
-      ctx.fillRect(p.x, p.y, p.w, THICK);
-      spikesRow(ctx, p.x, p.x + p.w, p.y, p.y - 0.28, Math.round(p.w * 2.5));
-    } else if (p.kind === 'bounce') {
-      ctx.strokeStyle = colors.bounce;
-      ctx.lineWidth = 0.08;
-      ctx.beginPath();
-      for (let i = 0; i <= p.w * 4; i++) ctx.lineTo(p.x + i / 4, p.y + (i % 2 ? THICK : 0.06));
-      ctx.stroke();
-      ctx.fillStyle = colors.bounce;
-      ctx.fillRect(p.x, p.y, p.w, 0.1);
-    } else if (p.kind === 'flip') {
-      ctx.fillStyle = colors.flip;
-      const shake = p.flip === null ? 0 : Math.sin(p.flip * 60) * 0.05;
-      for (let x = 0; x < p.w; x += 0.5) ctx.fillRect(p.x + x + shake, p.y, 0.4, THICK);
-    } else {
-      ctx.fillStyle = colors.normal;
-      ctx.fillRect(p.x, p.y, p.w, THICK);
-    }
-  }
-  ctx.globalAlpha = 1;
-
-  // 頂端的刺
-  ctx.fillStyle = colors.spike;
-  ctx.fillRect(0, 0, W, 0.12);
-  spikesRow(ctx, 0, W, 0.1, CEIL, 18);
-
-  // 玩家:受傷時閃爍
-  const { x, y } = state.player;
-  const blink = state.hurt > 0 && Math.floor(state.hurt * 10) % 2 === 0;
-  ctx.fillStyle = blink ? colors.spike : colors.player;
-  ctx.fillRect(x, y, PLAYER, PLAYER);
-  ctx.fillStyle = colors.eye;
-  ctx.fillRect(x + 0.18, y + 0.22, 0.14, 0.18);
-  ctx.fillRect(x + PLAYER - 0.32, y + 0.22, 0.14, 0.18);
-
-  // 生命
-  ctx.font = '0.55px system-ui, sans-serif';
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = colors.spike;
-  ctx.fillText('♥'.repeat(state.lives), 0.25, CEIL + 0.15);
-  ctx.fillStyle = colors.wall;
-  ctx.fillText('♥'.repeat(MAX_LIVES - state.lives), 0.25 + state.lives * 0.48, CEIL + 0.15);
+  drawScene(ctx, state, pal, fx, { reduced: reducedMotion.matches });
 }
 
 // ---- 畫面 ----
@@ -315,7 +262,7 @@ function infoHtml() {
 let shownKind = null;
 function renderOverlay() {
   const overlay = $('overlay');
-  const kind = overlayFor(state);
+  const kind = overlayFor(state) === 'over' && !endingDone(fx) ? null : overlayFor(state); // 結束動畫播完才出遮罩
   const sig = `${kind}|${ended ? (ended.pending ? 'p' : 'd') : ''}`;
   if (sig === shownKind) return; // 進行中不重繪遮罩
   shownKind = sig;
@@ -445,7 +392,7 @@ resize();
 
 // ---- 說明與示範:場面一律由 logic 實算 ----
 
-const demoPlatform = (n, y, kind = 'normal', x = 2.5, w = 4) => ({ n, x, y, w, kind, flip: null });
+const demoPlatform = (n, y, kind = 'normal', x = 2.5, w = 4) => ({ n, x, y, w, kind, flip: null, item: null });
 const demoState = (player, platforms, fields = {}) => ({
   ...initState(() => 0.5),
   paused: false,
@@ -465,21 +412,16 @@ const steps = (s, n) => {
 };
 const below = (n0) => [demoPlatform(n0 + 1, 15, 'normal', 0.5, 3), demoPlatform(n0 + 2, 17, 'normal', 5, 3)];
 
-const COLOR_VAR = { normal: 'var(--st-normal)', spike: 'var(--st-spike)', bounce: 'var(--st-bounce)', flip: 'var(--st-flip)' };
+// 示範圖:用遊戲同一套繪圖(draw.js)畫成圖片,美術與實際畫面一致。
+const DEMO_PX = 40; // 每個場地單位幾個像素
 function demoSvg(s) {
-  const plats = s.platforms.filter((p) => p.y < H).map((p) => {
-    const spikes = p.kind === 'spike'
-      ? `<path d="${Array.from({ length: p.w * 2 }, (_, i) => `M${p.x + i / 2} ${p.y}l0.25 -0.3l0.25 0.3z`).join('')}" fill="${COLOR_VAR.spike}"/>`
-      : '';
-    return `<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${THICK}" fill="${COLOR_VAR[p.kind]}"${p.kind === 'flip' ? ' stroke-dasharray="0.4 0.1" opacity="0.8"' : ''}/>${spikes}`;
-  }).join('');
-  const ceil = `<path d="${Array.from({ length: 18 }, (_, i) => `M${i / 2} 0.1l0.25 ${CEIL - 0.1}l0.25 ${-(CEIL - 0.1)}z`).join('')}" fill="var(--st-spike)"/>`;
-  const { x, y } = s.player;
-  const hurt = s.hurt > 0 ? 'var(--st-spike)' : 'var(--st-player)';
-  const player = s.player.y <= H ? `<rect x="${x}" y="${y}" width="${PLAYER}" height="${PLAYER}" fill="${hurt}"/>` : '';
-  const hud = `<text x="0.3" y="1.5" font-size="0.7" fill="var(--st-spike)">${'♥'.repeat(s.lives)}</text>`
-    + `<text x="8.7" y="1.5" font-size="0.7" text-anchor="end" fill="var(--st-text)">${s.over ? '結束' : `${s.floors} 層`}</text>`;
-  return `<svg class="demo-field" viewBox="0 0 ${W} ${H}" role="img" aria-label="示範場面">${plats}${ceil}${player}${hud}</svg>`;
+  const c = document.createElement('canvas');
+  c.width = W * DEMO_PX;
+  c.height = H * DEMO_PX;
+  const g = c.getContext('2d');
+  g.setTransform(DEMO_PX, 0, 0, DEMO_PX, 0, 0);
+  drawScene(g, s, pal, null, { reduced: true, demo: true });
+  return `<img class="demo-field" src="${c.toDataURL()}" alt="示範場面">`;
 }
 
 const landOn = (s) => stepUntil(s, (x) => x.player.on !== null);
@@ -493,7 +435,7 @@ setupHelp({
       <li>平台不斷往上捲;用 ← → / A D,或按住畫面左半邊/右半邊移動。</li>
       <li>刺平台扣 1 命;彈跳平台會把你彈起;翻轉平台踩上 0.5 秒後消失。</li>
       <li>被推到頂端的刺扣 1 命並往下掉;掉出畫面底部直接結束。</li>
-      <li>生命 3 格,每下 10 層站上普通平台回 1 命。</li>
+      <li>生命 3 格,每下 10 層站上普通平台回 1 命;碰到愛心也回 1 命(滿血照樣撿走)。</li>
       <li>P 或 ⏸ 暫停;難度越高捲得越快、刺越多,XP 越多。</li>
       <li>沒有勝利,撐到結束為止;分數 = 下了幾層,最佳 = 單局最多層。</li>
     </ol>`,
@@ -504,6 +446,8 @@ setupHelp({
         '往下掉到普通平台…', '…站穩了:層數 +1'), kind: 'ok' },
       demoStep(demoState({ x: 4, y: 3 }, [demoPlatform(1, 7, 'bounce'), ...below(1)]), (s) => steps(stepUntil(s, (x) => x.player.vy < 0), 12),
         '落到彈跳平台…', '…被彈起來,再落回平台'),
+      { ...demoStep(demoState({ x: 4.1, y: 3 }, [{ ...demoPlatform(1, 7), item: 'heart' }, ...below(1)], { lives: 2 }), landOn,
+        '普通平台上有愛心…', '…碰到就撿起:生命 +1'), kind: 'ok' },
       { ...demoStep(demoState({ x: 4, y: 3 }, [demoPlatform(1, 7, 'spike'), ...below(1)]), landOn,
         '落到刺平台…', '…扣 1 命(左上愛心少一顆)'), kind: 'fail' },
       { ...demoStep(demoState({ x: 4, y: 1.2, on: 1 }, [demoPlatform(1, 1.2 + PLAYER), demoPlatform(2, 7, 'normal', 2.5, 4), ...below(2)]),

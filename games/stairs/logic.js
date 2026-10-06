@@ -17,13 +17,17 @@ export const HURT_SEC = 0.6; // 受傷閃爍時間(只給畫面用)
 export const MAX_LIVES = 3;
 export const HEAL_EVERY = 10; // 每 10 層站上普通平台回 1 命
 export const KINDS = ['normal', 'spike', 'bounce', 'flip'];
+export const ITEMS = ['heart']; // 平台上的道具(RS17)
+export const HEART = 0.6; // 愛心邊長
+export const HEART_LIFT = 0.15; // 愛心底緣離平台上緣的高度
 export const DIFFICULTIES = ['normal', 'hard', 'expert'];
 
 // 難度參數:初始捲動速度、加速度(單位/秒²)、速度上限、各平台比例(其餘為普通)。
 export const LEVELS = {
-  normal: { speed0: 1.5, accel: 0.03, maxSpeed: 4, spike: 0.1, bounce: 0.1, flip: 0.15 },
-  hard: { speed0: 2, accel: 0.04, maxSpeed: 5, spike: 0.2, bounce: 0.1, flip: 0.15 },
-  expert: { speed0: 2.5, accel: 0.05, maxSpeed: 6, spike: 0.3, bounce: 0.1, flip: 0.15 },
+// heart = 新生成的普通平台帶愛心的機率(RS17)。
+  normal: { speed0: 1.5, accel: 0.03, maxSpeed: 4, spike: 0.1, bounce: 0.1, flip: 0.15, heart: 0.06 },
+  hard: { speed0: 2, accel: 0.04, maxSpeed: 5, spike: 0.2, bounce: 0.1, flip: 0.15, heart: 0.04 },
+  expert: { speed0: 2.5, accel: 0.05, maxSpeed: 6, spike: 0.3, bounce: 0.1, flip: 0.15, heart: 0.03 },
 };
 
 const START_Y = 8; // 開局平台高度(畫面中段)
@@ -54,15 +58,24 @@ export function kindFor(difficulty, r) {
   return 'normal';
 }
 
-// 產生第 n 層平台(上緣在 y):寬 2~4、水平位置隨機。→ { platform, seed }
+// 產生第 n 層平台(上緣在 y):寬 2~4、水平位置隨機;普通平台依難度機率帶愛心。→ { platform, seed }
+// 每塊平台固定取 4 個亂數(不論種類),序列只由種子決定,存檔續玩可重現。
 export function spawnPlatform(seed, n, y, difficulty) {
-  let r1, r2, r3;
+  let r1, r2, r3, r4;
   [r1, seed] = nextRandom(seed);
   [r2, seed] = nextRandom(seed);
   [r3, seed] = nextRandom(seed);
+  [r4, seed] = nextRandom(seed);
   const w = 2 + Math.floor(r2 * 3);
   const x = Math.round(r3 * (W - w) * 100) / 100;
-  return { platform: { n, x, y, w, kind: kindFor(difficulty, r1), flip: null }, seed };
+  const kind = kindFor(difficulty, r1);
+  const item = kind === 'normal' && r4 < LEVELS[difficulty].heart ? 'heart' : null;
+  return { platform: { n, x, y, w, kind, flip: null, item }, seed };
+}
+
+// 愛心的範圍(在平台中央上方,隨平台移動)。
+export function heartBox(p) {
+  return { x: p.x + (p.w - HEART) / 2, y: p.y - HEART_LIFT - HEART, w: HEART, h: HEART };
 }
 
 // 從最下面那層往下補平台,補到畫面底部以下一層。
@@ -80,16 +93,18 @@ function fill(platforms, seed, nextN, difficulty) {
 }
 
 // ---- 狀態 ----
-// state = { player, platforms, seed, nextN, floors, lives, healAt, time, ticks, speed, difficulty, hurt, paused, over }
+// state = { player, platforms, seed, nextN, floors, lives, healAt, hearts, time, ticks, speed, difficulty, hurt, picked, paused, over }
 //   player    { x, y, vy, on }:左上角座標、垂直速度、站著的平台層號(null = 空中)、drop = 正要穿過的平台層號
-//   platforms 由上到下;每個 { n 層號, x, y 上緣, w, kind, flip 翻轉計時(null = 未踩) }
+//   platforms 由上到下;每個 { n 層號, x, y 上緣, w, kind, flip 翻轉計時(null = 未踩), item 道具('heart' / null) }
 //   floors    分數 = 經過的層數 = 踩過最深的層號(開局平台是第 0 層)
 //   healAt    下一次可回命的層數門檻
+//   hearts    本局撿到的愛心數(RS17;不加分,記在 detail)
+//   picked    本步撿到愛心:'heal' 加命 / 'full' 滿血沒加 / null(只給畫面用,不存檔)
 //   ticks     本局已推進的步數(§4.2 判斷「新遊戲」要不要記錄)
 
 export function initState(rng = Math.random, difficulty = 'normal') {
   const diff = DIFFICULTIES.includes(difficulty) ? difficulty : 'normal';
-  const first = { n: 0, x: (W - START_W) / 2, y: START_Y, w: START_W, kind: 'normal', flip: null };
+  const first = { n: 0, x: (W - START_W) / 2, y: START_Y, w: START_W, kind: 'normal', flip: null, item: null };
   const filled = fill([first], Math.floor(rng() * 4294967296) >>> 0, 1, diff);
   return {
     player: { x: (W - PLAYER) / 2, y: START_Y - PLAYER, vy: 0, on: 0, drop: null },
@@ -99,11 +114,13 @@ export function initState(rng = Math.random, difficulty = 'normal') {
     floors: 0,
     lives: MAX_LIVES,
     healAt: HEAL_EVERY,
+    hearts: 0,
     time: 0,
     ticks: 0,
     speed: speedAt(diff, 0),
     difficulty: diff,
     hurt: 0,
+    picked: null,
     paused: true,
     over: false,
   };
@@ -206,6 +223,21 @@ export function stepState(state, input = {}, dt = DT) {
     vy = Math.max(vy, PUSH_V);
   }
 
+  // 6. 碰到愛心就撿起:生命 +1(上限 3);滿血也撿走但不加命(RS17)。
+  let { hearts } = state;
+  let picked = null;
+  if (lives > 0) {
+    platforms = platforms.map((p) => {
+      if (p.item !== 'heart') return p;
+      const b = heartBox(p);
+      if (!(x + PLAYER > b.x && x < b.x + b.w && y + PLAYER > b.y && y < b.y + b.h)) return p;
+      hearts += 1;
+      picked = lives < MAX_LIVES ? 'heal' : 'full';
+      lives = Math.min(MAX_LIVES, lives + 1);
+      return { ...p, item: null };
+    });
+  }
+
   const over = lives <= 0 || y > H; // 生命歸零或掉出底部
   return {
     ...state,
@@ -216,10 +248,12 @@ export function stepState(state, input = {}, dt = DT) {
     floors,
     lives: Math.max(0, lives),
     healAt,
+    hearts,
     time,
     ticks: state.ticks + 1,
     speed,
     hurt,
+    picked,
     over,
   };
 }
@@ -233,15 +267,24 @@ export function overlayFor({ paused, over, ticks }) {
 
 // ---- 存檔(續玩)----
 
-const SAVE_KEYS = ['player', 'platforms', 'seed', 'nextN', 'floors', 'lives', 'healAt', 'time', 'ticks', 'speed', 'difficulty'];
+const SAVE_KEYS = ['player', 'platforms', 'seed', 'nextN', 'floors', 'lives', 'healAt', 'hearts', 'time', 'ticks', 'speed', 'difficulty'];
 
 export function toSave(state) {
   return structuredClone(Object.fromEntries(SAVE_KEYS.map((k) => [k, state[k]])));
 }
 
-// 還原後處於暫停狀態。
+// 還原後處於暫停狀態。RS17 之前的存檔沒有 item / hearts,補成「無道具、撿到 0 顆」。
 export function fromSave(saved) {
-  return { ...structuredClone(saved), hurt: 0, paused: true, over: false };
+  const s = structuredClone(saved);
+  return {
+    ...s,
+    platforms: s.platforms.map((p) => ({ ...p, item: p.item ?? null })),
+    hearts: s.hearts ?? 0,
+    hurt: 0,
+    picked: null,
+    paused: true,
+    over: false,
+  };
 }
 
 // 存檔 state 格式檢查(匯入驗證與載入防呆;不合格的存檔不還原)。
@@ -252,7 +295,8 @@ const inRange = (v, lo, hi) => isNum(v) && v >= lo && v <= hi;
 
 function isPlatform(p) {
   return isObj(p) && isCount(p.n) && KINDS.includes(p.kind) && inRange(p.w, 2, 4) && inRange(p.x, 0, W - p.w)
-    && inRange(p.y, -1, H + GAP) && (p.flip === null || (p.kind === 'flip' && inRange(p.flip, 0, FLIP_DELAY)));
+    && inRange(p.y, -1, H + GAP) && (p.flip === null || (p.kind === 'flip' && inRange(p.flip, 0, FLIP_DELAY)))
+    && (p.item === undefined || p.item === null || (ITEMS.includes(p.item) && p.kind === 'normal')); // 愛心只在普通平台;undefined = RS17 前的存檔
 }
 
 // 開局到 time 秒平台累計上移的距離(速度線性增加到上限後固定)。
@@ -267,7 +311,7 @@ const SCROLL_TOL = 0.1; // 逐步累加與解析解的誤差上限(遠小於平�
 
 export function isValidState(s) {
   if (!isObj(s)) return false;
-  const { player, platforms, seed, nextN, floors, lives, healAt, time, ticks, speed, difficulty } = s;
+  const { player, platforms, seed, nextN, floors, lives, healAt, hearts, time, ticks, speed, difficulty } = s;
   if (!DIFFICULTIES.includes(difficulty)) return false;
   if (!Array.isArray(platforms) || platforms.length === 0 || platforms.length > 20 || !platforms.every(isPlatform)) return false;
   for (let i = 1; i < platforms.length; i++) {
@@ -283,6 +327,7 @@ export function isValidState(s) {
   const maxN = platforms[platforms.length - 1].n;
   if (!isCount(floors) || floors > maxN) return false;
   if (!Number.isInteger(lives) || lives < 1 || lives > MAX_LIVES) return false; // 生命 0 = 已結束,不會存檔
+  if (hearts !== undefined && (!isCount(hearts) || hearts > nextN)) return false; // 每層最多一顆;undefined = RS17 前的存檔
   if (!isCount(healAt) || healAt % HEAL_EVERY !== 0 || healAt < HEAL_EVERY || healAt > floors + HEAL_EVERY) return false;
   if (!isObj(player) || !inRange(player.x, 0, W - PLAYER) || !inRange(player.y, CEIL, H) || !inRange(player.vy, -BOUNCE_V, MAX_FALL)) return false;
   if (player.on !== null) {
