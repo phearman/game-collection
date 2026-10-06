@@ -115,8 +115,15 @@ a.card:hover { border-color: var(--accent); }
   .topbar .stats .stat { min-width: 0; padding: 2px 6px; }
   .topbar .stats .stat-value { font-size: 14px; }
   .topbar .stats .btn { padding-inline: 8px; }
+  @media (max-width: 374px) {
+    /* 360px 時版本連結兩側間距各收至 2px,保留分數區空間;375px 以上維持原樣。 */
+    .topbar .navigation .game-version { font-size: 10px; margin-inline: -2px; }
+  }
 }
 .card-code { margin-right: 6px; vertical-align: 1px; }
+
+.game-version { font-size: 11px; line-height: 1.4; color: var(--text-sub); white-space: nowrap; }
+.game-version:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2px 12px; text-align: center; min-width: 72px; }
 .stat-label { font-size: 11px; color: var(--text-muted); }
@@ -147,6 +154,9 @@ a.card:hover { border-color: var(--accent); }
 .help-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
 
 .topbar-actions { display: flex; align-items: center; gap: 8px; }
+.lobby-footer { margin-top: 24px; font-size: 12px; }
+.lobby-footer a { color: var(--text-sub); }
+.lobby-footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .card-tags { display: flex; gap: 6px; }
 .tag.is-resume { background: var(--accent); color: var(--surface); }
 
@@ -162,3 +172,13 @@ a.card:hover { border-color: var(--accent); }
 /* 放棄前的最佳分數確認框 */
 .quit-best p { margin: 8px 0 0; }
 .quit-best .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 16px; }
+
+.changelog-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.changelog-heading .btn[hidden] { display: none; }
+.changelog-date { margin-top: 20px; }
+.changelog-date h2 { font-size: 16px; color: var(--text-sub); margin: 0 0 8px; }
+.changelog-entry { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; overflow-wrap: anywhere; }
+.changelog-entry h3 { font-size: 16px; margin: 0 0 8px; }
+.changelog-entry ul { font-size: 14px; padding-left: 20px; margin: 0; }
+.changelog-entry li + li { margin-top: 6px; }
+.changelog-label { color: var(--text-sub); margin-right: 4px; }

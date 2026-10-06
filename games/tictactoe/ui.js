@@ -1,4 +1,4 @@
-import { PLAYER, AI, initState, stepState, aiStepState, undoState, cursorMove, winningLine, demoSteps } from './logic.js';
+import { PLAYER, AI, DIFFICULTIES, ORDERS, initState, newGameState, stepState, aiStepState, undoState, cursorMove, winningLine, demoSteps } from './logic.js';
 import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
@@ -7,12 +7,23 @@ import { setupHelp } from '../../shared/help.js';
 import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
 import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js';
+import { load, save } from '../../shared/storage.js';
 
 const GAME_ID = 'tictactoe';
 const $ = (id) => document.getElementById(id);
 const profile = await createProfile({ store: new LocalStore() });
 const saved = await profile.loadSave(GAME_ID);
-let state = saved ?? initState();
+const PREF_KEY = `preferences:${GAME_ID}`;
+const preferences = load(PREF_KEY, {});
+let state = saved ?? initState(
+  DIFFICULTIES.includes(preferences?.difficulty) ? preferences.difficulty : 'normal',
+  ORDERS.includes(preferences?.order) ? preferences.order : 'player',
+  preferences?.lastFirst,
+);
+function savePreferences() {
+  save(PREF_KEY, { difficulty: state.difficulty, order: state.order, lastFirst: state.first });
+}
+savePreferences();
 let best = await profile.best(GAME_ID);
 let cursor = 0;
 let ended = null;
@@ -55,6 +66,8 @@ function render() {
   $('best').textContent = Math.max(best, state.score);
   $('difficulty').value = state.difficulty;
   $('difficulty').disabled = restarting || !!ended?.pending;
+  $('order').value = state.order;
+  $('order').disabled = restarting || !!ended?.pending;
   $('new').disabled = restarting || !!ended?.pending;
   $('undo').disabled = !state.prev || !!ended || restarting;
   $('status').textContent = state.result ? '本局已結束' : restarting ? '正在開新局…' : state.turn === AI ? 'AI 思考中…' : '輪到你，選一格下 ✕';
@@ -90,7 +103,7 @@ function finish(result) {
   return run(async () => {
     const bestBefore = best;
     const out = await settlePlay(profile, GAME_ID, {
-      result, score: snap.score, difficulty: snap.difficulty, detail: { moves: snap.moves },
+      result, score: snap.score, difficulty: snap.difficulty, detail: { moves: snap.moves, first: snap.first },
     });
     if (!out) { // 結算失敗且選「不存了」:不記錄、開新局(IR6);開新局流程中則交給它
       ended = { abandoned: true };
@@ -115,11 +128,13 @@ function scheduleAi() {
   }, 300);
 }
 
-function afterChange() {
+function afterChange(persist = true) {
   render();
   if (state.result) { finish(state.result); return; }
-  const snap = structuredClone(state);
-  run(() => profile.saveState(GAME_ID, snap));
+  if (persist) {
+    const snap = structuredClone(state);
+    run(() => profile.saveState(GAME_ID, snap));
+  }
   scheduleAi();
 }
 
@@ -143,15 +158,15 @@ function undo() {
 }
 
 let confirmingQuit = false;
-async function newGame(difficulty = state.difficulty) {
-  if (confirmingQuit) return;
+async function newGame(difficulty = state.difficulty, order = state.order) {
+  if (confirmingQuit || restarting || ended?.pending) { render(); return; }
   const result = resultOnNewGame(state);
   const note = { score: state.score, best, assist: state.assist };
   if (!ended && result === 'quit' && needsQuitBestConfirm(note)) {
     confirmingQuit = true;
     const quit = await confirmQuitBest(note);
     confirmingQuit = false;
-    if (!quit) { $('difficulty').value = state.difficulty; return; }
+    if (!quit) { render(); return; }
   }
   profile.input();
   if (restarting || ended?.pending) return;
@@ -160,13 +175,15 @@ async function newGame(difficulty = state.difficulty) {
   render();
   if (!ended && result) await finish(result);
   await queue;
-  state = initState(difficulty);
+  if (!ended && !result) await profile.discardSave(GAME_ID); // AI 開局後零操作重開，丟棄上一盤。
+  state = newGameState(state, difficulty, order);
+  savePreferences();
   ended = null;
   cursor = 0;
   best = await profile.best(GAME_ID);
   profile.startTimer(GAME_ID);
   restarting = false;
-  render();
+  afterChange(false); // 開局尚無有效操作；AI 開局落子後由回呼存檔。
   cells[0].focus();
 }
 
@@ -194,22 +211,21 @@ $('new').addEventListener('click', () => newGame());
 $('again').addEventListener('click', () => newGame());
 $('undo').addEventListener('click', undo);
 $('difficulty').addEventListener('change', () => newGame($('difficulty').value));
+$('order').addEventListener('change', () => newGame(state.difficulty, $('order').value));
 bindThemeToggle($('theme'));
 profile.startTimer(GAME_ID);
-render();
-if (state.result) finish(state.result);
-else scheduleAi();
+afterChange(false); // 載入只還原畫面與待 AI 排程，不更新存檔時間。
 
 setupHelp({
   gameId: GAME_ID,
   title: '井字棋玩法',
   mountAfter: document.querySelector('.navigation .btn'),
   rules: `<ol>
-    <li>3×3 棋盤，你是 ✕、AI 是 ◯；你先手，輪流下空格。</li>
+    <li>3×3 棋盤，你是 ✕、AI 是 ◯，輪流下空格。先手可選我先、AI 先、輪流或隨機。</li>
     <li>點格子，或方向鍵選格後按 Enter／空白鍵。</li>
     <li>一般：AI 一半隨機、一半最佳；無敵：AI 永遠最佳，不會輸。</li>
     <li>復原退回自己上一步（含 AI）；結束後不能復原。</li>
-    <li>新遊戲或切難度重開；有操作的未完成局記為退出。</li>
+    <li>新遊戲、切難度或先手重開；操作過的未完成局記退出。</li>
     <li>橫、直、斜三子連線勝；滿盤無連線平手。勝 3 分、平手 1 分、敗 0 分；最佳為單局最高分。</li>
   </ol>`,
   demo: {

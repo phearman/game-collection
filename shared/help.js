@@ -8,6 +8,10 @@ export function gameCode(id) {
   return GAMES.find((g) => g.id === id)?.code ?? null;
 }
 
+export function gameVersion(id) {
+  return GAMES.find((g) => g.id === id)?.version ?? null;
+}
+
 // 示範步驟的成功/失敗標籤(RS5):kind = 'ok' | 'fail';沒給就不顯示。靠文字與符號區分,不只靠顏色。
 export function kindLabel(kind) {
   if (kind === 'ok') return '✅ 成功';
@@ -45,6 +49,15 @@ export function setupHelp({ gameId, title, rules, demo, mountAfter }) {
       group.append(mountAfter, btn);
     }
     mountAfter.after(tag);
+    const version = gameVersion(gameId);
+    if (version) {
+      const link = document.createElement('a');
+      link.className = 'game-version';
+      link.textContent = `v${version}`;
+      link.href = `../../changelog/?g=${encodeURIComponent(code)}`;
+      link.title = `${code} v${version} 更新紀錄`;
+      tag.after(link);
+    }
   }
 
   const dlg = document.createElement('dialog');

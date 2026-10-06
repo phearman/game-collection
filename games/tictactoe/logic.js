@@ -2,6 +2,15 @@
 export const PLAYER = 'X';
 export const AI = 'O';
 export const DIFFICULTIES = ['normal', 'hard'];
+export const ORDERS = ['player', 'ai', 'alternate', 'random'];
+const FIRSTS = ['player', 'ai'];
+
+export function chooseFirst(order = 'player', previousFirst = null, rng = Math.random) {
+  if (!ORDERS.includes(order)) throw new Error('unknown order');
+  if (order === 'alternate') return previousFirst === 'player' ? 'ai' : 'player';
+  if (order === 'random') return rng() < 0.5 ? 'player' : 'ai';
+  return order;
+}
 export const WIN_LINES = [
   [0, 1, 2], [3, 4, 5], [6, 7, 8],
   [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6],
@@ -63,9 +72,14 @@ export function chooseAiMove(board, difficulty = 'normal', rng = Math.random) {
   return bestMove(board);
 }
 
-export function initState(difficulty = 'normal') {
+export function initState(difficulty = 'normal', order = 'player', previousFirst = null, rng = Math.random) {
   if (!DIFFICULTIES.includes(difficulty)) throw new Error('unknown difficulty');
-  return { board: Array(9).fill(null), turn: PLAYER, result: null, score: 0, difficulty, moves: 0, prev: null };
+  const first = chooseFirst(order, previousFirst, rng);
+  return { board: Array(9).fill(null), turn: first === 'player' ? PLAYER : AI, first, order, result: null, score: 0, difficulty, moves: 0, prev: null };
+}
+
+export function newGameState(state, difficulty = state.difficulty, order = state.order, rng = Math.random) {
+  return initState(difficulty, order, state.first, rng);
 }
 
 function afterMove(state, board, nextTurn) {
@@ -102,16 +116,19 @@ export function cursorMove(index, direction) {
 const isBoard = (b) => Array.isArray(b) && b.length === 9 && Array.from(b).every((v) => v === null || v === PLAYER || v === AI);
 const count = (b, mark) => b.filter((v) => v === mark).length;
 
-function validBoard(board) {
+function validBoard(board, first) {
   if (!isBoard(board)) return false;
   const x = count(board, PLAYER);
   const o = count(board, AI);
-  if (x !== o && x !== o + 1) return false;
+  const starter = first === 'player' ? PLAYER : AI;
+  const leading = first === 'player' ? x : o;
+  const following = first === 'player' ? o : x;
+  if (leading !== following && leading !== following + 1) return false;
   const winners = [PLAYER, AI].filter((mark) => WIN_LINES.some((line) => line.every((i) => board[i] === mark)));
   if (winners.length > 1) return false;
   if (winners.length) {
     const mark = winners[0];
-    if (mark === PLAYER ? x !== o + 1 : x !== o) return false;
+    if (mark === starter ? leading !== following + 1 : leading !== following) return false;
     // 最後一子之前不可已結束。
     return board.some((cell, i) => cell === mark && !resultFor(placed(board, i, null)));
   }
@@ -119,15 +136,19 @@ function validBoard(board) {
 }
 
 export function isValidState(s) {
-  if (!s || typeof s !== 'object' || !validBoard(s.board) || !DIFFICULTIES.includes(s.difficulty)) return false;
+  if (!s || typeof s !== 'object' || !FIRSTS.includes(s.first) || !ORDERS.includes(s.order)
+    || !validBoard(s.board, s.first) || !DIFFICULTIES.includes(s.difficulty)) return false;
+  if (FIRSTS.includes(s.order) && s.order !== s.first) return false;
   if (!Number.isInteger(s.moves) || s.moves < count(s.board, PLAYER)) return false;
   const result = resultFor(s.board);
-  const turn = result ? null : count(s.board, PLAYER) === count(s.board, AI) ? PLAYER : AI;
+  const equal = count(s.board, PLAYER) === count(s.board, AI);
+  const turn = result ? null : (equal === (s.first === 'player') ? PLAYER : AI);
   if (s.result !== result || s.score !== scoreFor(result) || s.turn !== turn) return false;
   if (s.prev === null) return true;
-  if (!s.prev || !validBoard(s.prev.board) || resultFor(s.prev.board)) return false;
+  if (!s.prev || !validBoard(s.prev.board, s.first) || resultFor(s.prev.board)) return false;
   const before = s.prev.board;
-  if (count(before, PLAYER) !== count(before, AI) || count(s.board, PLAYER) !== count(before, PLAYER) + 1) return false;
+  if (count(before, AI) !== count(before, PLAYER) + (s.first === 'ai' ? 1 : 0)
+    || count(s.board, PLAYER) !== count(before, PLAYER) + 1) return false;
   if (count(s.board, AI) - count(before, AI) < 0 || count(s.board, AI) - count(before, AI) > 1) return false;
   return before.every((cell, i) => cell === null || s.board[i] === cell);
 }
