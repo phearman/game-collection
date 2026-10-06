@@ -10,6 +10,7 @@ import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
 import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js';
 
 const GAME_ID = 'minesweeper';
 const LONG_PRESS_MS = 400;
@@ -56,7 +57,7 @@ function finish(result) {
       result, score: snap.score, difficulty: snap.difficulty, detail: { seconds: snap.seconds, mines: snap.mines },
     });
     if (!out) { if (no === gameNo) startNew(snap.difficulty); return; } // 結算失敗且選「不存了」:不記錄、開新局(IR6)
-    best = Math.max(best, snap.score);
+    if (out.play.is_best) best = Math.max(best, snap.score);
     if (no !== gameNo) return;
     ended = {
       result,
@@ -73,13 +74,22 @@ function finish(result) {
 }
 
 // 新遊戲 / 切換難度:有操作未結束 ⇒ quit;0 次操作不記錄;已結算直接開新局。
-function newGame(difficulty = state.difficulty) {
+let confirmingQuit = false;
+async function newGame(difficulty = state.difficulty) {
+  if (confirmingQuit) return;
   if (ended) {
     if (!ended.pending) startNew(difficulty); // 結算中:忽略連點
     else render();
     return;
   }
   const result = resultOnNewGame({ everWon: state.status === 'win', moves: state.moves });
+  const note = { score: scoreFor(result, state.seconds), best, assist: state.assist };
+  if (result === 'quit' && needsQuitBestConfirm(note)) {
+    confirmingQuit = true;
+    const quit = await confirmQuitBest(note);
+    confirmingQuit = false;
+    if (!quit) { $('difficulty').value = state.difficulty; return; }
+  }
   if (result) finish(result);
   startNew(difficulty);
 }

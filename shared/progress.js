@@ -222,13 +222,13 @@ export function applyFinish(input) {
   if (!RESULTS.includes(result)) throw new Error(`unknown result: ${result}`);
   const completed = result !== 'quit';
   const prev = input.stats[gameId] ?? emptyStats(gameId);
-  const isBest = !assist && score > (prev.best_score || 0); // 輔助局不刷新最佳
+  const isBest = completed && !assist && score > (prev.best_score || 0); // 放棄與輔助局不刷新最佳
 
   const gameStats = {
     ...prev,
     plays_count: prev.plays_count + (completed ? 1 : 0),
     wins_count: prev.wins_count + (result === 'win' ? 1 : 0),
-    best_score: assist ? (prev.best_score || 0) : Math.max(prev.best_score || 0, score),
+    best_score: !completed || assist ? (prev.best_score || 0) : Math.max(prev.best_score || 0, score),
     total_sec: prev.total_sec + durationSec,
     last_played_at: iso(endedAt),
     detail: nextDetail(gameId, prev.detail ?? {}, result, detail),

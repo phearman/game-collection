@@ -12,6 +12,7 @@ import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
 import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
+import { quitBestNote } from '../../shared/quit.js';
 import { load, save } from '../../shared/storage.js';
 
 const GAME_ID = 'wordle';
@@ -80,7 +81,7 @@ function finish(result) {
       result, score: snap.score, difficulty: snap.difficulty, detail: { guesses: snap.guesses, answer: snap.answer }, assist: snap.assist,
     });
     if (!out) { if (no === gameNo) startNew(); return; } // 結算失敗且選「不存了」:不記錄、開新局(IR6)
-    if (!snap.assist) best = Math.max(best, snap.score); // 輔助局不刷新最佳
+    if (out.play.is_best) best = Math.max(best, snap.score);
     if (no !== gameNo) return;
     ended = {
       xp: out.xpGained,
@@ -136,6 +137,7 @@ function newGame(difficulty) {
   if (ended?.pending) return; // 結算中:忽略連點
   if (!ended && needsQuitConfirm(progressOf(state))) {
     pendingDifficulty = difficulty ?? null;
+    $('quit-best-note').textContent = quitBestNote({ score: scoreFor(state), best, assist: state.assist });
     $('quit-dlg').showModal();
     return;
   }

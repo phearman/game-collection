@@ -10,6 +10,7 @@ import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
 import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js';
 import { load, save } from '../../shared/storage.js';
 
 const GAME_ID = 'stairs';
@@ -67,7 +68,7 @@ function finish(result) {
       result, score: snap.score, difficulty: snap.difficulty, detail: { floors: snap.score },
     });
     if (!out) { if (no === gameNo) startNew(); return; } // 結算失敗且選「不存了」:不記錄、開新局(IR6)
-    best = Math.max(best, snap.score);
+    if (out.play.is_best) best = Math.max(best, snap.score);
     if (no !== gameNo) return;
     ended = {
       xp: out.xpGained,
@@ -82,12 +83,29 @@ function finish(result) {
 }
 
 // 新遊戲(含切換難度):未動不記錄、已動未結束 ⇒ quit。
-function newGame(difficulty) {
+let confirmingQuit = false;
+async function newGame(difficulty) {
+  if (confirmingQuit) return;
   if (ended?.pending) return; // 結算中:忽略連點
   if (!ended) {
     const result = resultOnNewGame({ everWon: false, moves: state.ticks });
+    const note = { score: state.floors, best, assist: state.assist };
+    if (result === 'quit' && needsQuitBestConfirm(note)) {
+      confirmingQuit = true;
+      const running = !state.paused;
+      if (running) timerPause();
+      const quit = await confirmQuitBest(note);
+      confirmingQuit = false;
+      if (!quit) {
+        $('difficulty').value = state.difficulty;
+        if (running && document.visibilityState !== 'hidden' && !state.paused) timerResume();
+        syncLoop();
+        return;
+      }
+    }
     if (result) finish(result);
   }
+  if (difficulty !== undefined) save(DIFF_KEY, difficulty);
   startNew(difficulty);
 }
 
@@ -132,7 +150,7 @@ function inputDir() {
 let running = false;
 let last = 0;
 let acc = 0;
-const playing = () => !state.paused && !state.over && !ended;
+const playing = () => !confirmingQuit && !state.paused && !state.over && !ended;
 
 function frame(t) {
   if (!playing()) {
@@ -395,7 +413,6 @@ $('difficulty').addEventListener('change', (e) => {
     e.target.value = state.difficulty;
     return;
   }
-  save(DIFF_KEY, d);
   newGame(d);
 });
 $('overlay-actions').addEventListener('click', (e) => {

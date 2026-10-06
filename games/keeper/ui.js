@@ -11,6 +11,7 @@ import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
 import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js';
 import { load, save } from '../../shared/storage.js';
 
 const GAME_ID = 'keeper';
@@ -68,7 +69,7 @@ function finish(info) {
     const bestBefore = best;
     const out = await settlePlay(profile, GAME_ID, info);
     if (!out) { if (no === gameNo) startNew(); return; } // 結算失敗且選「不存了」:不記錄、開新局(IR6)
-    best = Math.max(best, info.score);
+    if (out.play.is_best) best = Math.max(best, info.score);
     if (no !== gameNo) return;
     ended = {
       xp: out.xpGained,
@@ -84,12 +85,29 @@ function finish(info) {
 }
 
 // 新遊戲(含切換難度、球數):未動不記錄、已動未結束 ⇒ quit。
-function newGame(opts) {
+let confirmingQuit = false;
+async function newGame(opts) {
+  if (confirmingQuit) return;
   if (ended?.pending) return; // 結算中:忽略連點
   if (!ended) {
     const result = resultOnNewGame({ everWon: false, moves: movesOf(state) });
+    const note = { score: finishInfo(state).score, best, assist: state.assist };
+    if (result === 'quit' && needsQuitBestConfirm(note)) {
+      confirmingQuit = true;
+      const running = !state.paused && ['wait', 'runup', 'flight', 'result'].includes(state.phase);
+      if (running) timerPause();
+      syncLoop();
+      const quit = await confirmQuitBest(note);
+      confirmingQuit = false;
+      if (!quit) {
+        render(); // 難度、球數選單還原
+        if (running && document.visibilityState !== 'hidden' && !state.paused) timerResume();
+        return;
+      }
+    }
     if (result) finish({ ...finishInfo(state), result });
   }
+  if (opts) { save(DIFF_KEY, opts.difficulty); save(SHOTS_KEY, opts.total); }
   startNew(opts);
 }
 
@@ -147,7 +165,7 @@ function tick(now) {
 
 // 球進行中(含結果顯示)才跑動畫迴圈。
 function syncLoop() {
-  const want = !state.paused && ['wait', 'runup', 'flight', 'result'].includes(state.phase);
+  const want = !confirmingQuit && !state.paused && ['wait', 'runup', 'flight', 'result'].includes(state.phase);
   if (want && !frame) {
     lastT = performance.now();
     frame = requestAnimationFrame(tick);
@@ -502,22 +520,21 @@ $('pause').addEventListener('click', () => {
 const shotsSel = $('shots');
 for (let n = SHOTS_MIN; n <= SHOTS_MAX; n++) shotsSel.add(new Option(`${n} 球`, String(n)));
 
-function changeOption(e, key, value, opts) {
+function changeOption(e, opts) {
   if (ended?.pending) {
     render(); // 結算中:選單還原
     return;
   }
-  save(key, value);
   newGame(opts);
   e.target.blur();
 }
 $('difficulty').addEventListener('change', (e) => {
   const d = e.target.value;
-  changeOption(e, DIFF_KEY, d, { difficulty: d, total: state.total });
+  changeOption(e, { difficulty: d, total: state.total });
 });
 shotsSel.addEventListener('change', (e) => {
   const n = normalizeShots(Number(e.target.value));
-  changeOption(e, SHOTS_KEY, n, { difficulty: state.difficulty, total: n });
+  changeOption(e, { difficulty: state.difficulty, total: n });
 });
 $('overlay-actions').addEventListener('click', (e) => {
   const a = e.target.dataset.act;

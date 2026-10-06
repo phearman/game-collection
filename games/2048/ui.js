@@ -10,6 +10,7 @@ import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
 import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
+import { quitBestNote } from '../../shared/quit.js';
 import { DEMO_STUCK_LEFT, DEMO_FULL } from './demo.js';
 import { load, save } from '../../shared/storage.js';
 
@@ -58,7 +59,7 @@ function finish(result) {
       result, score: snap.score, difficulty: 'normal', detail: { max_tile: snap.max_tile }, assist: snap.assist,
     });
     if (!out) { if (no === gameNo) startNew(); return; } // 結算失敗且選「不存了」:不記錄、開新局(IR6)
-    if (!snap.assist) best = Math.max(best, snap.score); // 輔助局不刷新最佳
+    if (out.play.is_best) best = Math.max(best, snap.score);
     if (no !== gameNo) return;
     ended = {
       xp: out.xpGained, // 已含局中即時成就 XP(profile 不重複加總)
@@ -82,6 +83,7 @@ function newGame(mode) {
   }
   if (needsQuitConfirm(state)) {
     pendingMode = mode ?? null;
+    $('quit-best-note').textContent = quitBestNote({ score: state.score, best, assist: state.kids });
     $('quit-dlg').showModal(); // 防誤觸:會記為放棄的才問(RS4)
     return;
   }

@@ -6,6 +6,7 @@ import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
 import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js';
 
 const GAME_ID = 'sudoku';
 const $ = (id) => document.getElementById(id);
@@ -108,7 +109,7 @@ function finish(result) {
       if (!restarting) newGame();
       return;
     }
-    best = Math.max(best, snap.score);
+    if (out.play.is_best) best = Math.max(best, snap.score);
     ended = { ...out, bestBefore }; render();
     if (snap.result && !document.querySelector('dialog[open]')) $('again').focus();
   });
@@ -136,12 +137,21 @@ function toggleNotes() {
   if (ended || restarting || state.result) return;
   input(); noteMode = !noteMode; render();
 }
+let confirmingQuit = false;
 async function newGame(difficulty = state.difficulty) {
+  if (confirmingQuit) return;
   if (restarting || ended?.pending) return;
   if (state.result && !ended) { finish('win'); return; }
+  const result = resultOnNewGame({ everWon: state.result === 'win', moves: state.moves });
+  const note = { score: state.score, best, assist: state.assist };
+  if (!ended && result === 'quit' && needsQuitBestConfirm(note)) {
+    confirmingQuit = true;
+    const quit = await confirmQuitBest(note);
+    confirmingQuit = false;
+    if (!quit) { $('difficulty').value = state.difficulty; return; }
+  }
   state = clockState(state, 'tick', Date.now());
   restarting = true; render();
-  const result = resultOnNewGame({ everWon: state.result === 'win', moves: state.moves });
   if (!ended && result) await finish(result);
   await queue;
   state = initState(difficulty);
