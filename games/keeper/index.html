@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="page page-narrow">
+  <main class="page page-narrow page-fit">
     <header class="topbar">
       <a class="btn" href="../../">← 大廳</a>
       <div class="stats">
@@ -27,21 +27,26 @@
       </select>
       <select class="btn" id="shots" aria-label="球數"></select>
     </div>
-    <div class="board-wrap" id="board-wrap">
-      <canvas class="field" id="field" aria-label="球場:上方球門與守門員,下方射手"></canvas>
-      <div class="overlay" id="overlay" hidden>
-        <p class="overlay-title" id="overlay-title"></p>
-        <div class="overlay-info" id="overlay-info"></div>
-        <div class="overlay-actions" id="overlay-actions"></div>
+    <div class="board-area">
+      <div class="board-wrap" id="board-wrap">
+        <canvas class="field" id="field" aria-label="球場:上方球門與守門員,下方射手"></canvas>
+        <div class="overlay" id="overlay" hidden>
+          <p class="overlay-title" id="overlay-title"></p>
+          <div class="overlay-info" id="overlay-info"></div>
+          <div class="overlay-actions" id="overlay-actions"></div>
+        </div>
       </div>
     </div>
     <p class="tally" id="tally" aria-live="polite"></p>
+    <p class="pad-tip">按住 ◀ ▶ 移動 · 也可以在球場上按住左右拖</p>
     <div class="pad" role="group" aria-label="守門員動作">
+      <button class="btn pad-btn pad-move" type="button" data-move="-1" aria-label="按住往左移動">◀</button>
       <button class="btn pad-btn" type="button" data-act="diveL">◀ 撲</button>
       <button class="btn pad-btn" type="button" data-act="jump">跳</button>
       <button class="btn pad-btn" type="button" data-act="diveR">撲 ▶</button>
+      <button class="btn pad-btn pad-move" type="button" data-move="1" aria-label="按住往右移動">▶</button>
     </div>
-    <p class="hint">← → / A D 移動 · ↑ / W 跳 · Z 左撲 · X 右撲 · 空白鍵開始 · P 暫停<br>手機:左右滑動移動 · 點上半跳 · 往左上/右上快滑撲</p>
+    <p class="hint">按住 ← → / A D 移動 · ↑ / W 跳 · Z 左撲 · X 右撲 · 空白鍵開始 · P 暫停<br>手機:按住 ◀ ▶ 或在球場上左右拖移動 · 點上半跳 · 往左上/右上快滑撲</p>
   </main>
   <script type="module" src="ui.js"></script>
 </body>

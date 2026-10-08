@@ -8,6 +8,7 @@ import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
+import { swipe, dpad } from '../../shared/touch.js';
 import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
 import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js';
@@ -136,7 +137,7 @@ function togglePause() {
   else pause();
 }
 
-// 方向輸入:暫停中(含開局)先繼續,再轉向;反向或同 tick 第二次轉向由 logic 擋掉。
+// 方向輸入:暫停中(含開局)先繼續,再交給 logic 收進轉向佇列。
 function steer(dir) {
   if (ended) return;
   profile.input();
@@ -234,6 +235,11 @@ function renderOverlay() {
     return;
   }
   $('overlay-info').innerHTML = kind === 'won' || kind === 'over' ? infoHtml() : info;
+  if (kind === 'ready') {
+    const mobileHint = document.createElement('p');
+    mobileHint.textContent = '手機:在棋盤上滑動,或按下方方向鍵轉向';
+    $('overlay-info').append(mobileHint);
+  }
   overlay.hidden = false;
 }
 
@@ -261,16 +267,12 @@ document.addEventListener('keydown', (e) => {
 });
 
 // 滑動綁在棋盤外框,遮罩蓋住時(開局、暫停)也能滑動開始。
-let touch = null;
-$('board-wrap').addEventListener('pointerdown', (e) => { touch = { x: e.clientX, y: e.clientY }; });
-$('board-wrap').addEventListener('pointerup', (e) => {
-  if (!touch) return;
-  const dx = e.clientX - touch.x;
-  const dy = e.clientY - touch.y;
-  touch = null;
-  if (Math.max(Math.abs(dx), Math.abs(dy)) < 30) return;
-  steer(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
-});
+swipe($('board-wrap'), steer);
+const coarsePointer = matchMedia('(pointer: coarse)');
+dpad($('direction-pad'), steer);
+const syncDpad = () => { $('direction-pad').hidden = !coarsePointer.matches; };
+syncDpad();
+coarsePointer.addEventListener('change', syncDpad);
 
 // 分頁隱藏自動暫停。
 document.addEventListener('visibilitychange', () => {
@@ -320,6 +322,8 @@ const fixed = () => 0;
 const demoState = (fields) => ({ ...initState(fixed), paused: false, steps: 1, ...fields });
 const demoStep = (before, act, caption, result) => ({ before, after: act(before), caption, result });
 const tickOnce = (s) => tickState(s, fixed);
+// 打開說明時先暫停;先註冊,也涵蓋首次自動開啟說明。
+document.addEventListener('helpopen', pause);
 setupHelp({
   gameId: GAME_ID,
   title: '貪食蛇玩法',
@@ -327,6 +331,7 @@ setupHelp({
   rules: `
     <ol>
       <li>蛇會一直往前走;用方向鍵、W/A/S/D 或在棋盤上滑動轉彎。</li>
+      <li>手機:在棋盤上滑動,或按下方方向鍵轉向</li>
       <li>不能直接回頭(朝右時按 ← 無效)。</li>
       <li>吃到紅色食物:蛇長 1 格、分數 +10。</li>
       <li>撞牆或撞到自己就結束。</li>
@@ -347,5 +352,3 @@ setupHelp({
     ],
   },
 });
-// 打開說明時先暫停,避免蛇在背後撞死。
-document.querySelector('.topbar .btn').nextElementSibling.addEventListener('click', pause);

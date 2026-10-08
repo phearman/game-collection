@@ -83,6 +83,7 @@ export function setupHelp({ gameId, title, rules, demo, mountAfter }) {
 
   const runner = demo ? demoRunner(dlg, demo) : null;
   const open = () => {
+    document.dispatchEvent(new CustomEvent('helpopen'));
     dlg.showModal();
     runner?.reset();
     runner?.play();

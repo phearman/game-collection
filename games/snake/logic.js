@@ -38,7 +38,7 @@ export function placeFood(snake, rng = Math.random, size = SIZE) {
 // state = { snake, dir, pending, food, score, steps, difficulty, paused, over, won }
 //   snake   蛇身座標陣列,[0] 是蛇頭
 //   dir     目前前進方向
-//   pending 本 tick 已收下的轉向(下一 tick 生效;同一 tick 只收第一個)
+//   pending 轉向佇列(最多 2 個,每 tick 依序取出 1 個)
 //   steps   本局已前進的格數(§4.2 判斷「新遊戲」要不要記錄)
 //   paused  暫停中(開局、續玩還原後都是暫停)
 
@@ -48,7 +48,7 @@ export function initState(rng = Math.random, difficulty = 'normal') {
   return {
     snake,
     dir: 'right',
-    pending: null,
+    pending: [],
     food: placeFood(snake, rng),
     score: 0,
     steps: 0,
@@ -59,11 +59,13 @@ export function initState(rng = Math.random, difficulty = 'normal') {
   };
 }
 
-// 轉向:反向、同向、本 tick 已轉過、或已結束 ⇒ 原 state(同一物件)。
+// 以最後排入的方向判斷反向,避免兩個輸入在同一 tick 直接回頭。
+// 反向、同向、佇列已滿、或已結束 ⇒ 原 state(同一物件)。
 export function turnState(state, dir) {
-  if (!DIRS[dir] || state.over || state.pending) return state;
-  if (dir === state.dir || dir === OPPOSITE[state.dir]) return state;
-  return { ...state, pending: dir };
+  if (!Object.hasOwn(DIRS, dir) || state.over || state.pending.length >= 2) return state;
+  const last = state.pending.at(-1) ?? state.dir;
+  if (dir === last || dir === OPPOSITE[last]) return state;
+  return { ...state, pending: [...state.pending, dir] };
 }
 
 export function pauseState(state) {
@@ -79,10 +81,10 @@ export function resumeState(state) {
 // 前進一格。暫停或已結束 ⇒ 原 state。
 export function tickState(state, rng = Math.random) {
   if (state.paused || state.over) return state;
-  const dir = state.pending ?? state.dir;
+  const dir = state.pending[0] ?? state.dir;
   const [dr, dc] = DIRS[dir];
   const head = [state.snake[0][0] + dr, state.snake[0][1] + dc];
-  const base = { ...state, dir, pending: null };
+  const base = { ...state, dir, pending: state.pending.slice(1) };
   if (!inside(head)) return { ...base, over: true };
   const eat = state.food !== null && same(head, state.food);
   // 沒吃到食物時尾巴同一步移開,蛇頭進入原尾巴位置合法。
@@ -114,7 +116,7 @@ export function fromSave(saved) {
   return {
     snake: saved.snake.map(([r, c]) => [r, c]),
     dir: saved.dir,
-    pending: null,
+    pending: [],
     food: [saved.food[0], saved.food[1]],
     score: saved.score,
     steps: saved.steps,

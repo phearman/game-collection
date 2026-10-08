@@ -8,6 +8,7 @@ import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
+import { swipe } from '../../shared/touch.js';
 import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
 import { quitBestNote } from '../../shared/quit.js';
@@ -240,16 +241,7 @@ document.addEventListener('keydown', (e) => {
   step(dir);
 });
 
-let touch = null;
-$('board').addEventListener('pointerdown', (e) => { touch = { x: e.clientX, y: e.clientY }; });
-$('board').addEventListener('pointerup', (e) => {
-  if (!touch) return;
-  const dx = e.clientX - touch.x;
-  const dy = e.clientY - touch.y;
-  touch = null;
-  if (Math.max(Math.abs(dx), Math.abs(dy)) < 30) return;
-  step(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
-});
+swipe($('board'), step);
 
 $('new').addEventListener('click', () => newGame()); // ⛔ 直接傳 newGame:click 事件會被當成模式參數(H2)
 $('board').addEventListener('animationend', () => $('board').classList.remove('shake'));

@@ -1,5 +1,5 @@
 // 足球守門員規則層:純函式,不碰 DOM。時間一律以毫秒傳入,隨機數(rng)可注入。
-// 規則正典:workbook/plans/keeper.md「規則(驗收依據)」。
+// 規則正典:workbook/plans/keeper.md「規則(驗收依據)」;操作以 workbook/plans/rs12-keeper.md 為準(RS12 取代原操作段)。
 //
 // 座標(世界單位):x = 水平,球門中央為 0,往右為正;y = 離地高度,地面為 0,往上為正。
 // 守門員站在門線上,x 範圍 ±X_LIMIT;球的目標點在球門框內。
@@ -16,7 +16,8 @@ export const SHOTS_MIN = 1;
 export const SHOTS_MAX = 10;
 export const SHOTS_DEFAULT = 3;
 
-export const MOVE_STEP = 22; // 左右移動每次位移
+export const MOVE_STEP = 22; // 一步位移(滑動手勢未達即時拖曳時的備援)
+export const MOVE_SPEED = 180; // 連續移動:按住方向每秒移動的單位(RS12)
 export const X_LIMIT = 118; // 守門員中心 x 範圍 ±118
 export const JUMP_PEAK = 70; // 跳起峰高
 export const DIVE_SHIFT = 52; // 撲救水平位移
@@ -30,7 +31,7 @@ export const GOAL_H = 140; // 球門高
 export const TARGET_X_MAX = 135; // 射門目標 x ∈ [-135, 135]
 export const TARGET_Y_MIN = 10; // 射門目標 y ∈ [10, 125]
 export const TARGET_Y_MAX = 125;
-export const ACTION_MS = 600; // 跳起 / 撲救動作全長
+export const ACTION_MS = 480; // 跳起 / 撲救動作全長(RS12:原 600)
 export const RUNUP_MS = 500; // 射手助跑到起腳
 export const RESULT_MS = 1300; // 每球結果顯示時間
 export const SAVE_SCORE = 100;
@@ -99,6 +100,14 @@ export function keeperPose(k) {
 // 可及高度 = 站立手高 + 當下離地高度。
 export const reachHeight = (h) => REACH_BASE + h;
 
+// 撲救範圍(世界座標):水平 守門員中心 ± 容許值、高度 可及高度 ± 48。判定與畫面上的手套都用這一份(RS12)。
+export function saveZone(keeper, difficulty) {
+  const { x, h } = keeperPose(keeper);
+  const tol = paramsFor(difficulty).tolerance;
+  const reach = reachHeight(h);
+  return { x0: x - tol, x1: x + tol, y0: reach - HEIGHT_TOL, y1: reach + HEIGHT_TOL, x, reach };
+}
+
 // 動作進行 dt 毫秒;做完回到站立(撲救停在撲到的位置)。
 export function advanceKeeper(k, dt) {
   if (!k.action) return k;
@@ -127,8 +136,8 @@ export function isSave({ keeperX, reach, target, tolerance }) {
 }
 
 export function judgeShot(keeper, target, difficulty) {
-  const { x, h } = keeperPose(keeper);
-  return isSave({ keeperX: x, reach: reachHeight(h), target, tolerance: paramsFor(difficulty).tolerance });
+  const z = saveZone(keeper, difficulty);
+  return target.x >= z.x0 && target.x <= z.x1 && target.y >= z.y0 && target.y <= z.y1;
 }
 
 // ---- 計分與結算 ----
@@ -155,12 +164,14 @@ export function tally(log) {
 export const normalizeShots = (n) => (Number.isInteger(n) ? clamp(n, SHOTS_MIN, SHOTS_MAX) : SHOTS_DEFAULT);
 
 // ---- 狀態轉移(純函式,UI 只呼叫)----
-// state = { difficulty, total, log, phase, t, shot, keeper, paused, actions }
+// state = { difficulty, total, log, phase, t, shot, keeper, move, paused, actions }
 //   total   本回合球數 N
 //   log     已踢完每球的結果('save' / 'goal');log.length = 已踢球數
 //   phase   'ready'(開局或續玩還原,等開始) / 'wait' / 'runup' / 'flight' / 'result' / 'over'
 //   t       本階段已經過 ms
 //   shot    本球 { wait, target };ready 時為 null
+//   move    按住的移動方向 -1 / 0 / 1(RS12 連續移動;不存檔)
+//   moved   這次按住已經實際位移過(有效操作只在每次按住的首次位移計一次;不存檔)
 //   paused  球進行中暫停
 //   actions 本回合守門員有效動作數(§4.2 判斷「新遊戲」要不要記錄)
 
@@ -173,6 +184,8 @@ export function initState({ difficulty = 'normal', total = SHOTS_DEFAULT } = {})
     t: 0,
     shot: null,
     keeper: idleKeeper(),
+    move: 0,
+    moved: false,
     paused: false,
     actions: 0,
   };
@@ -192,6 +205,46 @@ export function actState(state, act) {
   const keeper = keeperAct(state.keeper, act);
   if (keeper === state.keeper) return state;
   return { ...state, keeper, actions: state.actions + 1 };
+}
+
+// 按住/放開方向(鍵盤 ← →、畫面 ◀ ▶):只記住方向,時間推進時才移動。
+// 有效操作(§4.2)在每次按住期間「首次實際位移」時計一次(stepState 裡判斷);按住但沒動到(開始前、頂住邊界)不計。
+export function setMove(state, dir) {
+  const move = Math.sign(dir || 0);
+  if (move === (state.move ?? 0)) return state;
+  return { ...state, move, moved: false };
+}
+
+// 拖曳:守門員直接移到 x(限 ±118);動作中(跳/撲)或球沒在進行 ⇒ 原 state。
+export function moveTo(state, x) {
+  if (!isPlaying(state) || state.keeper.action) return state;
+  const nx = clamp(x, -X_LIMIT, X_LIMIT);
+  if (nx === state.keeper.x) return state;
+  return { ...state, keeper: idleKeeper(nx), actions: state.actions + 1 };
+}
+
+// 連續移動 dt 毫秒(動作中不動)。
+function slide(keeper, move, dt) {
+  if (!move || keeper.action || dt <= 0) return keeper;
+  const x = clamp(keeper.x + (move * MOVE_SPEED * dt) / 1000, -X_LIMIT, X_LIMIT);
+  return x === keeper.x ? keeper : idleKeeper(x);
+}
+
+// 動作推進 dt;動作在這段時間內做完的話,剩下的時間才照按住的方向移動。
+function advanceAndSlide(keeper, move, dt) {
+  if (!keeper.action) return slide(keeper, move, dt);
+  const left = ACTION_MS - keeper.at;
+  const next = advanceKeeper(keeper, dt);
+  return next.action ? next : slide(next, move, dt - left);
+}
+
+// 一段時間的守門員推進;連續移動造成首次位移時計一次有效操作。
+function keeperStep(s, dt) {
+  const before = s.keeper.action ? advanceKeeper(s.keeper, dt) : s.keeper;
+  const keeper = advanceAndSlide(s.keeper, s.move ?? 0, dt);
+  const slid = keeper.x !== before.x && !keeper.action;
+  if (!slid || s.moved) return { ...s, keeper };
+  return { ...s, keeper, moved: true, actions: s.actions + 1 };
 }
 
 // 球進行中與結果顯示中都可暫停(ready、over 不用暫停)。
@@ -224,7 +277,8 @@ export function stepState(state, dt, rng = Math.random) {
   let left = dt;
   while (left > 0 && ['wait', 'runup', 'flight', 'result'].includes(s.phase)) {
     const step = Math.min(left, phaseLength(s) - s.t);
-    s = { ...s, t: s.t + step, keeper: s.phase === 'result' ? s.keeper : advanceKeeper(s.keeper, step) };
+    s = { ...s, t: s.t + step };
+    if (s.phase !== 'result') s = keeperStep(s, step);
     left -= step;
     if (s.t < phaseLength(s)) break;
     if (s.phase === 'wait') s = { ...s, phase: 'runup', t: 0 };
@@ -260,6 +314,7 @@ export function finishInfo(state) {
 //   快速(≤ 350ms)往左上/右上滑 ⇒ 撲
 //   其他滑動(含較慢的斜滑)依主方向:水平為主 ⇒ 移動,每 35px 一步(至少 1、至多 6 步);往上為主 ⇒ 跳;往下為主 ⇒ 無
 export const TAP_PX = 12;
+export const FIELD_W = 360; // 球場畫布寬(世界單位 1:1),拖曳換算用
 export const SWIPE_PX = 24;
 export const FLICK_MS = 350;
 export const STEP_PX = 35;
@@ -272,6 +327,12 @@ export function classifyGesture({ dx, dy, ms, upper }) {
   if (ax >= ay) return ax >= SWIPE_PX ? { act: dx < 0 ? 'left' : 'right', steps: clamp(Math.round(ax / STEP_PX), 1, 6) } : null;
   return dy <= -SWIPE_PX ? { act: 'jump' } : null;
 }
+
+// 即時拖曳(RS12):按住球場後水平為主地拖(往上 < 0.4 × 水平,與快撲的斜滑分開)就進入拖曳,守門員即時跟著手指。
+export const isDrag = ({ dx, dy }) => Math.abs(dx) >= TAP_PX && Math.abs(dy) < Math.abs(dx) * 0.4;
+
+// 拖曳換算:起點 x + 手指水平位移(px)× 世界寬/畫面寬,限 ±118。
+export const dragX = (startX, dxPx, cssWidth) => clamp(startX + (dxPx * FIELD_W) / cssWidth, -X_LIMIT, X_LIMIT);
 
 // ---- 存檔(續玩,存檔點 = 球與球之間)----
 

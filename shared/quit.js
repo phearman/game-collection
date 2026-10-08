@@ -32,17 +32,22 @@ export function confirmQuitBest(args) {
   const d = dialog();
   d.querySelector('#quit-best-text').textContent = quitBestNote(args);
   return new Promise((resolve) => {
-    let quit = false;
-    const onClick = (e) => {
-      const act = e.target.closest('[data-act]')?.dataset.act;
-      if (act !== 'quit' && act !== 'keep') return;
-      quit = act === 'quit';
-      d.close();
-    };
-    const onClose = () => {
+    let settled = false;
+    const settle = (quit) => {
+      if (settled) return;
+      settled = true;
       d.removeEventListener('click', onClick);
       d.removeEventListener('close', onClose);
       resolve(quit);
+    };
+    const onClick = (e) => {
+      const act = e.target.closest('[data-act]')?.dataset.act;
+      if (act !== 'quit' && act !== 'keep') return;
+      settle(act === 'quit');
+      d.close();
+    };
+    const onClose = () => {
+      settle(false);
     };
     d.addEventListener('click', onClick);
     d.addEventListener('close', onClose);

@@ -7,14 +7,39 @@
 select.btn { appearance: auto; }
 select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.board-wrap { position: relative; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+/* 整頁剛好一個視窗高(比照下樓梯):頂列、操作列、按鍵之外的高度全給球場,不捲動(RS12 K5)。 */
+.page-fit {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  padding-top: 16px;
+  padding-bottom: 12px;
+}
+.page-fit .topbar { margin-bottom: 10px; }
+.page-fit .actions { margin-bottom: 10px; }
+/* 球場維持 360:420:依剩餘空間的寬、高取小者縮放 */
+.board-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  container-type: size;
+  display: flex;
+  justify-content: center;
+  align-items: center; /* 高度有餘時上下置中,不在球場和按鍵之間留一大塊空白 */
+}
+.board-wrap {
+  position: relative;
+  aspect-ratio: 360 / 420;
+  width: min(100cqw, 100cqh * 360 / 420);
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
 .field {
   display: block;
   width: 100%;
-  aspect-ratio: 360 / 420;
+  height: 100%;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: #3f8f3a;
+  background: var(--kp-grass-a);
 }
 
 .overlay {
@@ -36,12 +61,162 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
 .overlay-info p { margin: 2px 0; }
 .overlay-info .overlay-xp { font-size: 18px; font-weight: 700; }
 
-.tally { text-align: center; font-size: 15px; font-weight: 600; margin: 10px 0 8px; font-variant-numeric: tabular-nums; }
+.tally { flex: none; text-align: center; font-size: 15px; font-weight: 600; margin: 8px 0 4px; font-variant-numeric: tabular-nums; }
 
-.pad { display: flex; gap: 8px; touch-action: manipulation; -webkit-touch-callout: none; }
-.pad-btn { flex: 1; min-height: 52px; font-size: 17px; font-weight: 600; user-select: none; -webkit-user-select: none; }
+.pad-tip { flex: none; text-align: center; font-size: 13px; color: var(--text-sub); margin: 0 0 6px; }
+.pad { flex: none; display: flex; gap: 6px; touch-action: none; -webkit-touch-callout: none; }
+.pad-btn { flex: 1 1 0; min-width: 52px; min-height: 52px; padding-left: 2px; padding-right: 2px; font-size: 16px; font-weight: 600; white-space: nowrap; user-select: none; -webkit-user-select: none; }
 .pad-btn:active { background: var(--accent-bg); }
+/* ◀ ▶ 方向鍵放最外側、做成拇指好按的大圓角 */
+.pad-move { flex: 1.15 1 0; font-size: 22px; border-radius: 16px; background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
 
-.hint { font-size: 13px; color: var(--text-sub); text-align: center; margin: 12px 0 0; }
+.hint { flex: none; font-size: 13px; color: var(--text-sub); text-align: center; margin: 10px 0 0; }
+/* 矮螢幕(手機):鍵盤說明讓位給球場,手機操作已寫在按鍵上方那行 */
+@media (max-height: 760px) { .hint { display: none; } }
 
 .demo-field { display: block; width: 100%; border-radius: 8px; }
+
+/* 球場色票(畫布讀這些變數繪圖;RS12:淺色=白天球場、深色=夜間照明) */
+:root {
+  --kp-night: 0;
+  --kp-sky-top: #8fd0ff;
+  --kp-sky-bot: #d9f0ff;
+  --kp-stand: #5d6f8c;
+  --kp-stand-hi: #6c7f9e;
+  --kp-crowd-a: #e2504a;
+  --kp-crowd-b: #f2b632;
+  --kp-crowd-c: #3d8be0;
+  --kp-crowd-d: #f4f4f4;
+  --kp-board-a: #1f6fd6;
+  --kp-board-b: #e23d4a;
+  --kp-board-text: #ffffff;
+  --kp-grass-a: #5fbf55;
+  --kp-grass-b: #52ad49;
+  --kp-line: rgba(255, 255, 255, 0.85);
+  --kp-post: #ffffff;
+  --kp-post-dark: #c9d2dc;
+  --kp-net: rgba(255, 255, 255, 0.55);
+  --kp-light: #fff6c8;
+  --kp-glow: rgba(255, 245, 190, 0.5);
+  --kp-skin: #ffd8b4;
+  --kp-hair: #3b2a20;
+  --kp-jersey: #ff8a1e;
+  --kp-jersey-dark: #a84b00;
+  --kp-shorts: #22324f;
+  --kp-sock: #ff8a1e;
+  --kp-glove: #ffe14d;
+  --kp-glove-dark: #c99a00;
+  --kp-boot: #2b2b2b;
+  --kp-eye: #222222;
+  --kp-cheek: rgba(255, 110, 120, 0.45);
+  --kp-kid-jersey: #e23d4a;
+  --kp-kid-cap: #1f6fd6;
+  --kp-kid-shorts: #ffffff;
+  --kp-ball: #ffffff;
+  --kp-ball-dark: #2b2b2b;
+  --kp-shadow: rgba(20, 50, 20, 0.35);
+  --kp-ink: rgba(28, 22, 18, 0.85);
+  --kp-zone: rgba(255, 225, 77, 0.16);
+  --kp-zone-line: rgba(255, 240, 160, 0.9);
+  --kp-save: #7ef09a;
+  --kp-goal: #ff8a7a;
+  --kp-star: #ffe14d;
+  --kp-text: #2c2c2a;
+  --kp-hud: rgba(255, 252, 240, 0.9);
+}
+:root[data-theme="dark"] {
+  --kp-night: 1;
+  --kp-sky-top: #0b1230;
+  --kp-sky-bot: #22305a;
+  --kp-stand: #2b3247;
+  --kp-stand-hi: #353d55;
+  --kp-crowd-a: #9c3a36;
+  --kp-crowd-b: #a8822a;
+  --kp-crowd-c: #2f5f9c;
+  --kp-crowd-d: #a9adb8;
+  --kp-board-a: #174f9c;
+  --kp-board-b: #9c2b35;
+  --kp-board-text: #f1efe8;
+  --kp-grass-a: #3f8f3f;
+  --kp-grass-b: #367f37;
+  --kp-line: rgba(240, 245, 255, 0.75);
+  --kp-post: #ffffff;
+  --kp-post-dark: #9aa6b4;
+  --kp-net: rgba(230, 236, 255, 0.45);
+  --kp-light: #fff6c8;
+  --kp-glow: rgba(255, 245, 190, 0.5);
+  --kp-skin: #ffd8b4;
+  --kp-hair: #3b2a20;
+  --kp-jersey: #ff8a1e;
+  --kp-jersey-dark: #a84b00;
+  --kp-shorts: #22324f;
+  --kp-sock: #ff8a1e;
+  --kp-glove: #ffe14d;
+  --kp-glove-dark: #c99a00;
+  --kp-boot: #2b2b2b;
+  --kp-eye: #222222;
+  --kp-cheek: rgba(255, 110, 120, 0.45);
+  --kp-kid-jersey: #e23d4a;
+  --kp-kid-cap: #1f6fd6;
+  --kp-kid-shorts: #ffffff;
+  --kp-ball: #ffffff;
+  --kp-ball-dark: #2b2b2b;
+  --kp-shadow: rgba(0, 0, 0, 0.4);
+  --kp-ink: rgba(6, 6, 12, 0.9);
+  --kp-zone: rgba(255, 225, 77, 0.14);
+  --kp-zone-line: rgba(255, 240, 160, 0.9);
+  --kp-save: #7ef09a;
+  --kp-goal: #ff8a7a;
+  --kp-star: #ffe14d;
+  --kp-text: #f1efe8;
+  --kp-hud: rgba(16, 18, 30, 0.85);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --kp-night: 1;
+    --kp-sky-top: #0b1230;
+    --kp-sky-bot: #22305a;
+    --kp-stand: #2b3247;
+    --kp-stand-hi: #353d55;
+    --kp-crowd-a: #9c3a36;
+    --kp-crowd-b: #a8822a;
+    --kp-crowd-c: #2f5f9c;
+    --kp-crowd-d: #a9adb8;
+    --kp-board-a: #174f9c;
+    --kp-board-b: #9c2b35;
+    --kp-board-text: #f1efe8;
+    --kp-grass-a: #3f8f3f;
+    --kp-grass-b: #367f37;
+    --kp-line: rgba(240, 245, 255, 0.75);
+    --kp-post: #ffffff;
+    --kp-post-dark: #9aa6b4;
+    --kp-net: rgba(230, 236, 255, 0.45);
+    --kp-light: #fff6c8;
+    --kp-glow: rgba(255, 245, 190, 0.5);
+    --kp-skin: #ffd8b4;
+    --kp-hair: #3b2a20;
+    --kp-jersey: #ff8a1e;
+    --kp-jersey-dark: #a84b00;
+    --kp-shorts: #22324f;
+    --kp-sock: #ff8a1e;
+    --kp-glove: #ffe14d;
+    --kp-glove-dark: #c99a00;
+    --kp-boot: #2b2b2b;
+    --kp-eye: #222222;
+    --kp-cheek: rgba(255, 110, 120, 0.45);
+    --kp-kid-jersey: #e23d4a;
+    --kp-kid-cap: #1f6fd6;
+    --kp-kid-shorts: #ffffff;
+    --kp-ball: #ffffff;
+    --kp-ball-dark: #2b2b2b;
+    --kp-shadow: rgba(0, 0, 0, 0.4);
+    --kp-ink: rgba(6, 6, 12, 0.9);
+    --kp-zone: rgba(255, 225, 77, 0.14);
+    --kp-zone-line: rgba(255, 240, 160, 0.9);
+    --kp-save: #7ef09a;
+    --kp-goal: #ff8a7a;
+    --kp-star: #ffe14d;
+    --kp-text: #f1efe8;
+    --kp-hud: rgba(16, 18, 30, 0.85);
+  }
+}

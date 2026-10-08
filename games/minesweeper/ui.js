@@ -1,7 +1,7 @@
 // 踩地雷畫面層:狀態、渲染、輸入。規則一律呼叫 logic.js(遊戲)與 shared/profile.js(紀錄),這裡不寫規則。
 import {
   DIFFICULTIES, initState, stateWithMines, revealState, flagState, tickState, scoreFor, resultOf, isOver,
-  remainingMines, cellView, toSave, fromSave, isValidState,
+  remainingMines, cellView, toSave, fromSave, isValidState, confirmModeFor, cellTapAction,
 } from './logic.js';
 import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
@@ -11,9 +11,13 @@ import { setupHelp } from '../../shared/help.js';
 import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
 import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js';
+import { load, save } from '../../shared/storage.js';
 
 const GAME_ID = 'minesweeper';
 const LONG_PRESS_MS = 400;
+const CONFIRM_KEY = 'minesweeper:confirm-mode';
+const coarsePointer = matchMedia('(pointer: coarse)').matches;
+let confirmPreference = load(CONFIRM_KEY);
 const LABELS = { normal: '初級', hard: '中級', expert: '高級' };
 const $ = (id) => document.getElementById(id);
 const profile = await createProfile({ store: new LocalStore() });
@@ -23,6 +27,8 @@ let best = 0; // 本局開始前的最佳分數(profile 管)
 let ended = null; // 本局已結算:{ xp, newAchievements, isBest, bestBefore, score, seconds };結算中為 { pending: true }
 let gameNo = 0; // 每開一局 +1;非同步結算回來時,局號不同就不動畫面
 let flagMode = false;
+let confirmMode = false;
+let selectedIdx = null;
 let focusIdx = 0; // 鍵盤焦點所在格(roving tabindex)
 let peek = false; // 結束後按「看盤面」:暫時收起遮罩
 
@@ -32,6 +38,9 @@ const run = (fn) => { queue = queue.then(fn).catch((e) => console.error(e)); ret
 
 async function startNew(difficulty = state?.difficulty ?? 'normal') {
   state = initState(difficulty);
+  confirmMode = confirmModeFor(difficulty, coarsePointer, confirmPreference);
+  selectedIdx = null;
+  cancelPress();
   gameNo++;
   ended = null;
   peek = false;
@@ -96,9 +105,10 @@ async function newGame(difficulty = state.difficulty) {
 
 function act(i, kind) {
   profile.input();
+  selectedIdx = null;
   if (ended || isOver(state)) return;
   const next = kind === 'flag' ? flagState(state, i) : revealState(state, i);
-  if (next === state) return;
+  if (next === state) { render(); return; }
   state = next;
   render();
   const result = resultOf(state);
@@ -110,9 +120,13 @@ function act(i, kind) {
   }
 }
 
-// 點一下:插旗模式下對未翻開格插旗,其餘一律翻開(點已翻開的數字 = 快速翻開)。
-function tap(i) {
-  act(i, flagMode && !state.open[i] ? 'flag' : 'reveal');
+// 指標輸入可先選取;鍵盤沿用原有翻開/插旗模式。
+function tap(i, pointer = true) {
+  if (ended) return;
+  const choice = cellTapAction(state, i, { confirm: pointer && confirmMode, selected: selectedIdx, flagMode });
+  selectedIdx = choice.selected;
+  if (choice.action) act(i, choice.action);
+  else { profile.input(); render(); }
 }
 
 // ---- 渲染 ----
@@ -141,6 +155,8 @@ function renderCells() {
     const el = cells[i];
     const open = /^\d$/.test(v);
     el.className = `cell${open ? ` open n${v}` : ` is-${v}`}`;
+    el.classList.toggle('is-selected', i === selectedIdx);
+    el.setAttribute('aria-selected', String(i === selectedIdx));
     el.textContent = text;
     el.setAttribute('aria-label', `${Math.floor(i / state.cols) + 1} 列 ${(i % state.cols) + 1} 欄:${label}`);
     el.tabIndex = i === focusIdx ? 0 : -1;
@@ -154,6 +170,12 @@ function render() {
   $('difficulty').value = state.difficulty;
   $('flag-mode').setAttribute('aria-pressed', String(flagMode));
   $('flag-mode').classList.toggle('is-on', flagMode);
+  $('confirm-mode').setAttribute('aria-pressed', String(confirmMode));
+  $('confirm-mode').classList.toggle('is-on', confirmMode);
+  $('selection-slot').classList.toggle('is-active', confirmMode);
+  $('selection-actions').hidden = selectedIdx === null;
+  $('selection-label').textContent = selectedIdx === null ? ''
+    : `已選 ${Math.floor(selectedIdx / state.cols) + 1} 列 ${(selectedIdx % state.cols) + 1} 欄`;
   const d = DIFFICULTIES[state.difficulty];
   $('status').textContent = `💣 剩餘 ${remainingMines(state)} · ${LABELS[state.difficulty]} ${d.cols}×${d.rows} · ${d.mines} 雷${flagMode ? ' · 插旗模式中' : ''}`;
   renderOverlay();
@@ -211,7 +233,7 @@ $('board').addEventListener('pointerdown', (e) => {
   cancelPress();
   const i = Number(el.dataset.i);
   press = { i, x: e.clientX, y: e.clientY, long: false, timer: null };
-  if (e.pointerType !== 'mouse') {
+  if (e.pointerType !== 'mouse' && !confirmMode) {
     press.timer = setTimeout(() => {
       if (!press) return;
       press.long = true;
@@ -257,7 +279,7 @@ $('board').addEventListener('keydown', (e) => {
   } else if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault();
     focusIdx = i;
-    tap(i);
+    tap(i, false);
   } else if (e.key === 'f' || e.key === 'F') {
     e.preventDefault();
     focusIdx = i;
@@ -270,6 +292,22 @@ $('difficulty').addEventListener('change', (e) => newGame(e.target.value));
 $('flag-mode').addEventListener('click', () => {
   flagMode = !flagMode;
   render();
+});
+$('confirm-mode').addEventListener('click', () => {
+  cancelPress();
+  confirmMode = !confirmMode;
+  confirmPreference = confirmMode;
+  save(CONFIRM_KEY, confirmPreference);
+  selectedIdx = null;
+  render();
+});
+$('selection-actions').addEventListener('click', (e) => {
+  const kind = e.target.closest?.('[data-selection]')?.dataset.selection;
+  if (selectedIdx === null || !['reveal', 'flag', 'cancel'].includes(kind)) return;
+  if (kind === 'cancel') {
+    selectedIdx = null;
+    render();
+  } else act(selectedIdx, kind);
 });
 $('overlay-actions').addEventListener('click', (e) => {
   const cmd = e.target.dataset.act;
@@ -301,6 +339,7 @@ bindThemeToggle($('theme'));
 const saved = await profile.loadSave(GAME_ID);
 if (saved && isValidState(saved)) {
   state = fromSave(saved);
+  confirmMode = confirmModeFor(state.difficulty, coarsePointer, confirmPreference);
   gameNo++;
   focusIdx = Math.floor(state.rows / 2) * state.cols + Math.floor(state.cols / 2);
   buildBoard();
@@ -336,6 +375,7 @@ setupHelp({
     <ol>
       <li>點格子翻開;數字 = 周圍 8 格的地雷數,翻到空白會自動展開。<b>第一下必定安全</b>。</li>
       <li>右鍵、長按或「🚩 插旗模式」在雷上插旗;插旗的格子不會被翻開。</li>
+      <li>「點選確認」開啟時,點一下只選中;再點同格或按「翻開」確認,也可按「🚩 插旗」或「取消」。此時長按與插旗模式也先選中;鍵盤操作不變。</li>
       <li>點已翻開的數字:周圍旗數等於該數字時,一次翻開其餘鄰格(旗插錯會踩雷)。</li>
       <li>翻到地雷就輸。鍵盤:方向鍵移動、Enter 翻開、F 插旗。</li>
       <li><b>勝利</b>:翻開所有不是雷的格子。<b>分數</b> = 10000 − 秒數(越快越高),輸了 0 分。</li>

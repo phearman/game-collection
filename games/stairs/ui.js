@@ -426,6 +426,8 @@ function demoSvg(s) {
 
 const landOn = (s) => stepUntil(s, (x) => x.player.on !== null);
 const demoStep = (before, act, caption, result) => ({ before, after: act(before), caption, result });
+// 打開說明時先暫停;先註冊,也涵蓋首次自動開啟說明。
+document.addEventListener('helpopen', pause);
 setupHelp({
   gameId: GAME_ID,
   title: '下樓梯玩法',
@@ -459,5 +461,3 @@ setupHelp({
     ],
   },
 });
-// 打開說明時先暫停,避免在背後掉下去。
-document.querySelector('.topbar .btn').nextElementSibling.addEventListener('click', pause);

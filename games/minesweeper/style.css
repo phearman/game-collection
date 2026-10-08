@@ -2,10 +2,18 @@
 .topbar .btn { white-space: nowrap; padding: 6px 10px; }
 .stats { display: flex; gap: 6px; align-items: stretch; }
 .stats .stat { min-width: 52px; padding: 2px 8px; }
-.actions { display: flex; gap: 8px; margin-bottom: 8px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .actions .btn { flex: 1 1 auto; white-space: nowrap; padding: 6px 8px; min-width: 0; }
 .actions select.btn { appearance: none; text-align: center; text-align-last: center; }
-#flag-mode.is-on { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+#flag-mode.is-on, #confirm-mode.is-on { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+.actions #confirm-mode { flex-basis: 100%; }
+
+/* 棋盤下方保留動作列位置,選取/取消時不推動盤面,也不遮住長盤面。 */
+.selection-slot.is-active { min-height: 88px; padding-top: 8px; }
+.selection-actions[hidden] { display: none; }
+.selection-label { margin: 0 0 4px; font-size: 13px; text-align: center; }
+.selection-buttons { display: flex; gap: 8px; }
+.selection-buttons .btn { flex: 1; min-height: 48px; min-width: 48px; }
 
 .status { font-size: 13px; color: var(--text-sub); text-align: center; margin: 0 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -47,6 +55,7 @@
 .board[data-size="hard"] .cell, .board[data-size="expert"] .cell { font-size: clamp(10px, 3.4vw, 15px); border-radius: 2px; }
 .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; position: relative; z-index: 1; }
 .cell.open { background: var(--surface-sub); cursor: default; }
+.cell.is-selected { outline: 3px solid var(--accent); outline-offset: -3px; box-shadow: 0 0 0 1px var(--text); position: relative; z-index: 1; }
 .cell.is-mine, .cell.is-wrong { background: var(--surface-sub); }
 .cell.is-exploded { background: #e24b4a; }
 

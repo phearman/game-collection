@@ -88,6 +88,21 @@ export function stateWithMines(rows, cols, mineIndexes, difficulty = 'normal') {
 
 export const isOver = (state) => state.status === 'win' || state.status === 'lose';
 
+// 點選確認是輸入偏好,不放入遊戲存檔、不改變計分或輔助局。
+export function confirmModeFor(difficulty, coarsePointer, preference = null) {
+  if (typeof preference === 'boolean') return preference;
+  return coarsePointer && (difficulty === 'hard' || difficulty === 'expert');
+}
+
+// 只決定選取或交給既有翻開/插旗規則;第一下選取不算遊戲操作。
+export function cellTapAction(state, i, { confirm = false, selected = null, flagMode = false } = {}) {
+  if (isOver(state) || !Number.isInteger(i) || i < 0 || i >= state.open.length) {
+    return { selected: null, action: null };
+  }
+  if (confirm && selected !== i) return { selected: i, action: null };
+  return { selected: null, action: flagMode && !state.open[i] ? 'flag' : 'reveal' };
+}
+
 const flagCount = (state) => state.flags.filter(Boolean).length;
 
 // 剩餘雷數 = 總雷數 − 旗數(可為負)。
