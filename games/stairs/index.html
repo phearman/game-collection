@@ -12,7 +12,7 @@
     <header class="topbar">
       <a class="btn" href="../../">← 大廳</a>
       <div class="stats">
-        <div class="stat"><div class="stat-label">層數</div><div class="stat-value" id="score">0</div></div>
+        <div class="stat"><div class="stat-label" id="score-label">分數</div><div class="stat-value" id="score">0</div></div>
         <div class="stat"><div class="stat-label">最佳</div><div class="stat-value" id="best">0</div></div>
         <button class="btn" id="pause" type="button" aria-label="暫停" title="暫停(P)">⏸</button>
         <button class="btn" id="theme" type="button"></button>
@@ -20,11 +20,19 @@
     </header>
     <div class="actions">
       <button class="btn" id="new" type="button">↻ 新遊戲</button>
+      <select class="btn" id="mode" aria-label="模式">
+        <option value="adventure">闖關</option>
+        <option value="endless">無盡</option>
+      </select>
       <select class="btn" id="difficulty" aria-label="難度">
         <option value="normal">普通</option>
         <option value="hard">困難</option>
         <option value="expert">專家</option>
       </select>
+    </div>
+    <div class="adventure-hud" id="adventure-hud" hidden>
+      <strong id="stage-name"></strong><span id="goal-progress"></span>
+      <span id="treasures"></span>
     </div>
     <div class="stage-area">
       <div class="stage" id="stage">

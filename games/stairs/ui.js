@@ -2,14 +2,15 @@
 import {
   W, H, PLAYER, DT, MAX_LIVES, DIFFICULTIES, initState, stepState, pauseState, resumeState, overlayFor,
   toSave, fromSave, isValidState,
+  initAdventure, nextStage, scoreFor, detailFor, resultFor, stageFor, goalText, goalProgress,
 } from './logic.js';
 import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js';
 import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
-import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
 import { setupHelp } from '../../shared/help.js';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
 import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js';
 import { load, save } from '../../shared/storage.js';
@@ -46,8 +47,9 @@ function persist() {
   run(() => profile.saveState(GAME_ID, saved));
 }
 
-async function startNew(difficulty = difficultyPref()) {
-  state = initState(Math.random, difficulty);
+async function startNew(difficulty = difficultyPref(), mode = 'adventure') {
+  state = mode === 'adventure' ? initAdventure() : initState(Math.random, difficulty);
+  clearInput();
   fx = createFx();
   gameNo++;
   ended = null;
@@ -62,16 +64,16 @@ async function startNew(difficulty = difficultyPref()) {
 
 // 一局結束:依 §4.2 結算(每局只執行一次),結果顯示在遮罩。
 function finish(result) {
-  const snap = { score: state.floors, difficulty: state.difficulty, hearts: state.hearts ?? 0 };
+  const snap = { score: scoreFor(state), difficulty: state.difficulty, detail: detailFor(state) };
   ended = { pending: true };
   const no = gameNo;
   render();
   return run(async () => {
     const bestBefore = best;
     const out = await settlePlay(profile, GAME_ID, {
-      result, score: snap.score, difficulty: snap.difficulty, detail: { floors: snap.score, hearts: snap.hearts },
+      result, score: snap.score, difficulty: snap.difficulty, detail: snap.detail,
     });
-    if (!out) { if (no === gameNo) startNew(); return; } // 結算失敗且選「不存了」:不記錄、開新局(IR6)
+    if (!out) { if (no === gameNo) startNew(undefined, state.mode); return; } // 結算失敗且選「不存了」:不記錄、開新局(IR6)
     if (out.play.is_best) best = Math.max(best, snap.score);
     if (no !== gameNo) return;
     ended = {
@@ -81,6 +83,7 @@ function finish(result) {
       isBest: out.play.is_best,
       bestBefore,
       score: snap.score,
+      detail: snap.detail,
     };
     render();
   });
@@ -88,12 +91,12 @@ function finish(result) {
 
 // 新遊戲(含切換難度):未動不記錄、已動未結束 ⇒ quit。
 let confirmingQuit = false;
-async function newGame(difficulty) {
+async function newGame(difficulty, mode = state.mode) {
   if (confirmingQuit) return;
   if (ended?.pending) return; // 結算中:忽略連點
   if (!ended) {
     const result = resultOnNewGame({ everWon: false, moves: state.ticks });
-    const note = { score: state.floors, best, assist: state.assist };
+    const note = { score: scoreFor(state), best, assist: state.assist };
     if (result === 'quit' && needsQuitBestConfirm(note)) {
       confirmingQuit = true;
       const running = !state.paused;
@@ -102,6 +105,7 @@ async function newGame(difficulty) {
       confirmingQuit = false;
       if (!quit) {
         $('difficulty').value = state.difficulty;
+        $('mode').value = state.mode;
         if (running && document.visibilityState !== 'hidden' && !state.paused) timerResume();
         syncLoop();
         return;
@@ -110,7 +114,7 @@ async function newGame(difficulty) {
     if (result) finish(result);
   }
   if (difficulty !== undefined) save(DIFF_KEY, difficulty);
-  startNew(difficulty);
+  startNew(difficulty, mode);
 }
 
 function pause() {
@@ -122,7 +126,7 @@ function pause() {
 }
 
 function resume() {
-  if (ended || !state.paused) return;
+  if (ended || !state.paused || state.stageCleared) return;
   state = resumeState(state);
   timerResume();
   render();
@@ -137,6 +141,17 @@ function togglePause() {
 
 const keys = { left: false, right: false };
 const touches = new Map(); // pointerId → -1 / 1(後按的優先)
+function clearInput() { keys.left = false; keys.right = false; touches.clear(); }
+
+function advanceStage() {
+  const next = nextStage(state);
+  if (next === state) return;
+  state = next;
+  clearInput();
+  fx = createFx();
+  persist();
+  render();
+}
 const HOLD_INPUT_MS = 1000; // 按住不放時,每秒至少記一次輸入(避免被判閒置)
 let lastInputAt = 0;
 const noteInput = (t = performance.now()) => {
@@ -174,7 +189,12 @@ function frame(t) {
       state = stepState(state, { dir });
       fxEvents(fx, prev, state, { dir, reduced: reducedMotion.matches });
       if (state.over) {
-        finish(resultOnGameOver({ everWon: false }));
+        timerPause();
+        finish(resultFor(state));
+      } else if (state.stageCleared) {
+        clearInput();
+        timerPause();
+        persist();
       } else if (state.ticks % SAVE_EVERY === 0) {
         persist();
       }
@@ -225,65 +245,94 @@ function draw() {
 
 let shown = { score: -1, best: -1, lives: -1 };
 function render() {
-  const score = state.floors;
+  const score = scoreFor(state);
   const b = Math.max(best, score);
   if (shown.score !== score) $('score').textContent = score.toLocaleString();
   if (shown.best !== b) $('best').textContent = b.toLocaleString();
   if (shown.lives !== state.lives) $('status').textContent = `生命 ${state.lives}/${MAX_LIVES}`;
   shown = { score, best: b, lives: state.lives };
   $('difficulty').value = state.difficulty;
+  const adventure = state.mode === 'adventure';
+  $('mode').value = state.mode;
+  $('mode').disabled = !!ended?.pending;
+  $('difficulty').disabled = adventure || !!ended?.pending;
+  $('score-label').textContent = adventure ? '分數' : '層數';
+  $('adventure-hud').hidden = !adventure;
+  if (adventure) {
+    $('stage-name').textContent = `${state.stage}. ${stageFor(state).name}`;
+    $('goal-progress').textContent = goalProgress(state);
+    const treasures = [`生命 ${state.lives}/${MAX_LIVES}`, `金幣 ${state.coins}`];
+    if (state.star > 0) treasures.push(`星星 ${Math.ceil(state.star)}秒`);
+    if (state.shield) treasures.push('護盾 ×1');
+    if (state.cloudTime > 0) treasures.push(`雲 ${Math.ceil(state.cloudTime)}秒 · ${state.cloudUses}次`);
+    $('treasures').textContent = treasures.join(' · ');
+  }
   const pauseBtn = $('pause');
   const label = state.paused ? (state.ticks === 0 ? '開始' : '繼續') : '暫停';
   pauseBtn.textContent = state.paused ? '▶' : '⏸';
   pauseBtn.setAttribute('aria-label', label);
   pauseBtn.title = `${label}(P)`;
-  pauseBtn.disabled = !!ended || state.over;
+  pauseBtn.disabled = !!ended || state.over || state.stageCleared;
   draw();
   renderOverlay();
   syncLoop();
 }
 
-// 成就 id 可能來自匯入檔:只顯示白名單名稱,其餘一律 escape。
-const esc = (v) => String(v).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const achName = (id) => {
   const a = ACHIEVEMENTS.find((x) => x.id === id);
-  return esc(a ? `${a.icon} ${a.name}` : id);
+  return a ? `${a.icon} ${a.name}` : id;
 };
 
-function infoHtml() {
-  if (!ended) return '';
-  if (ended.pending) return '<p>結算中…</p>';
-  const lines = [`<p>下了 ${ended.score.toLocaleString()} 層</p>`, `<p class="overlay-xp">本局 +${ended.xp} XP</p>`, xpBreakdownHtml(ended.xpBreakdown)];
-  if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
-  lines.push(bestLineHtml({ ...ended, noun: '紀錄', unit: ' 層' }));
-  return lines.join('');
+function infoLine(text, className = '') {
+  const p = document.createElement('p');
+  p.textContent = text;
+  p.className = className;
+  $('overlay-info').append(p);
+}
+function resultInfo() {
+  if (!ended) return;
+  if (ended.pending) { infoLine('結算中…'); return; }
+  const adventure = ended.detail.mode === 'adventure';
+  infoLine(adventure ? `本局 ${ended.score.toLocaleString()} 分 · 通過 ${ended.detail.cleared} / 6 關` : `下了 ${ended.score.toLocaleString()} 層`);
+  if (adventure) infoLine(`本關金幣 ${state.stageCoins} · 累計金幣 ${ended.detail.coins} · 剩餘生命 ${state.lives}`);
+  infoLine(`本局 +${ended.xp} XP`, 'overlay-xp');
+  appendXpBreakdown($('overlay-info'), ended.xpBreakdown, document);
+  if (ended.newAchievements.length) infoLine(`新成就:${ended.newAchievements.map(achName).join('、')}`);
+  const line = bestLine({ ...ended, noun: '紀錄', unit: adventure ? ' 分' : ' 層' });
+  if (line) infoLine(line);
 }
 
 let shownKind = null;
 function renderOverlay() {
   const overlay = $('overlay');
   const kind = overlayFor(state) === 'over' && !endingDone(fx) ? null : overlayFor(state); // 結束動畫播完才出遮罩
-  const sig = `${kind}|${ended ? (ended.pending ? 'p' : 'd') : ''}`;
+  const sig = `${state.mode}|${state.stage}|${kind}|${ended ? (ended.pending ? 'p' : 'd') : ''}`;
   if (sig === shownKind) return; // 進行中不重繪遮罩
   shownKind = sig;
   const actions = $('overlay-actions');
-  let info = '';
+  $('overlay-info').textContent = '';
   if (kind === 'ready') {
-    $('overlay-title').textContent = '準備開始';
-    info = '<p>按 ← →,或按住場地左半邊/右半邊開始</p>';
+    $('overlay-title').textContent = state.mode === 'adventure' ? `第 ${state.stage} 關：${stageFor(state).name}` : '準備開始';
+    if (state.mode === 'adventure') infoLine(goalText(state));
+    infoLine('按 ← →,或按住場地左半邊/右半邊開始');
     actions.innerHTML = '<button class="btn" data-act="resume">▶ 開始</button>';
   } else if (kind === 'paused') {
     $('overlay-title').textContent = '已暫停';
-    info = '<p>按 P、← →,或按住場地左右半邊接著玩</p>';
+    infoLine('按 P、← →,或按住場地左右半邊接著玩');
     actions.innerHTML = '<button class="btn" data-act="resume">▶ 繼續</button>';
   } else if (kind === 'over') {
-    $('overlay-title').textContent = '遊戲結束';
+    $('overlay-title').textContent = state.won ? '六關全破！' : '遊戲結束';
     actions.innerHTML = '<button class="btn" data-act="new">再玩一次</button>';
+    resultInfo();
+  } else if (kind === 'cleared') {
+    $('overlay-title').textContent = `第 ${state.stage} 關過關！`;
+    infoLine(`本關金幣 ${state.stageCoins} · 剩餘生命 ${state.lives}/${MAX_LIVES}`);
+    infoLine('過關 +30 分 · 回復 1 命（上限 3）');
+    actions.innerHTML = '<button class="btn" data-act="next">下一關</button>';
   } else {
     overlay.hidden = true;
     return;
   }
-  $('overlay-info').innerHTML = kind === 'over' ? infoHtml() : info;
   overlay.hidden = false;
 }
 
@@ -355,6 +404,7 @@ $('pause').addEventListener('click', () => {
   togglePause();
 });
 $('difficulty').addEventListener('change', (e) => {
+  if (state.mode === 'adventure') return;
   const d = e.target.value;
   if (ended?.pending) {
     e.target.value = state.difficulty;
@@ -362,9 +412,14 @@ $('difficulty').addEventListener('change', (e) => {
   }
   newGame(d);
 });
+$('mode').addEventListener('change', (e) => {
+  if (ended?.pending) { e.target.value = state.mode; return; }
+  newGame(undefined, e.target.value);
+});
 $('overlay-actions').addEventListener('click', (e) => {
   const act = e.target.dataset.act;
   if (act === 'new') newGame();
+  if (act === 'next') advanceStage();
   if (act === 'resume') {
     profile.input();
     resume();
@@ -426,6 +481,7 @@ function demoSvg(s) {
 
 const landOn = (s) => stepUntil(s, (x) => x.player.on !== null);
 const demoStep = (before, act, caption, result) => ({ before, after: act(before), caption, result });
+const adventureDemo = (fields) => ({ ...initAdventure(() => .5, 4), ...fields, paused: false });
 // 打開說明時先暫停;先註冊,也涵蓋首次自動開啟說明。
 document.addEventListener('helpopen', pause);
 setupHelp({
@@ -434,16 +490,28 @@ setupHelp({
   mountAfter: document.querySelector('.topbar .btn'),
   rules: `
     <ol>
+      <li>闖關模式依序挑戰六關：層數、生存時間、金幣與終點旗；第五關往上爬，危險刺在底部。每關按開始，過關回 1 命並延續生命。</li>
       <li>平台不斷往上捲;用 ← → / A D,或按住畫面左半邊/右半邊移動。</li>
       <li>刺平台扣 1 命;彈跳平台會把你彈起;翻轉平台踩上 0.5 秒後消失。</li>
+      <li>移動平台會載你左右往返；冰平台左右加速、放開仍會滑。敵人側碰扣 1 命，從上方落下踩頭消滅並得 5 分。</li>
+      <li>金幣得 2 分；星星無敵 6 秒，碰敵人直接消滅；護盾擋一次傷害；雲 10 秒內慢落並自動接住踩空兩次，每朵雲 1.5 秒後消散。</li>
       <li>被推到頂端的刺扣 1 命並往下掉;掉出畫面底部直接結束。</li>
       <li>生命 3 格,每下 10 層站上普通平台回 1 命;碰到愛心也回 1 命(滿血照樣撿走)。</li>
-      <li>P 或 ⏸ 暫停;難度越高捲得越快、刺越多,XP 越多。</li>
-      <li>沒有勝利,撐到結束為止;分數 = 下了幾層,最佳 = 單局最多層。</li>
+      <li>P 或 ⏸ 暫停；難度只影響無盡模式，難度越高捲得越快、刺越多，XP 越多。</li>
+      <li>闖關分數 = 累計層數 + 金幣 ×2 + 踩敵人 ×5 + 過關數 ×30。無盡沒有勝利，分數 = 層數；兩模式共用最佳紀錄。</li>
     </ol>`,
   demo: {
     render: demoSvg,
     steps: [
+      { ...demoStep(adventureDemo({
+        player: { x: 4, y: 4, vy: 4, vx: 0, on: null, drop: null },
+        platforms: [{ ...demoPlatform(1, 8), motion: 1, enemy: { offset: 1.5, dir: 1 }, flag: false }, ...below(1)], nextN: 4,
+      }), (s) => stepUntil(s, (s) => s.stomps > 0), '從敵人上方落下…', '…踩頭消滅敵人，小彈起並加 5 分'), kind: 'ok' },
+      { ...demoStep(adventureDemo({
+        player: { x: 1, y: 8 - PLAYER, vy: 0, vx: 0, on: 1, drop: null },
+        platforms: [demoPlatform(1, 8, 'normal', 5, 3), ...below(1)], nextN: 4,
+        cloudTime: 10, cloudUses: 2,
+      }), (s) => stepState(s), '雲寶物生效時踩空…', '…腳下生雲接住！剩餘 1 次，1.5 秒後消散'), kind: 'ok' },
       { ...demoStep(demoState({ x: 4, y: 3 }, [demoPlatform(1, 7), ...below(1)]), landOn,
         '往下掉到普通平台…', '…站穩了:層數 +1'), kind: 'ok' },
       demoStep(demoState({ x: 4, y: 3 }, [demoPlatform(1, 7, 'bounce'), ...below(1)]), (s) => steps(stepUntil(s, (x) => x.player.vy < 0), 12),

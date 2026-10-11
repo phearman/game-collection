@@ -3,6 +3,10 @@
 .stats { display: flex; gap: 6px; align-items: stretch; }
 .stats .stat { min-width: 52px; padding: 2px 8px; }
 .actions { display: flex; gap: 8px; margin-bottom: 12px; }
+.actions > * { min-width: 0; }
+.adventure-hud { display: grid; grid-template-columns: 1fr auto; gap: 0 6px; font-size: 12px; line-height: 1.5; padding: 4px 8px; margin-bottom: 6px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); }
+.adventure-hud[hidden] { display: none; }
+#treasures { grid-column: 1 / -1; min-height: 18px; }
 .actions .btn { flex: 1; white-space: nowrap; padding-left: 8px; padding-right: 8px; }
 select.btn { appearance: auto; }
 select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -238,6 +242,7 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
 }
 .overlay[hidden] { display: none; }
 .overlay-title { font-size: 26px; font-weight: 700; margin: 0; }
+.overlay-title { text-align: center; padding: 0 8px; font-size: clamp(18px, 5vw, 26px); }
 .overlay-actions { display: flex; gap: 8px; }
 .overlay-actions .btn { min-height: 48px; min-width: 120px; }
 .overlay-info { text-align: center; font-size: 14px; padding: 0 16px; }
@@ -249,3 +254,39 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
 
 /* 說明示範(SVG 由 logic 實算的場面畫出) */
 .demo-field { display: block; width: 100%; max-width: 150px; margin: 0 auto; border: 1px solid var(--border); border-radius: 8px; background: var(--st-bg); }
+
+/* 闖關六主題的背景、環境、平台與危險邊緣：淺/深套用同一形狀。 */
+:root {
+  --st-forest-bg: #dce8c8; --st-forest-scenery: #809b70; --st-forest-board: #af733c; --st-forest-hi: #f0c18b; --st-forest-dark: #6d4527;
+  --st-cave-bg: #b4a08b; --st-cave-scenery: #796c61; --st-cave-board: #aa8260; --st-cave-hi: #e2c5a4; --st-cave-dark: #5e483a;
+  --st-ice-bg: #d4e9f1; --st-ice-scenery: #8ab4c7; --st-ice-board: #65b7d8; --st-ice-hi: #edfaff; --st-ice-dark: #286781;
+  --st-factory-bg: #c8ccca; --st-factory-scenery: #7b8989; --st-factory-board: #7b9396; --st-factory-hi: #cddfe0; --st-factory-dark: #3a4c52;
+  --st-sky-bg: #c9e8fa; --st-sky-scenery: #8bc0de; --st-sky-board: #86b3ce; --st-sky-hi: #f6fcff; --st-sky-dark: #3d718e;
+  --st-tower-bg: #37344f; --st-tower-scenery: #5e597b; --st-tower-board: #a68abd; --st-tower-hi: #e0c9fa; --st-tower-dark: #564069;
+  --st-coin: #ffd04e; --st-star: #fff083; --st-shield: #519be2; --st-cloud: #f5fbff; --st-enemy: #9864ab; --st-enemy-hi: #d0a0dd; --st-flag: #e9475c;
+}
+:root[data-theme="dark"] {
+  --st-forest-bg: #1e3026; --st-forest-scenery: #395140; --st-forest-board: #b6844b; --st-forest-hi: #edc690; --st-forest-dark: #604327;
+  --st-cave-bg: #28221f; --st-cave-scenery: #49403a; --st-cave-board: #ae8a68; --st-cave-hi: #e4c8a3; --st-cave-dark: #5e483a;
+  --st-ice-bg: #183042; --st-ice-scenery: #305769; --st-ice-board: #70bfdf; --st-ice-hi: #e5f8ff; --st-ice-dark: #2a627e;
+  --st-factory-bg: #252c32; --st-factory-scenery: #444e55; --st-factory-board: #92afb4; --st-factory-hi: #d1e6e8; --st-factory-dark: #42575e;
+  --st-sky-bg: #233953; --st-sky-scenery: #496884; --st-sky-board: #a5c2dc; --st-sky-hi: #eaf5ff; --st-sky-dark: #4f7294;
+  --st-tower-bg: #191626; --st-tower-scenery: #35304f; --st-tower-board: #a78bbc; --st-tower-hi: #eed4ff; --st-tower-dark: #59476e;
+  --st-coin: #ffdc65; --st-star: #fff6a0; --st-shield: #8bc9ff; --st-cloud: #dceeff; --st-enemy: #b882c9; --st-enemy-hi: #edb7f8; --st-flag: #ff6a7c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --st-forest-bg: #1e3026; --st-forest-scenery: #395140; --st-forest-board: #b6844b; --st-forest-hi: #edc690; --st-forest-dark: #604327;
+    --st-cave-bg: #28221f; --st-cave-scenery: #49403a; --st-cave-board: #ae8a68; --st-cave-hi: #e4c8a3; --st-cave-dark: #5e483a;
+    --st-ice-bg: #183042; --st-ice-scenery: #305769; --st-ice-board: #70bfdf; --st-ice-hi: #e5f8ff; --st-ice-dark: #2a627e;
+    --st-factory-bg: #252c32; --st-factory-scenery: #444e55; --st-factory-board: #92afb4; --st-factory-hi: #d1e6e8; --st-factory-dark: #42575e;
+    --st-sky-bg: #233953; --st-sky-scenery: #496884; --st-sky-board: #a5c2dc; --st-sky-hi: #eaf5ff; --st-sky-dark: #4f7294;
+    --st-tower-bg: #191626; --st-tower-scenery: #35304f; --st-tower-board: #a78bbc; --st-tower-hi: #eed4ff; --st-tower-dark: #59476e;
+    --st-coin: #ffdc65; --st-star: #fff6a0; --st-shield: #8bc9ff; --st-cloud: #dceeff; --st-enemy: #b882c9; --st-enemy-hi: #edb7f8; --st-flag: #ff6a7c;
+  }
+}
+@media (max-height: 700px) {
+  .page-fit { padding-top: 8px; padding-bottom: 6px; }
+  .page-fit .topbar, .actions { margin-bottom: 6px; }
+  .page-fit .hint { font-size: 11px; margin-top: 4px; }
+}

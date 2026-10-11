@@ -1,7 +1,7 @@
 // 下樓梯繪圖模組(RS11):只負責畫面與特效,⛔ 不改 state、不含規則。
 // 座標單位 = 場地單位(logic.js 的 W × H,x 往右、y 往下);呼叫端先把 ctx 縮放到場地單位。
 // 美術正典:workbook/plans/rs11-stairs-art.md「RS11 美術要求」;第 1 輪退回(PR #20 A1~A3)後改為「高塔內部」世界觀。
-import { W, H, PLAYER, CEIL, FLIP_DELAY, MAX_LIVES, HURT_SEC, heartBox, scrolledBy } from './logic.js';
+import { W, H, PLAYER, CEIL, FLIP_DELAY, MAX_LIVES, HURT_SEC, heartBox, enemyBox, scrolledBy, canonicalState, directionFor, stageFor } from './logic.js';
 
 export const THICK = 0.3; // 平台畫面厚度(碰撞只看上緣)
 export const END_SEC = 0.8; // 結束動畫長度(≤ 1 秒),播完才顯示結算遮罩
@@ -18,11 +18,29 @@ export const PALETTE_KEYS = [
   'glow', 'flame', 'iron-hi', 'iron', 'iron-dark', 'glint', 'ink', 'shadow', 'warm', 'brick-spot', 'rust', 'rust-dark', 'rust-spot', 'beam', 'wood', 'wood-hi', 'wood-dark', 'old', 'old-hi', 'old-dark', 'axle',
   'warn', 'spike', 'bounce', 'bounce-hi', 'bounce-dark', 'coil', 'skin', 'hat', 'hat-hi', 'scarf', 'coat', 'sleeve', 'pants', 'boot',
   'eye', 'cheek', 'heart', 'empty', 'text', 'halo', 'danger', 'hud', 'dust',
+  'coin', 'star', 'shield', 'cloud', 'enemy', 'enemy-hi', 'flag',
+  ...['forest', 'cave', 'ice', 'factory', 'sky', 'tower'].flatMap((theme) => ['bg', 'scenery', 'board', 'hi', 'dark'].map((key) => `${theme}-${key}`)),
 ];
 
 // cs = getComputedStyle(document.documentElement)(由呼叫端傳入,本模組不碰 DOM 全域)。
 export function readPalette(cs) {
   return Object.fromEntries(PALETTE_KEYS.map((k) => [k, cs.getPropertyValue(`--st-${k}`).trim()]));
+}
+
+const themePalettes = new WeakMap();
+function themePalette(pal, theme) {
+  let themes = themePalettes.get(pal);
+  if (!themes) { themes = new Map(); themePalettes.set(pal, themes); }
+  if (themes.has(theme)) return themes.get(theme);
+  const bg = pal[`${theme}-bg`];
+  const scenery = pal[`${theme}-scenery`];
+  const out = { ...pal, theme, 'wall-top': bg, 'wall-bot': bg,
+    'brick-a': scenery, 'brick-b': bg, pillar: scenery, 'pillar-hi': pal[`${theme}-hi`],
+    wood: pal[`${theme}-board`], 'wood-hi': pal[`${theme}-hi`], 'wood-dark': pal[`${theme}-dark`],
+    iron: scenery, 'iron-hi': pal[`${theme}-hi`], 'iron-dark': pal[`${theme}-dark`],
+    ...(theme === 'tower' ? { night: '1' } : {}) };
+  themes.set(theme, out);
+  return out;
 }
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -72,6 +90,8 @@ function burst(fx, kind, x, y, reduced) {
 
 // 比對一步前後的 state,觸發特效。dir = 本步輸入方向。
 export function fxEvents(fx, prev, next, { dir = 0, reduced = false } = {}) {
+  prev = canonicalState(prev);
+  next = canonicalState(next);
   const a = fx.anim;
   if (dir) a.facing = dir;
   a.moving = dir !== 0 && next.player.on !== null;
@@ -97,15 +117,22 @@ export function fxEvents(fx, prev, next, { dir = 0, reduced = false } = {}) {
     burst(fx, 'spark', cx, next.player.y + PLAYER / 2, reduced);
   }
   if (next.picked) {
-    burst(fx, 'heart', cx, next.player.y + 0.2, reduced);
-    fx.texts.push({ text: next.picked === 'heal' ? '+1' : '已滿', x: cx, y: next.player.y - 0.5, life: 0.9, max: 0.9 });
+    burst(fx, ['heal', 'full'].includes(next.picked) ? 'heart' : 'star', cx, next.player.y + 0.2, reduced);
+    const texts = { heal: '+1', full: '已滿', coin: '金幣 +1', star: '無敵 6 秒', shield: '護盾！', cloud: '乘雲駕霧！' };
+    fx.texts.push({ text: texts[next.picked], x: cx, y: next.player.y - 0.5, life: 0.9, max: 0.9 });
   }
+  if (next.stomps > prev.stomps) {
+    burst(fx, 'star', cx, feet, reduced);
+    fx.texts.push({ text: '踩敵 +5', x: cx, y: next.player.y - .5, life: .9, max: .9 });
+  }
+  if (next.cloudUses < prev.cloudUses && next.cloudTime > 0) burst(fx, 'dust', cx, feet, reduced);
+  if (next.stageCleared && !prev.stageCleared) burst(fx, 'star', cx, feet, reduced);
   for (const p of prev.platforms) {
     if (p.kind === 'flip' && p.flip !== null && p.y > -0.5 && !next.platforms.some((q) => q.n === p.n)) {
       fx.ghosts.push({ x: p.x, y: p.y, w: p.w, vy: 0, rot: 0.25, life: 0.6 });
     }
   }
-  if (next.over && !prev.over) {
+  if (next.over && !prev.over && !next.won) {
     const fell = next.player.y > H;
     fx.ending = { t: 0, kind: fell ? 'fall' : 'ko', x: next.player.x, y: Math.min(next.player.y, H - PLAYER) };
     if (fell) burst(fx, 'dust', cx, H - 0.1, reduced);
@@ -301,7 +328,8 @@ function layersFor(c, pal) {
     far: make(W, FAR_PERIOD, (g) => {
       g.fillStyle = pal['wall-bot']; // 磚縫
       g.fillRect(0, 0, W, FAR_PERIOD);
-      paintFar(g, pal, 0, FAR_ROWS, 0);
+      if (pal.theme && pal.theme !== 'tower') paintThemeFar(g, pal);
+      else paintFar(g, pal, 0, FAR_ROWS, 0);
     }),
     glow: make(3.2, 3.2, (g) => {
       const r = g.createRadialGradient(1.6, 1.6, 0.05, 1.6, 1.6, 1.6);
@@ -336,6 +364,17 @@ function ink(c, pal, w = 0.035) {
 }
 
 function drawBackground(c, pal, scroll, t, reduced) {
+  if (pal.theme && pal.theme !== 'tower') {
+    const far = scroll * .3;
+    const L = layersFor(c, pal);
+    c.fillStyle = pal['wall-bot'];
+    c.fillRect(0, 0, W, H);
+    for (let y = -(far % FAR_PERIOD); y < H; y += FAR_PERIOD) {
+      if (L) c.drawImage(L.far, 0, y, W, FAR_PERIOD);
+      else { c.save(); c.translate(0, y); paintThemeFar(c, pal); c.restore(); }
+    }
+    return;
+  }
   c.fillStyle = pal['wall-bot']; // 磚縫
   c.fillRect(-1, -1, W + 2, H + 2);
 
@@ -370,6 +409,59 @@ function drawBackground(c, pal, scroll, t, reduced) {
     for (let y = -(near % SEG); y < H; y += SEG) c.fillRect(x0, y, 0.42, 0.035); // 石柱接縫
   }
   for (const tr of torches(scroll)) drawTorch(c, pal, tr.x, tr.y, t, reduced);
+}
+
+// 每個場景是同一趟探險的環境，靜態週期圖層沿用既有快取。
+function paintThemeFar(c, pal) {
+  c.fillStyle = pal['wall-bot'];
+  c.fillRect(0, 0, W, FAR_PERIOD);
+  const scene = pal[`${pal.theme}-scenery`];
+  for (let i = 0; i < 6; i++) {
+    const x = i % 2 ? 6.4 : .5;
+    const y = .7 + Math.floor(i / 2) * 3;
+    c.fillStyle = scene;
+    if (pal.theme === 'forest') {
+      c.fillRect(x + .6, y + .5, .18, 2.2);
+      for (const [dx, dy, r] of [[.1, .5, .55], [.7, 0, .65], [1.3, .5, .55]]) { circle(c, x + dx, y + dy, r); c.fill(); }
+      c.strokeStyle = pal['wood-dark']; c.lineWidth = .04;
+      c.beginPath(); c.moveTo(x + .68, y + 2.4); c.lineTo(x + .68, y + .8); c.stroke();
+    } else if (pal.theme === 'cave') {
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x + 1.5, y - .2); c.lineTo(x + 1.1, y + 1.8); c.lineTo(x + .3, y + 1.4); c.closePath(); c.fill();
+      c.strokeStyle = pal['wood-hi']; c.lineWidth = .03;
+      c.beginPath(); c.moveTo(x + .2, y + .5); c.lineTo(x + .8, y + .1); c.lineTo(x + 1.2, y + .7); c.stroke();
+    } else if (pal.theme === 'ice') {
+      c.beginPath(); c.moveTo(x - .6, y + 1.6); c.lineTo(x + .6, y - .4); c.lineTo(x + 2, y + 1.6); c.closePath(); c.fill();
+      c.fillStyle = pal['wood-hi']; c.beginPath(); c.moveTo(x + .6, y - .4); c.lineTo(x + .1, y + .45); c.lineTo(x + .7, y + .2); c.lineTo(x + 1.15, y + .4); c.closePath(); c.fill();
+      for (let k = 0; k < 5; k++) { circle(c, x + k * .35, y + 2, .025); c.fill(); }
+    } else if (pal.theme === 'factory') {
+      c.strokeStyle = scene; c.lineWidth = .2;
+      c.beginPath(); c.moveTo(x, y - 1); c.lineTo(x, y + 1); c.lineTo(x + 1.3, y + 1); c.lineTo(x + 1.3, y + 2); c.stroke();
+      gearPath(c, x + .7, y + .3, .5); c.fillStyle = scene; c.fill();
+      circle(c, x + .7, y + .3, .17); c.fillStyle = pal['wall-bot']; c.fill();
+    } else if (pal.theme === 'sky') {
+      cloudPath(c, x, y, 2.3, .65); c.fill();
+      c.strokeStyle = pal['wood-hi']; c.lineWidth = .025; c.stroke();
+    }
+  }
+}
+
+function gearPath(c, x, y, r) {
+  c.beginPath();
+  for (let i = 0; i < 32; i++) {
+    const a = i * Math.PI / 16;
+    const rr = i % 4 < 2 ? r : r * .77;
+    c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  c.closePath();
+}
+
+function cloudPath(c, x, y, w, h) {
+  c.beginPath();
+  c.moveTo(x + .15, y + h);
+  c.bezierCurveTo(x - .25, y + h * .3, x + w * .15, y, x + w * .3, y + h * .35);
+  c.bezierCurveTo(x + w * .3, y - h * .45, x + w * .75, y - h * .45, x + w * .75, y + h * .3);
+  c.bezierCurveTo(x + w * 1.1, y, x + w * 1.12, y + h, x + w - .15, y + h);
+  c.closePath();
 }
 
 // ---- 平台:四種形狀、顏色都不同;一律平塗+上亮下暗+描邊 ----
@@ -575,9 +667,37 @@ function drawPlatforms(c, s, pal, fx, t, reduced) {
     if (p.kind === 'spike') drawSpike(c, p, pal);
     else if (p.kind === 'bounce') drawBounce(c, p, pal, fx?.springs.get(p.n));
     else if (p.kind === 'flip') drawFlip(c, p, pal, reduced);
+    else if (p.kind === 'ice') {
+      plank(c, pal, p.x, p.y, p.w, THICK, pal['ice-board'], pal['ice-hi'], pal['ice-dark']);
+      c.strokeStyle = pal['ice-hi']; c.lineWidth = .06;
+      c.beginPath();
+      for (let dx = .3; dx < p.w; dx += .7) { c.moveTo(p.x + dx, p.y + .05); c.lineTo(p.x + dx + .2, p.y + .22); }
+      c.stroke();
+      for (let dx = .4; dx < p.w; dx += .8) ironSpike(c, { ...pal, 'iron-hi': pal['ice-hi'], 'iron-dark': pal['ice-dark'] }, p.x + dx, p.x + dx + .25, p.y + THICK, p.y + .6, false);
+    }
+    else if (p.kind === 'moving') {
+      drawNormal(c, p, pal);
+      for (const dx of [.4, p.w - .4]) {
+        circle(c, p.x + dx, p.y + .4, .17); c.fillStyle = pal.iron; c.fill(); ink(c, pal);
+        circle(c, p.x + dx, p.y + .4, .06); c.fillStyle = pal.glint; c.fill();
+      }
+      c.strokeStyle = pal['wood-dark']; c.lineWidth = .06;
+      c.beginPath();
+      for (const dx of [.8, p.w - .8]) { c.moveTo(p.x + dx, p.y + .08); c.lineTo(p.x + dx + (dx < 1 ? -.15 : .15), p.y + .15); c.lineTo(p.x + dx, p.y + .22); }
+      c.stroke();
+    }
     else drawNormal(c, p, pal);
     c.globalAlpha = 1;
-    if (p.item === 'heart') drawHeartItem(c, p, pal, t);
+    if (p.item === 'heart') drawHeartItem(c, p, pal, reduced ? 0 : t);
+    else if (p.item) drawTreasure(c, p, pal);
+    if (p.enemy) drawEnemy(c, p, pal);
+    if (p.flag) drawFlag(c, p, pal);
+  }
+  for (const p of s.clouds ?? []) {
+    c.globalAlpha = Math.min(1, p.life / .4);
+    cloudPath(c, p.x, p.y - .12, p.w, .32);
+    c.fillStyle = pal.cloud; c.fill(); ink(c, pal);
+    c.globalAlpha = 1;
   }
   for (const g of fx?.ghosts ?? []) { // 翻落:繞轉軸翻轉往下掉、淡出
     c.save();
@@ -587,6 +707,68 @@ function drawPlatforms(c, s, pal, fx, t, reduced) {
     drawFlipBoard(c, pal, g.w, true);
     c.restore();
   }
+}
+
+function starPath(c, x, y, r) {
+  c.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / 5;
+    const rr = i % 2 ? r * .45 : r;
+    c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  c.closePath();
+}
+function shieldPath(c, x, y, r) {
+  c.beginPath(); c.moveTo(x - r, y - r); c.lineTo(x + r, y - r);
+  c.quadraticCurveTo(x + r, y + r * .6, x, y + r);
+  c.quadraticCurveTo(x - r, y + r * .6, x - r, y - r); c.closePath();
+}
+function drawTreasure(c, p, pal) {
+  const b = heartBox(p);
+  const x = b.x + b.w / 2, y = b.y + b.h / 2;
+  c.fillStyle = pal[p.item];
+  if (p.item === 'coin') {
+    c.beginPath(); c.ellipse(x, y, .22, .3, 0, 0, Math.PI * 2); c.fill(); ink(c, pal);
+    c.strokeStyle = pal['wood-dark']; c.lineWidth = .035;
+    c.beginPath(); c.ellipse(x, y, .14, .22, 0, 0, Math.PI * 2); c.stroke();
+    c.beginPath(); c.moveTo(x, y - .12); c.lineTo(x, y + .12); c.stroke();
+  } else if (p.item === 'star') {
+    starPath(c, x, y, .32); c.fill(); ink(c, pal);
+  } else if (p.item === 'shield') {
+    shieldPath(c, x, y, .27); c.fill(); ink(c, pal);
+    c.strokeStyle = pal.glint; c.lineWidth = .045;
+    c.beginPath(); c.moveTo(x, y - .18); c.lineTo(x, y + .15); c.moveTo(x - .13, y - .05); c.lineTo(x + .13, y - .05); c.stroke();
+  } else if (p.item === 'cloud') {
+    cloudPath(c, b.x + .05, b.y + .12, b.w - .1, .3); c.fill(); ink(c, pal);
+    c.strokeStyle = pal['sky-dark']; c.lineWidth = .04;
+    c.beginPath(); c.moveTo(b.x, b.y + .5); c.lineTo(b.x + .2, b.y + .5); c.moveTo(b.x + .4, b.y + .55); c.lineTo(b.x + .65, b.y + .55); c.stroke();
+  }
+  c.fillStyle = pal.glint;
+  circle(c, x - .08, y - .12, .04); c.fill();
+}
+function drawEnemy(c, p, pal) {
+  const b = enemyBox(p), cx = b.x + b.w / 2;
+  c.strokeStyle = pal.ink; c.lineWidth = .05;
+  c.beginPath(); c.moveTo(cx - .15, b.y + .2); c.lineTo(cx - .22, b.y + .04); c.moveTo(cx + .15, b.y + .2); c.lineTo(cx + .22, b.y + .04); c.stroke();
+  c.beginPath(); c.ellipse(cx, b.y + b.h * .62, b.w / 2, b.h * .38, 0, 0, Math.PI * 2);
+  c.fillStyle = pal.enemy; c.fill(); ink(c, pal);
+  c.fillStyle = pal['enemy-hi']; circle(c, cx - .12, b.y + .28, .08); c.fill();
+  for (const dx of [-.13, .13]) {
+    circle(c, cx + dx, b.y + .33, .075); c.fillStyle = pal.glint; c.fill();
+    circle(c, cx + dx + p.enemy.dir * .025, b.y + .34, .035); c.fillStyle = pal.eye; c.fill();
+  }
+  c.strokeStyle = pal.eye; c.lineWidth = .025;
+  c.beginPath(); c.arc(cx, b.y + .44, .06, 0, Math.PI); c.stroke();
+  for (const dx of [-.2, .2]) { circle(c, cx + dx, p.y - .035, .07); c.fillStyle = pal['wood-dark']; c.fill(); ink(c, pal); }
+}
+function drawFlag(c, p, pal) {
+  const x = p.x + p.w / 2;
+  c.strokeStyle = pal.iron; c.lineWidth = .06;
+  c.beginPath(); c.moveTo(x, p.y); c.lineTo(x, p.y - 1.6); c.stroke();
+  c.beginPath(); c.moveTo(x, p.y - 1.5); c.lineTo(x + .85, p.y - 1.2); c.lineTo(x, p.y - .9); c.closePath();
+  c.fillStyle = pal.flag; c.fill(); ink(c, pal);
+  starPath(c, x + .27, p.y - 1.2, .12); c.fillStyle = pal.star; c.fill();
+  circle(c, x, p.y - 1.62, .09); c.fillStyle = pal.coin; c.fill(); ink(c, pal);
 }
 
 // ---- 頂刺:鐵梁+鉚釘+雙面鋼刺(高光/陰影);玩家接近時頂端泛紅脈動 ----
@@ -613,6 +795,7 @@ function drawCeiling(c, s, pal, t, reduced) {
 const CEIL_SPRITE_H = CEIL + 0.7;
 // 鐵梁+投影+鐵刺(靜態部分;快取成圖層或直接畫)
 function paintCeiling(c, pal, red, jitter = 0) {
+  if (pal.theme) { paintThemeCeiling(c, pal, red, jitter); return; }
   // 鐵梁底下的投影:把頂刺和石牆的明度拉開
   const sh = c.createLinearGradient(0, 0.2, 0, CEIL + 0.6);
   sh.addColorStop(0, pal.shadow);
@@ -640,6 +823,39 @@ function paintCeiling(c, pal, red, jitter = 0) {
   for (let i = 0; i < n; i++) {
     circle(c, (i + 0.45) * step + jitter, CEIL - 0.06, 0.016);
     c.fill();
+  }
+}
+
+function paintThemeCeiling(c, pal, red, jitter) {
+  c.fillStyle = pal['wood-dark']; c.fillRect(0, 0, W, .2);
+  c.fillStyle = pal['wood-hi']; c.fillRect(0, .12, W, .035);
+  if (pal.theme === 'factory') {
+    for (let x = .35; x < W; x += .75) {
+      gearPath(c, x + jitter, .32, .28); c.fillStyle = pal.iron; c.fill(); ink(c, pal);
+      circle(c, x + jitter, .32, .09); c.fillStyle = pal['iron-dark']; c.fill();
+      if (red) { circle(c, x + jitter, .32, .04); c.fillStyle = pal.spike; c.fill(); }
+    }
+    return;
+  }
+  const step = pal.theme === 'cave' ? .75 : .5;
+  for (let x = 0; x < W; x += step) {
+    const mid = x + step / 2 + jitter;
+    c.fillStyle = red ? pal.spike : pal[`${pal.theme}-scenery`];
+    c.beginPath(); c.moveTo(x + jitter, .2);
+    if (pal.theme === 'forest') {
+      c.quadraticCurveTo(mid - .03, .3, mid, CEIL);
+      c.quadraticCurveTo(mid + .03, .3, x + step + jitter, .2);
+    } else if (pal.theme === 'sky') {
+      c.lineTo(mid + .06, .36); c.lineTo(mid - .05, .37); c.lineTo(mid, CEIL);
+      c.lineTo(x + step + jitter, .2);
+    } else if (pal.theme === 'tower') {
+      c.lineTo(mid - .08, .37); c.lineTo(mid, CEIL); c.lineTo(mid + .08, .37); c.lineTo(x + step + jitter, .2);
+    } else {
+      c.lineTo(mid, CEIL); c.lineTo(x + step + jitter, .2);
+    }
+    c.closePath(); c.fill(); ink(c, pal, .025);
+    c.strokeStyle = pal['wood-hi']; c.lineWidth = .025;
+    c.beginPath(); c.moveTo(mid - .05, .26); c.lineTo(mid - .01, .48); c.stroke();
   }
 }
 
@@ -869,8 +1085,8 @@ function drawPlayer(c, s, pal, fx, opts) {
   const a = fx?.anim ?? { t: 0, facing: 1, phase: 0, moving: false, land: 0 };
   const { x, y, vy, on } = s.player;
   const flashing = fx ? fx.hurtFlash > 0 : s.hurt > HURT_SEC - HURT_FLASH;
-  const blink = flashing && (opts.demo || Math.floor((fx?.hurtFlash ?? 0) * 12) % 2 === 0);
-  const tint = blink ? pal.spike : undefined;
+  const blink = flashing && (opts.reduced || opts.demo || Math.floor((fx?.hurtFlash ?? 0) * 12) % 2 === 0);
+  const tint = blink ? pal.spike : s.star > 0 && !opts.reduced && Math.floor(a.t * 8) % 2 === 0 ? pal.star : undefined;
   const e = fx?.ending;
   const cx = x + PLAYER / 2;
   if (e) {
@@ -881,6 +1097,14 @@ function drawPlayer(c, s, pal, fx, opts) {
     return; // 掉出底部:角色已不在場內
   }
   if (y > H) return;
+  if (s.star > 0 || s.shield) {
+    c.save();
+    c.strokeStyle = s.star > 0 ? pal.star : pal.shield; c.lineWidth = .07;
+    c.globalAlpha = s.star > 0 && !opts.reduced ? .65 + .3 * Math.sin(a.t * 8) : .95;
+    c.beginPath(); c.ellipse(cx, y + .05, .65, .95, 0, 0, Math.PI * 2); c.stroke();
+    if (s.shield) { shieldPath(c, cx + .5, y - .4, .16); c.fillStyle = pal.shield; c.fill(); ink(c, pal); }
+    c.restore();
+  }
   const pose = on === null ? (vy < 0 ? 'jump' : vy > 2 ? 'fall' : 'idle') : a.moving ? 'walk' : 'idle';
   const squash = a.land > 0 ? Math.sin((1 - a.land / LAND_SEC) * Math.PI) : 0;
   if (on !== null) { // 腳下小陰影
@@ -891,7 +1115,8 @@ function drawPlayer(c, s, pal, fx, opts) {
   }
   drawHero(c, cx, y + PLAYER, { pose, facing: a.facing, phase: a.phase, t: a.t, hurt: flashing, tint, squash }, pal);
   // 壁燈附近:角色受到暖色光(只疊在角色周圍一小圈)
-  const scroll = scrolledBy(s.difficulty, s.time);
+  const scroll = s.mode === 'adventure' ? s.speed * s.time : scrolledBy(s.difficulty, s.time);
+  if (s.mode === 'adventure' && stageFor(s).theme !== 'tower') return;
   const lit = torches(scroll).map((tr) => ({ ...tr, d: Math.hypot(tr.x - cx, tr.y - (y + 0.2)) })).sort((p, q) => p.d - q.d)[0];
   if (lit && lit.d < 2.6) {
     const k = 1 - lit.d / 2.6;
@@ -908,7 +1133,7 @@ function drawPlayer(c, s, pal, fx, opts) {
   }
 }
 
-function drawParticles(c, fx, pal) {
+function drawParticles(c, fx, pal, reversed) {
   for (const p of fx.particles) {
     const k = clamp(p.life / p.max, 0, 1);
     c.globalAlpha = k;
@@ -938,11 +1163,16 @@ function drawParticles(c, fx, pal) {
   c.textBaseline = 'middle';
   c.lineWidth = 0.08;
   for (const t of fx.texts) {
+    c.save();
+    c.translate(t.x, t.y);
+    // 保留場景翻轉後的位置，只把字形翻回正向。
+    if (reversed) c.scale(1, -1);
     c.globalAlpha = clamp((t.life / t.max) * 1.5, 0, 1);
     c.strokeStyle = pal['wall-top'];
-    c.strokeText(t.text, t.x, t.y);
+    c.strokeText(t.text, 0, 0);
     c.fillStyle = pal.heart;
-    c.fillText(t.text, t.x, t.y);
+    c.fillText(t.text, 0, 0);
+    c.restore();
   }
   c.globalAlpha = 1;
   c.textAlign = 'start';
@@ -967,17 +1197,23 @@ function drawLives(c, lives, pal) {
 
 // 畫一整個場面。fx = createFx() 的特效狀態(示範圖可傳 null);opts = { reduced, demo }。
 export function drawScene(c, s, pal, fx = null, opts = {}) {
+  const reversed = directionFor(s) === -1;
+  if (s.mode === 'adventure') pal = themePalette(pal, stageFor(s).theme);
+  s = canonicalState(s);
   const t = fx?.anim.t ?? 0;
   c.save();
+  if (reversed) { c.translate(0, H); c.scale(1, -1); }
   if (fx && fx.shake > 0 && !opts.reduced) {
     const m = 0.12 * (fx.shake / 0.3);
     c.translate(Math.sin(t * 95) * m, Math.cos(t * 83) * m);
   }
-  drawBackground(c, pal, scrolledBy(s.difficulty, s.time), t, opts.reduced);
+  drawBackground(c, pal, s.mode === 'adventure' ? s.speed * s.time : scrolledBy(s.difficulty, s.time), t, opts.reduced);
   drawPlatforms(c, s, pal, fx, t, opts.reduced);
   drawCeiling(c, s, pal, t, opts.reduced);
   drawPlayer(c, s, pal, fx, opts);
-  if (fx) drawParticles(c, fx, pal);
+  if (fx) drawParticles(c, fx, pal, reversed);
+  c.restore();
+  c.save();
   drawLives(c, s.lives, pal);
   if (opts.demo) {
     c.font = 'bold 0.6px system-ui, sans-serif';

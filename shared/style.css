@@ -196,3 +196,11 @@ a.card:hover { border-color: var(--accent); }
 .changelog-entry ul { font-size: 14px; padding-left: 20px; margin: 0; }
 .changelog-entry li + li { margin-top: 6px; }
 .changelog-label { color: var(--text-sub); margin-right: 4px; }
+/* 帳號狀態與首次登入的紀錄選擇。 */
+[hidden] { display: none !important; }
+.account-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.account-row img { border-radius: 50%; }
+.account-icon { min-width: 40px; justify-content: center; }
+.cloud-choice { width: min(440px, calc(100vw - 32px)); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.cloud-choice::backdrop { background: rgba(0, 0, 0, 0.45); }
+.cloud-choice .btn { display: block; width: 100%; margin-top: 12px; white-space: normal; }

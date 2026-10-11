@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>越野機車 橫向版 · 遊戲集錦</title>
+  <link rel="stylesheet" href="../../shared/style.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page page-narrow page-fit">
+    <header class="topbar">
+      <a class="btn" href="../../">← 大廳</a>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">分數</div><div class="stat-value" id="score">0</div></div>
+        <div class="stat"><div class="stat-label">最佳</div><div class="stat-value" id="best">0</div></div>
+        <button class="btn" id="pause" type="button" aria-label="暫停" title="暫停(P)">⏸</button>
+        <button class="btn" id="theme" type="button"></button>
+      </div>
+    </header>
+    <div class="actions">
+      <button class="btn" id="new" type="button">↻ 新遊戲</button>
+      <select class="btn" id="mode" aria-label="模式">
+        <option value="race">競速</option><option value="time">計時賽</option>
+      </select>
+      <select class="btn" id="difficulty" aria-label="難度">
+        <option value="normal">一般</option><option value="hard">困難</option><option value="expert">專家</option>
+      </select>
+    </div>
+    <div class="stage-area">
+      <div class="stage" id="stage">
+        <canvas id="field" role="img" aria-label="側面斜視角四車道越野賽道"></canvas>
+        <p class="sr-only" id="status" aria-live="polite"></p>
+        <div class="overlay" id="overlay" hidden>
+          <p class="overlay-title" id="overlay-title"></p>
+          <div class="overlay-info" id="overlay-info"></div>
+          <div class="overlay-actions" id="overlay-actions"></div>
+        </div>
+      </div>
+    </div>
+    <div class="dashboard" aria-label="比賽儀表">
+      <div class="readouts"><strong id="place">第 1 / 4 名</strong><span id="time">0.0 秒</span><span id="speed">速度 0</span></div>
+      <div class="temperature"><label for="heat">溫度 <span id="heat-value">0</span></label><meter id="heat" min="0" max="100" low="60" high="85" optimum="0" value="0">0</meter><span id="engine">正常</span></div>
+      <div class="progress-track" id="progress-track" role="progressbar" aria-label="賽程進度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progress-fill"></div><div id="position-dots"></div></div>
+    </div>
+    <div class="controls" role="group" aria-label="機車操作">
+      <div class="dpad">
+        <button class="btn up" data-control="up" type="button" aria-label="向上換道,空中後仰">▲</button>
+        <button class="btn left" data-control="left" type="button" aria-label="地面煞車,空中後仰">◀</button>
+        <button class="btn down" data-control="down" type="button" aria-label="向下換道,空中前傾">▼</button>
+        <button class="btn right" data-control="right" type="button" aria-label="空中前傾">▶</button>
+      </div>
+      <button class="btn throttle" data-control="throttle" type="button">油門</button>
+      <button class="btn sprint" data-control="sprint" type="button">衝刺</button>
+    </div>
+    <p class="hint">→ D 油門 · 空白 J 衝刺 · ↑↓ W S 換道/傾斜<br>← A 煞車/後仰 · ▲▼◀▶ 空中調角度 · P 暫停</p>
+  </main>
+  <script type="module" src="ui.js"></script>
+</body>
+</html>

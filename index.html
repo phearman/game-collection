@@ -11,10 +11,12 @@
     <header class="topbar">
       <h1 class="brand">🎮 遊戲集錦</h1>
       <div class="topbar-actions">
+        <a class="btn account-icon" id="account-link" href="me/" aria-label="帳號登入狀態" hidden></a>
         <a class="btn" id="me" href="me/">👤 我的</a>
         <button class="btn" id="theme" type="button"></button>
       </div>
     </header>
+    <p id="local-record-note" class="me-sub">未登入:紀錄只存在這台裝置</p>
     <section class="cards" id="cards" aria-label="遊戲清單"></section>
     <footer class="lobby-footer"><a href="changelog/">更新紀錄</a></footer>
   </main>
@@ -23,10 +25,30 @@
     import { createProfile } from './shared/profile.js';
     import { LocalStore } from './shared/stores/local.js';
     import { bindThemeToggle } from './shared/theme.js';
+    import { cloudEnabled } from './shared/supabase-config.js';
 
     bindThemeToggle(document.getElementById('theme'));
 
     const sum = await (await createProfile({ store: new LocalStore() })).summary();
+    if (cloudEnabled) {
+      const { auth, notice } = await (await import('./shared/auth.js')).getCloudRuntime();
+      const icon = document.getElementById('account-link');
+      icon.hidden = false;
+      const renderAccount = () => {
+        document.getElementById('local-record-note').hidden = Boolean(auth.session);
+        icon.textContent = auth.session ? '🟢' : '🔑';
+        icon.setAttribute('aria-label', auth.session ? '已登入，前往帳號' : '未登入，前往帳號');
+        icon.title = notice || (auth.session ? '已登入' : '用 Google 或 GitHub 登入');
+      };
+      renderAccount();
+      auth.subscribe(renderAccount);
+      if (notice) {
+        const status = document.createElement('p');
+        status.setAttribute('role', 'status');
+        status.textContent = notice;
+        document.querySelector('.topbar').after(status);
+      }
+    }
     document.getElementById('me').textContent = `👤 我的 · Lv ${sum.level}`;
 
     // 最近活動在前(最後結算與存檔時間較新者,新到舊),其餘照 games.js 原順序。
@@ -34,23 +56,31 @@
     const games = sum.recent.map((id) => byId.get(id));
     const saves = new Set(sum.saves);
 
-    document.getElementById('cards').innerHTML = games.map((g) => {
+    const node = (tag, cls, text) => {
+      const el = document.createElement(tag);
+      el.className = cls;
+      if (text !== undefined) el.textContent = text;
+      return el;
+    };
+    for (const g of games) {
       const active = g.status === 'active';
       const best = g.stats?.best_score ?? 0;
-      return `
-        <a class="card${active ? ' is-active' : ''}" href="games/${g.id}/">
-          <div class="card-head">
-            <span class="card-icon" aria-hidden="true">${g.icon}</span>
-            <span class="card-tags">
-              ${saves.has(g.id) ? '<span class="tag is-resume">繼續</span>' : ''}
-              <span class="tag${active ? ' is-active' : ''}">${active ? '開發中' : '規劃中'}</span>
-            </span>
-          </div>
-          <p class="card-title">${g.code ? `<span class="card-code">${g.code}${g.version ? ` v${g.version}` : ''}</span>` : ''}${g.title}</p>
-          <p class="card-desc">${g.desc}</p>
-          ${best ? `<p class="card-meta">最佳 ${best.toLocaleString()}</p>` : ''}
-        </a>`;
-    }).join('');
+      const card = node('a', `card${active ? ' is-active' : ''}`);
+      card.href = `games/${g.id}/`;
+      const head = node('div', 'card-head');
+      const icon = node('span', 'card-icon', g.icon);
+      icon.setAttribute('aria-hidden', 'true');
+      const tags = node('span', 'card-tags');
+      if (saves.has(g.id)) tags.append(node('span', 'tag is-resume', '繼續'));
+      tags.append(node('span', `tag${active ? ' is-active' : ''}`, active ? '開發中' : '規劃中'));
+      head.append(icon, tags);
+      const title = node('p', 'card-title');
+      if (g.code) title.append(node('span', 'card-code', `${g.code}${g.version ? ` v${g.version}` : ''}`));
+      title.append(document.createTextNode(g.title));
+      card.append(head, title, node('p', 'card-desc', g.desc));
+      if (best) card.append(node('p', 'card-meta', `最佳 ${best.toLocaleString()}`));
+      document.getElementById('cards').append(card);
+    }
   </script>
 </body>
 </html>

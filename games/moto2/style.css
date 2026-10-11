@@ -1,0 +1,93 @@
+:root {
+  --m2-night: 0; --m2-sky: #c6e7ed; --m2-mountain: #8fa8a2; --m2-grass: #a8ba83; --m2-grass-dark: #7a9960;
+  --m2-road: #d3b68b; --m2-road-hi: #e5cba4; --m2-road-dark: #ab8963;
+  --m2-ink: rgba(52,34,20,.85); --m2-shadow: rgba(60,40,20,.3);
+  --m2-mud: #876342; --m2-mud-hi: #b29163; --m2-wood: #be7446;
+  --m2-danger: #e85542; --m2-ramp: #65b786; --m2-skin: #ffdab5;
+  --m2-player: #ec5e55; --m2-blue: #448dd3; --m2-yellow: #edb842; --m2-purple: #a67bd4;
+  --m2-white: #fff7e4; --m2-eye: #292533; --m2-cheek: #f49b91;
+  --m2-metal: #6a7180; --m2-tire: #32313d; --m2-hud: rgba(255,250,240,.92);
+  --m2-text: #302c29; --m2-dust: #d4ad7a; --m2-lamp: #ffe2a6;
+}
+:root[data-theme="dark"] {
+  --m2-night: 1; --m2-sky: #192840; --m2-mountain: #39455d; --m2-grass: #354638; --m2-grass-dark: #26342e;
+  --m2-road: #6c605e; --m2-road-hi: #8d7970; --m2-road-dark: #51464b;
+  --m2-ink: rgba(6,5,12,.9); --m2-shadow: rgba(0,0,0,.45);
+  --m2-mud: #413333; --m2-mud-hi: #88705a; --m2-wood: #bd7752;
+  --m2-danger: #ff7961; --m2-ramp: #75d6a5; --m2-skin: #ffdab5;
+  --m2-player: #ff796d; --m2-blue: #70b2fa; --m2-yellow: #ffd165; --m2-purple: #c49af5;
+  --m2-white: #fff7e4; --m2-eye: #17151e; --m2-cheek: #f49b91;
+  --m2-metal: #a4a9bc; --m2-tire: #292832; --m2-hud: rgba(22,21,33,.92);
+  --m2-text: #fff0df; --m2-dust: #ad9990; --m2-lamp: #ffe2a6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --m2-night: 1; --m2-sky: #192840; --m2-mountain: #39455d; --m2-grass: #354638; --m2-grass-dark: #26342e;
+    --m2-road: #6c605e; --m2-road-hi: #8d7970; --m2-road-dark: #51464b;
+    --m2-ink: rgba(6,5,12,.9); --m2-shadow: rgba(0,0,0,.45);
+    --m2-mud: #413333; --m2-mud-hi: #88705a; --m2-wood: #bd7752;
+    --m2-danger: #ff7961; --m2-ramp: #75d6a5; --m2-skin: #ffdab5;
+    --m2-player: #ff796d; --m2-blue: #70b2fa; --m2-yellow: #ffd165; --m2-purple: #c49af5;
+    --m2-white: #fff7e4; --m2-eye: #17151e; --m2-cheek: #f49b91;
+    --m2-metal: #a4a9bc; --m2-tire: #292832; --m2-hud: rgba(22,21,33,.92);
+    --m2-text: #fff0df; --m2-dust: #ad9990; --m2-lamp: #ffe2a6;
+  }
+}
+.page-fit { display: flex; flex-direction: column; height: 100vh; height: 100dvh; padding: 12px 12px 8px; }
+.page-fit .topbar { flex-wrap: nowrap; gap: 4px; margin-bottom: 8px; }
+.page-fit .topbar, .actions { flex-shrink: 0; }
+.topbar .btn { white-space: nowrap; padding-inline: 6px; }
+.topbar .navigation { gap: 2px; }
+.topbar .navigation .btn { padding-inline: 5px; font-size: 13px; }
+.topbar .stats { display: flex; gap: 3px; }
+.topbar .stats .stat { min-width: 0; padding: 2px 3px; }
+.topbar .stats .stat-value { font-size: 14px; }
+.topbar .stats .btn { padding-inline: 6px; }
+.actions { display: flex; gap: 6px; margin-bottom: 8px; }
+.actions .btn { flex: 1; min-width: 0; white-space: nowrap; padding-inline: 6px; }
+select.btn { appearance: auto; }
+.stage-area { flex: 0 1 auto; height: min(66vw, calc(100dvh - 320px)); min-height: 0; container-type: size; display: flex; justify-content: center; align-items: flex-start; }
+.stage { position: relative; aspect-ratio: 4 / 3; width: min(100cqw, 100cqh * 4 / 3); }
+.stage canvas { display: block; width: 100%; height: 100%; border: 1px solid var(--border); border-radius: 12px; background: var(--m2-road); }
+.dashboard { flex: none; display: grid; gap: 5px; padding: 8px 4px 4px; font-size: 12px; }
+.readouts { display: flex; justify-content: space-between; gap: 4px; }
+.temperature { display: flex; align-items: center; gap: 8px; }
+.temperature meter { flex: 1; min-width: 0; height: 18px; }
+#engine { min-width: 48px; text-align: right; }
+.progress-track { position: relative; height: 12px; background: var(--m2-road-dark); border-radius: 8px; margin-top: 4px; overflow: hidden; }
+#progress-fill { height: 100%; width: 0; background: var(--m2-ramp); }
+.position-dot { position: absolute; top: 2px; width: 8px; height: 8px; border: 1px solid var(--m2-ink); border-radius: 50%; transform: translateX(-50%); }
+.position-dot.player { background: var(--m2-player); z-index: 2; }
+.position-dot.cpu1 { background: var(--m2-blue); }
+.position-dot.cpu2 { background: var(--m2-yellow); }
+.position-dot.cpu3 { background: var(--m2-purple); }
+.controls { display: grid; grid-template-columns: 164px minmax(64px, 1fr) minmax(64px, 1fr); gap: 8px; margin-top: 8px; flex: none; }
+.dpad { display: grid; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(2, 52px); gap: 4px; }
+.dpad .up { grid-column: 2; grid-row: 1; }
+.dpad .left { grid-column: 1; grid-row: 2; }
+.dpad .down { grid-column: 2; grid-row: 2; }
+.dpad .right { grid-column: 3; grid-row: 2; }
+.controls .btn { min-width: 52px; min-height: 52px; padding: 0; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; white-space: nowrap; font-size: 18px; }
+.controls > .btn { min-width: 64px; min-height: 64px; align-self: center; height: 80px; }
+.controls .throttle { border-color: var(--m2-ramp); }
+.controls .sprint { border-color: var(--m2-danger); }
+.controls .held { background: var(--m2-road-dark); color: var(--m2-white); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.overlay { position: absolute; inset: 0; border-radius: 12px; background: rgba(15,12,22,.8); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 8px; }
+.overlay[hidden] { display: none; }
+.overlay-title { font-size: 23px; font-weight: 700; margin: 0; }
+.overlay-info { font-size: 13px; text-align: center; }
+.overlay-info p { margin: 4px 0; }
+.overlay-info a { color: #ffe2a6; }
+.overlay-xp { font-size: 17px; font-weight: 700; }
+.overlay-actions .btn { min-height: 48px; min-width: 120px; }
+.hint { flex: none; color: var(--text-sub); text-align: center; font-size: 11px; margin: 6px 0 0; white-space: nowrap; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.demo-field { display: block; width: 100%; max-width: 280px; margin: auto; border: 1px solid var(--border); border-radius: 8px; }
+@media (max-width: 359px) { .topbar .navigation .game-version { display: none; } .page-fit { padding-inline: 8px; } }
+
+@media (min-width: 600px) { .stage-area { height: min(400px, calc(100dvh - 320px)); } }
+@media (max-width: 599px) and (orientation: portrait) {
+  .stage-area { flex: 1 1 0; height: auto; }
+  .stage { width: 100%; height: 100%; aspect-ratio: auto; }
+}
