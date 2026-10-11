@@ -1,14 +1,17 @@
 // 足球守門員畫面層:狀態、Canvas 繪製、輸入、動畫迴圈。規則一律呼叫 logic.js(遊戲)與 shared/profile.js(紀錄),這裡不寫規則。
 import {
-  DIFFICULTIES, PARAMS, SHOTS_MIN, SHOTS_MAX, SHOTS_DEFAULT, ACTION_MS, FIELD_W,
+  DIFFICULTIES, PARAMS, SHOTS_MIN, SHOTS_MAX, SHOTS_DEFAULT, ACTION_MS, FIELD_W, WEATHER_CHOICES, weatherFor, ballMotion, releaseDrag,
   initState, startShot, actState, stepState, pauseState, resumeState, isPlaying, canPause, setMove, moveTo, isDrag, dragX,
   tally, movesOf, finishInfo, classifyGesture, normalizeShots, toSave, fromSave, isValidState,
+  ROLES, roleOf, kickerTally, aimAt, nudgeAim, chooseCurve, chargeShot, releaseShot, cancelCharge,
+  CURVES, CURVE_NAMES, POWER_HALF_MS, kickFlightMs, KICKER_WIN_GOALS,
 } from './logic.js';
-import { FIELD_H, drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js';
+import { FIELD_H, aimFromPoint, drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js';
 import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
+import { play } from '../../shared/sound.js';
 import { setupHelp } from '../../shared/help.js';
 import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
@@ -18,6 +21,8 @@ import { load, save } from '../../shared/storage.js';
 const GAME_ID = 'keeper';
 const DIFF_KEY = 'difficulty:keeper'; // 上次選的難度(開新局用)
 const SHOTS_KEY = 'shots:keeper'; // 上次選的球數
+const WEATHER_KEY = 'weather:keeper';
+const ROLE_KEY = 'role:keeper';
 const $ = (id) => document.getElementById(id);
 const profile = await createProfile({ store: new LocalStore() });
 
@@ -41,13 +46,18 @@ const timerResume = () => run(() => { profile.setVisible(true); profile.input();
 
 function prefs() {
   const d = load(DIFF_KEY, 'normal');
-  return { difficulty: DIFFICULTIES.includes(d) ? d : 'normal', total: normalizeShots(load(SHOTS_KEY, SHOTS_DEFAULT)) };
+  const weather = load(WEATHER_KEY, 'random');
+  const role = load(ROLE_KEY, 'keeper');
+  return { difficulty: DIFFICULTIES.includes(d) ? d : 'normal', total: normalizeShots(load(SHOTS_KEY, SHOTS_DEFAULT)),
+    weather: WEATHER_CHOICES.includes(weather) ? weather : 'random', role: ROLES.includes(role) ? role : 'keeper' };
 }
 
 async function startNew(opts = prefs()) {
   state = initState(opts);
   fx = createFx();
   held.clear();
+  touch = null;
+  shotPointer = null;
   gameNo++;
   ended = null;
   reveal = false;
@@ -98,8 +108,10 @@ async function newGame(opts) {
     const result = resultOnNewGame({ everWon: false, moves: movesOf(state) });
     const note = { score: finishInfo(state).score, best, assist: state.assist };
     if (result === 'quit' && needsQuitBestConfirm(note)) {
+      state = cancelCharge(state); // 開確認框時放掉蓄力，取消確認也不會留下已鬆開的射門鍵
+      shotPointer = null;
       confirmingQuit = true;
-      const running = !state.paused && ['wait', 'runup', 'flight', 'result'].includes(state.phase);
+      const running = !state.paused && (isPlaying(state) || state.phase === 'result');
       if (running) timerPause();
       syncLoop();
       const quit = await confirmQuitBest(note);
@@ -112,7 +124,11 @@ async function newGame(opts) {
     }
     if (result) finish({ ...finishInfo(state), result });
   }
-  if (opts) { save(DIFF_KEY, opts.difficulty); save(SHOTS_KEY, opts.total); }
+  if (opts) {
+    save(DIFF_KEY, opts.difficulty);
+    if ((opts.role ?? roleOf(state)) !== 'kicker') save(SHOTS_KEY, opts.total);
+    save(WEATHER_KEY, opts.weather ?? 'random'); save(ROLE_KEY, opts.role ?? roleOf(state));
+  }
   startNew(opts);
 }
 
@@ -120,6 +136,7 @@ function begin() {
   if (ended) return;
   if (state.phase === 'ready') {
     state = startShot(state);
+    if (state.phase === 'wait') play('countdown');
     timerResume();
   } else if (state.paused) {
     state = resumeState(state);
@@ -130,6 +147,11 @@ function begin() {
 
 function pause() {
   if (ended || !canPause(state)) return;
+  state = cancelCharge(state);
+  shotPointer = null;
+  touch = null;
+  held.clear();
+  state = setMove(state, 0);
   state = pauseState(state);
   timerPause();
   render();
@@ -156,9 +178,13 @@ function tick(now) {
   lastT = now;
   const before = state;
   if (!confirmingQuit) state = stepState(state, dt); // 確認框期間只播特效,規則不推進(K1)
+  if (state.phase === 'wait' && before.phase !== 'wait') play('countdown');
   fxEvents(fx, before, state, { reduced: reducedMotion.matches });
   fxUpdate(fx, dt, state);
   if (state.log.length > before.log.length) {
+    const shotResult = state.log.at(-1);
+    if (roleOf(state) === 'keeper') play(shotResult === 'save' ? 'save' : 'lose');
+    else if (shotResult === 'goal') play('goal');
     if (state.phase === 'over') finish(finishInfo(state));
     else if (state.actions > 0) {
       const saved = toSave(state);
@@ -172,7 +198,7 @@ function tick(now) {
 
 // 球進行中(含結果顯示)、或特效還沒播完時才跑動畫迴圈。
 function syncLoop() {
-  const want = (!confirmingQuit && !state.paused && ['wait', 'runup', 'flight', 'result'].includes(state.phase)) || fxBusy(fx);
+  const want = (!confirmingQuit && !state.paused && ['wait', 'runup', 'flight', 'result', 'charge'].includes(state.phase)) || fxBusy(fx);
   if (want && !frame) {
     lastT = performance.now();
     frame = requestAnimationFrame(tick);
@@ -205,13 +231,31 @@ function draw() {
 // ---- 畫面(DOM)----
 
 function render() {
-  const t = tally(state.log);
+  const kicker = roleOf(state) === 'kicker';
+  const t = kicker ? kickerTally(state) : tally(state.log, state.weather);
   $('score').textContent = t.score.toLocaleString();
   $('best').textContent = Math.max(best, t.score).toLocaleString();
   $('difficulty').value = state.difficulty;
   $('shots').value = String(state.total);
+  $('weather').value = state.weatherChoice;
+  $('role').value = roleOf(state);
+  $('shots').disabled = kicker;
+  $('keeper-pad').hidden = kicker;
+  $('keeper-tip').hidden = kicker;
+  $('kicker-controls').hidden = !kicker;
+  $('keeper-hint').hidden = kicker;
+  $('kicker-hint').hidden = !kicker;
+  $('shoot').disabled = !!ended || state.paused || !['aim', 'charge'].includes(state.phase);
+  for (const curve of CURVES) {
+    const b = $(`curve-${curve}`);
+    b.disabled = !!ended || state.paused || state.phase !== 'aim';
+    b.setAttribute?.('aria-pressed', String(curve === state.curve));
+  }
+  const names = kicker ? ['普通', '困難', '專家'] : ['簡單', '普通', '困難'];
+  Array.from($('difficulty').options ?? []).forEach((o, i) => { o.textContent = names[i]; });
   const shotNo = Math.min(state.total, state.log.length + (['result', 'over'].includes(state.phase) ? 0 : 1));
-  $('tally').textContent = `第 ${shotNo} / ${state.total} 球 · 撲救 ${t.saves} / 失分 ${t.conceded}`;
+  $('tally').textContent = `${weatherFor(state.weather).name} · 第 ${shotNo} / ${state.total} 球 · ${kicker
+    ? `進球 ${t.goals} / 撲出 ${t.saves} / 偏出 ${t.misses}` : `撲救 ${t.saves} / 失分 ${t.conceded}`}`;
   const pauseBtn = $('pause');
   pauseBtn.textContent = state.phase === 'ready' ? '▶ 開始' : state.paused ? '▶ 繼續' : '⏸ 暫停';
   pauseBtn.disabled = !!ended || state.phase === 'over';
@@ -221,21 +265,29 @@ function render() {
   syncLoop();
 }
 
-// 成就 id 可能來自匯入檔:只顯示白名單名稱,其餘一律 escape。
-const esc = (v) => String(v).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-const achName = (id) => {
-  const a = ACHIEVEMENTS.find((x) => x.id === id);
-  return esc(a ? `${a.icon} ${a.name}` : id);
-};
-
-function infoHtml() {
-  const t = tally(state.log);
-  const lines = [`<p>撲救 ${t.saves} / 失分 ${t.conceded} · 最長連續撲救 ${t.bestStreak}</p>`];
-  if (ended.pending) return `${lines.join('')}<p>結算中…</p>`;
-  lines.push(`<p class="overlay-xp">本局 +${ended.xp} XP</p>`, xpBreakdownHtml(ended.xpBreakdown));
-  if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
-  lines.push(bestLineHtml(ended));
-  return lines.join('');
+function renderFinishInfo() {
+  const info = $('overlay-info'); info.textContent = '';
+  const line = (text, cls) => {
+    const p = document.createElement('p'); p.textContent = text;
+    if (cls) p.className = cls;
+    info.append(p);
+  };
+  if (roleOf(state) === 'kicker') {
+    const t = kickerTally(state);
+    line(`進球 ${t.goals} / 被撲出 ${t.saves} / 打偏或高出 ${t.misses} · 得分 ${t.score}`);
+  } else {
+    const t = tally(state.log);
+    line(`撲救 ${t.saves} / 失分 ${t.conceded} · 最長連續撲救 ${t.bestStreak}`);
+  }
+  if (ended.pending) { line('結算中…'); return; }
+  line(`本局 +${ended.xp} XP`, 'overlay-xp');
+  const explanation = document.createElement('div');
+  explanation.innerHTML = xpBreakdownHtml(ended.xpBreakdown) + bestLineHtml(ended);
+  info.append(explanation);
+  if (ended.newAchievements.length) line(`新成就:${ended.newAchievements.map((id) => {
+    const a = ACHIEVEMENTS.find((x) => x.id === id);
+    return a ? `${a.icon} ${a.name}` : id;
+  }).join('、')}`);
 }
 
 let shown = null;
@@ -252,7 +304,15 @@ function renderOverlay() {
   if (kind === 'ready') {
     const first = state.log.length === 0;
     $('overlay-title').textContent = first ? '準備開始' : '繼續比賽';
-    $('overlay-info').innerHTML = `<p>${first ? `本回合 ${state.total} 球` : `接著踢第 ${state.log.length + 1} / ${state.total} 球`}</p><p>按空白鍵或「開始」</p>`;
+    const info = $('overlay-info');
+    info.textContent = '';
+    for (const text of [first ? `本回合 ${state.total} 球` : `接著踢第 ${state.log.length + 1} / ${state.total} 球`,
+      `天氣：${weatherFor(state.weather).name} · 分數 ×${weatherFor(state.weather).bonus}`,
+      (roleOf(state) === 'kicker' ? weatherFor(state.weather).kickerDescription : null) ?? weatherFor(state.weather).description,
+      ...(state.weather === 'wind' ? [`${state.wind.direction < 0 ? '← 左風' : '右風 →'} · 風力 ${state.wind.strength}`] : []),
+      ...(roleOf(state) === 'kicker' ? ['踢球員：點球門或拖曳瞄準，選弧度，按住射門再放開。', '空白鍵開始後，可按住空白鍵蓄力射門。'] : ['按空白鍵或「開始」'])]) {
+      const p = document.createElement('p'); p.textContent = text; info.append(p);
+    }
     actions.innerHTML = '<button class="btn" data-act="begin">▶ 開始</button>';
   } else if (kind === 'paused') {
     $('overlay-title').textContent = '已暫停';
@@ -260,8 +320,8 @@ function renderOverlay() {
     actions.innerHTML = '<button class="btn" data-act="begin">▶ 繼續</button>';
   } else if (kind === 'over') {
     const win = finishInfo(state).result === 'win';
-    $('overlay-title').textContent = win ? '守住了!' : '失守了';
-    $('overlay-info').innerHTML = infoHtml();
+    $('overlay-title').textContent = roleOf(state) === 'kicker' ? (win ? '射門成功!' : '再接再厲') : (win ? '守住了!' : '失守了');
+    renderFinishInfo();
     actions.innerHTML = '<button class="btn" data-act="new">再玩一次</button>';
   } else {
     overlay.hidden = true;
@@ -297,13 +357,23 @@ function release(src) {
 
 const dialogOpen = () => document.querySelector('dialog[open]');
 
+function kickerInput(update) {
+  if (ended || confirmingQuit) return;
+  const next = update(state);
+  if (next === state) return;
+  state = next;
+  profile.input();
+  render();
+}
+
 document.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey || dialogOpen()) return;
   if (e.target instanceof HTMLSelectElement) return; // 選單用方向鍵切換選項
   if (e.key === ' ') {
     e.preventDefault(); // 空白鍵只用來開始,不觸發焦點所在的按鈕
     profile.input();
-    begin();
+    if (roleOf(state) === 'kicker' && !e.repeat && state.phase === 'aim' && !state.paused) kickerInput(chargeShot);
+    else if (!e.repeat) begin();
     return;
   }
   if (e.key === 'p' || e.key === 'P') {
@@ -311,6 +381,11 @@ document.addEventListener('keydown', (e) => {
     if (ended) return;
     profile.input();
     togglePause();
+    return;
+  }
+  if (roleOf(state) === 'kicker') {
+    const direction = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key];
+    if (direction) { e.preventDefault(); kickerInput((s) => nudgeAim(s, ...direction)); }
     return;
   }
   const m = MOVE_KEYS[e.key] ?? MOVE_KEYS[e.key.toLowerCase()];
@@ -326,9 +401,10 @@ document.addEventListener('keydown', (e) => {
 });
 document.addEventListener('keyup', (e) => {
   if (e.key === ' ' && !(e.target instanceof HTMLSelectElement) && !dialogOpen()) e.preventDefault();
+  if (roleOf(state) === 'kicker' && e.key === ' ' && !dialogOpen()) { kickerInput((s) => releaseShot(s)); return; }
   if (MOVE_KEYS[e.key] ?? MOVE_KEYS[e.key?.toLowerCase()]) release(`key:${e.key.toLowerCase()}`);
 });
-window.addEventListener('blur', () => { held.clear(); syncMove(); });
+window.addEventListener('blur', () => { held.clear(); syncMove(); if (roleOf(state) === 'kicker') pause(); });
 
 // 觸控手勢綁在球場:按住水平拖 ⇒ 守門員即時跟著手指(RS12);其餘放開時分類(點上半跳、斜上快滑撲,規則見 logic)。
 let touch = null;
@@ -336,11 +412,24 @@ const wrap = $('board-wrap');
 wrap.addEventListener('pointerdown', (e) => {
   if (e.target.closest('button')) return;
   const rect = canvas.getBoundingClientRect();
+  if (roleOf(state) === 'kicker') {
+    const target = aimFromPoint(e.clientX, e.clientY, rect);
+    if (!target || state.phase !== 'aim' || state.paused || confirmingQuit) return;
+    touch = { id: e.pointerId, kicker: true };
+    kickerInput((s) => aimAt(s, target));
+    try { wrap.setPointerCapture(e.pointerId); } catch { /* 合成事件 */ }
+    return;
+  }
   touch = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), upper: e.clientY - rect.top < rect.height / 2, startX: state.keeper.x, drag: false, width: rect.width };
   try { wrap.setPointerCapture(e.pointerId); } catch { /* 合成事件沒有真的指標,略過 */ }
 });
 wrap.addEventListener('pointermove', (e) => {
   if (!touch || e.pointerId !== touch.id || ended) return;
+  if (touch.kicker) {
+    const target = aimFromPoint(e.clientX, e.clientY, canvas.getBoundingClientRect(), true);
+    kickerInput((s) => aimAt(s, target));
+    return;
+  }
   const dx = e.clientX - touch.x;
   const dy = e.clientY - touch.y;
   if (!touch.drag && isDrag({ dx, dy })) touch.drag = true;
@@ -358,13 +447,44 @@ wrap.addEventListener('pointerup', (e) => {
   if (!touch || e.pointerId !== touch.id) return;
   const t = touch;
   touch = null;
+  if (t.kicker) return;
+  state = releaseDrag(state);
   const g = classifyGesture({ dx: e.clientX - t.x, dy: e.clientY - t.y, ms: performance.now() - t.t, upper: t.upper });
   const flick = g && (g.act === 'diveL' || g.act === 'diveR');
   if (t.drag && !flick) return; // 拖曳已即時移動,放開不再判定;但整段手勢符合快撲時,快撲優先(K3)
   if (g && isPlaying(state)) act(g.act, g.steps ?? 1);
 });
-wrap.addEventListener('pointercancel', () => { touch = null; });
+wrap.addEventListener('pointercancel', () => { touch = null; state = releaseDrag(state); });
 wrap.addEventListener('contextmenu', (e) => e.preventDefault()); // 手機長按不跳選單
+
+let shotPointer = null;
+const shootBtn = $('shoot');
+shootBtn.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  if (shotPointer !== null || state.phase !== 'aim' || state.paused || ended || confirmingQuit) return;
+  shotPointer = e.pointerId;
+  try { shootBtn.setPointerCapture(e.pointerId); } catch { /* 合成事件 */ }
+  kickerInput(chargeShot);
+});
+shootBtn.addEventListener('pointerup', (e) => {
+  if (shotPointer !== e.pointerId) return;
+  shotPointer = null;
+  kickerInput((s) => releaseShot(s));
+});
+for (const event of ['pointercancel', 'lostpointercapture']) shootBtn.addEventListener(event, (e) => {
+  if (shotPointer !== e.pointerId) return;
+  shotPointer = null;
+  kickerInput(cancelCharge);
+});
+shootBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+// Enter 可操作聚焦的射門鈕；空白鍵由頁面統一处理，避免按鈕原生 click 重複射門。
+shootBtn.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) kickerInput(chargeShot); }
+});
+shootBtn.addEventListener('keyup', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); kickerInput((s) => releaseShot(s)); }
+});
+for (const curve of CURVES) $(`curve-${curve}`).addEventListener('click', () => kickerInput((s) => chooseCurve(s, curve)));
 
 const pad = document.querySelector('.pad');
 pad.addEventListener('click', (e) => {
@@ -407,11 +527,18 @@ function changeOption(e, opts) {
 }
 $('difficulty').addEventListener('change', (e) => {
   const d = e.target.value;
-  changeOption(e, { difficulty: d, total: state.total });
+  changeOption(e, { difficulty: d, total: state.total, weather: state.weatherChoice, role: roleOf(state) });
 });
 shotsSel.addEventListener('change', (e) => {
   const n = normalizeShots(Number(e.target.value));
-  changeOption(e, { difficulty: state.difficulty, total: n });
+  changeOption(e, { difficulty: state.difficulty, total: n, weather: state.weatherChoice, role: roleOf(state) });
+});
+$('weather').addEventListener('change', (e) => {
+  changeOption(e, { difficulty: state.difficulty, total: state.total, weather: e.target.value, role: roleOf(state) });
+});
+$('role').addEventListener('change', (e) => {
+  changeOption(e, { difficulty: state.difficulty, total: normalizeShots(load(SHOTS_KEY, SHOTS_DEFAULT)),
+    weather: state.weatherChoice, role: e.target.value });
 });
 $('overlay-actions').addEventListener('click', (e) => {
   const a = e.target.dataset.act;
@@ -467,6 +594,39 @@ function demoSvg(s) {
 }
 
 const half = ACTION_MS / 2;
+function kickerDemos() {
+  const before = startShot(initState({ role: 'kicker', weather: 'sun' }));
+  const aimed = chooseCurve(aimAt(before, { x: 125, y: 105 }), 'right');
+  const charged = stepState(chargeShot(aimed), POWER_HALF_MS * 0.65);
+  const kicked = releaseShot(charged, () => 0.5);
+  const after = stepState(kicked, kickFlightMs(kicked.shot, kicked.weather));
+  const high = releaseShot(stepState(chargeShot(aimAt(before, { x: 0, y: 130 })), POWER_HALF_MS), () => 0.5);
+  const highAfter = stepState(high, kickFlightMs(high.shot, high.weather));
+  const resultName = { goal: '進球', save: '被撲出', miss: '打偏', high: '高出橫梁' };
+  return [
+    { before: aimed, after, caption: '踢球員：瞄準右上、選右弧，按住到 65% 放開…',
+      result: `…${resultName[after.log.at(-1)]}，目前得分 ${finishInfo(after).score}。`, kind: after.log.at(-1) === 'goal' ? 'ok' : 'fail' },
+    { before: { ...high, phase: 'aim', shot: null }, after: highAfter, caption: '靠近橫梁的瞄準點，力道拉到 100%…',
+      result: `…${resultName[highAfter.log.at(-1)]}；太強會把球抬高。`, kind: 'fail' },
+  ];
+}
+function weatherDemos() {
+  const target = { x: 20, y: 60 };
+  const wind = { ...initState({ weather: 'wind' }, () => 0.99), phase: 'flight', t: 0, shot: { wait: 0, target } };
+  const snow = { ...initState({ weather: 'snow' }), phase: 'flight', t: 0, shot: { wait: 0, target } };
+  const elapsed = PARAMS.normal.flight / 2;
+  const blown = stepState(wind, elapsed);
+  const slow = stepState(snow, elapsed);
+  const w = ballMotion(target, blown.t, wind.difficulty, wind.weather, wind.wind);
+  const s = ballMotion(target, slow.t, snow.difficulty, snow.weather, snow.wind);
+  const sunny = ballMotion(target, elapsed, 'normal', 'sun');
+  return [
+    { before: wind, after: blown, caption: '看右風箭頭：球原本往中間附近飛…',
+      result: `…側風把球往右多吹 ${Math.round(w.x - sunny.x)} 單位，撲救要跟著球路調整。`, kind: 'ok' },
+    { before: snow, after: slow, caption: '雪中射門：比較相同的飛行時間…',
+      result: `…晴天前進 ${Math.round(sunny.progress * 100)}%，雪天只前進 ${Math.round(s.progress * 100)}%；要等球接近才跳。`, kind: 'ok' },
+  ];
+}
 setupHelp({
   gameId: GAME_ID,
   title: '足球守門員玩法',
@@ -479,6 +639,12 @@ setupHelp({
       <li>高球要跳、遠的球要移動或撲;太早跳會落地撲空。</li>
       <li>難度越高等待越短、球越快、手套範圍越小,XP 越多。</li>
       <li>勝利條件:撲到過半(≥ 一半球數);分數 = 撲到數 ×100 + 最長連續撲救 ×50。</li>
+      <li>天氣可選隨機（每回合固定）／晴／雨／雪／夜／風：雨天低球彈地後滑得更快、移動起停有滑行；雪天球速與移動最高速度降低 15%；夜間暗場有照明；風會把球吹偏，方向與風力整回合固定。</li>
+      <li>本回合分數再乘天氣加成並四捨五入：晴 ×1、雨／雪 ×1.2、夜／風 ×1.3。</li>
+      <li>開局可選踢球員，每回合固定 5 球：點球門或拖曳準星瞄準；電腦用方向鍵移動準星。</li>
+      <li>射門前選直球／左弧／右弧／高吊；按住「射門」或空白鍵讓力道條來回擺動，放開就射。太弱是慢速低球、易被撲出，太強可能高出橫梁；按鈕聚焦時也可按住 Enter。</li>
+      <li>電腦守門員看到球路後才反應；踢球員難度普通／困難／專家，反應越快、撲救範圍越大。風偏、雨天低球滑行與雪天減速仍會影響射門。</li>
+      <li>踢球員進球 ×100，進球的目標越靠上方角落加 0～50 分，再乘天氣加成；5 球中進至少 ${KICKER_WIN_GOALS} 球獲勝。每球之間存檔，續玩保留角色、天氣、已踢球數與準星／弧度。</li>
     </ol>`,
   demo: {
     render: demoSvg,
@@ -493,6 +659,8 @@ setupHelp({
         '同樣的高球,站著不跳…', '…手搆不到那麼高:進球'), kind: 'fail' },
       { ...demoStep(demoState({ x: 70, y: 90 }, half), ['diveR'], half,
         '球往右上飛,按「撲 ▶」…', '…撲過去攔住:撲到了!'), kind: 'ok' },
+      ...kickerDemos(),
+      ...weatherDemos(),
     ],
   },
 });

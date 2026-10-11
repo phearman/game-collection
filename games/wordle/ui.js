@@ -9,6 +9,7 @@ import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
+import { play } from '../../shared/sound.js';
 import { setupHelp } from '../../shared/help.js';
 import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
@@ -188,6 +189,7 @@ function press(key) {
     }
     state = submitState(state);
     if (state.over) {
+      play(state.won ? 'win' : 'lose');
       finish(resultOnGameOver({ everWon: state.won }));
     } else {
       const saved = toSave(state);
@@ -198,6 +200,7 @@ function press(key) {
   }
   const next = key === 'back' ? eraseState(state) : typeState(state, key);
   if (next === state) return;
+  play('tap');
   state = next;
   render();
 }

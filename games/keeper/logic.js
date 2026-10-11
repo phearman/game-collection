@@ -16,6 +16,29 @@ export const SHOTS_MIN = 1;
 export const SHOTS_MAX = 10;
 export const SHOTS_DEFAULT = 3;
 
+// 踢球員未定參數集中在此，供手感驗收調整。
+export const ROLES = ['keeper', 'kicker'];
+export const KICKER_SHOTS = 5;
+export const KICKER_WIN_GOALS = 3;
+export const POWER_HALF_MS = 900;
+export const AIM_STEP = 8;
+export const COMPUTER_MIN_REACH = 12;
+export const AIM_DEFAULT = { x: 0, y: 70 };
+export const CURVES = ['straight', 'left', 'right', 'lob'];
+export const CURVE_NAMES = { straight: '直球', left: '左弧', right: '右弧', lob: '高吊' };
+export const KICK_PARAMS = { flight: 1600, speedGain: 700, weak: 0.3, weakHeight: 12, strong: 0.8,
+  overshoot: 300, bend: 55, curveDrift: 24, lift: 30, lobLift: 95, lobRise: 18, cornerMax: 50 };
+export const COMPUTER_PARAMS = {
+  normal: { reaction: 480, speed: 105, heightSpeed: 90, tolerance: 25, heightTolerance: 28, error: 20 },
+  hard: { reaction: 320, speed: 150, heightSpeed: 125, tolerance: 33, heightTolerance: 36, error: 12 },
+  expert: { reaction: 180, speed: 210, heightSpeed: 170, tolerance: 42, heightTolerance: 44, error: 5 },
+};
+export const roleOf = (value) => value?.role ?? value?.detail?.role ?? 'keeper'; // 舊局面／紀錄缺 role = 守門員
+export const powerAt = (elapsed) => {
+  const p = Math.max(0, elapsed) / POWER_HALF_MS % 2;
+  return p <= 1 ? p : 2 - p;
+};
+
 export const MOVE_STEP = 22; // 一步位移(滑動手勢未達即時拖曳時的備援)
 export const MOVE_SPEED = 180; // 連續移動:按住方向每秒移動的單位(RS12)
 export const X_LIMIT = 118; // 守門員中心 x 範圍 ±118
@@ -36,6 +59,61 @@ export const RUNUP_MS = 500; // 射手助跑到起腳
 export const RESULT_MS = 1300; // 每球結果顯示時間
 export const SAVE_SCORE = 100;
 export const STREAK_SCORE = 50;
+
+// 天氣未定數值集中於此:風為側向加速度(單位/s²)、雨天加速度(單位/s²)。
+export const WEATHERS = ['sun', 'rain', 'snow', 'night', 'wind'];
+export const WEATHER_CHOICES = ['random', ...WEATHERS];
+export const WEATHER_PARAMS = {
+  sun: { name: '晴', description: '球路與移動維持平常節奏。', ballSpeed: 1, keeperSpeed: 1, acceleration: Infinity, retention: 0.65, bonus: 1 },
+  rain: { name: '雨', description: '低球彈地後滑得更快，起步與停下會滑行。', kickerDescription: '低球彈地後保留更多速度，更快抵達門線。', ballSpeed: 1, keeperSpeed: 1, acceleration: 450, retention: 0.9, bonus: 1.2 },
+  snow: { name: '雪', description: '球速與守門員最高移動速度都降低 15%。', ballSpeed: 0.85, keeperSpeed: 0.85, acceleration: Infinity, retention: 0.65, bonus: 1.2 },
+  night: { name: '夜', description: '暗場燈光下守門，球路與移動維持平常節奏。', kickerDescription: '暗場燈光下射門，足球帶微光，球路維持平常節奏。', ballSpeed: 1, keeperSpeed: 1, acceleration: Infinity, retention: 0.65, bonus: 1.3 },
+  wind: { name: '風', description: '側風把球吹成弧線，本回合風向與風力固定。', ballSpeed: 1, keeperSpeed: 1, acceleration: Infinity, retention: 0.65, bonus: 1.3 },
+};
+export const WIND_MIN = 20;
+export const WIND_MAX = 45;
+export const LOW_BALL_Y = 40;
+export const BOUNCE_AT = 0.65;
+export const BOUNCE_HEIGHT = 12;
+export const BALL_LIFT = 30;
+export const DRAG_RESPONSE = 8;
+export const weatherFor = (weather) => WEATHER_PARAMS[weather] ?? WEATHER_PARAMS.sun;
+export function roundWeather(choice = 'random', rng = Math.random) {
+  const weather = choice === 'random' ? WEATHERS[Math.min(WEATHERS.length - 1, Math.floor(rng() * WEATHERS.length))]
+    : WEATHERS.includes(choice) ? choice : 'sun';
+  const wind = weather === 'wind' ? { direction: rng() < 0.5 ? -1 : 1, strength: WIND_MIN + Math.floor(rng() * (WIND_MAX - WIND_MIN + 1)) }
+    : { direction: 0, strength: 0 };
+  return { weather, wind };
+}
+
+const retainedSpeed = (weather, target) => target?.y <= LOW_BALL_Y ? weatherFor(weather).retention / WEATHER_PARAMS.sun.retention : 1;
+export function flightMs(difficulty, weather = 'sun', target) {
+  const base = paramsFor(difficulty).flight / weatherFor(weather).ballSpeed;
+  return base * (BOUNCE_AT + (1 - BOUNCE_AT) / retainedSpeed(weather, target));
+}
+
+// 同一條球路供飛行繪製、影子與門線判定使用。progress 表示往門線的距離。
+export function ballMotion(target, elapsed, difficulty = 'normal', weather = 'sun', wind = { direction: 0, strength: 0 }) {
+  const base = paramsFor(difficulty).flight / weatherFor(weather).ballSpeed;
+  const seconds = clamp(elapsed, 0, flightMs(difficulty, weather, target)) / 1000;
+  const q = clamp(elapsed / base, 0, 1);
+  const progress = clamp(q <= BOUNCE_AT ? q : BOUNCE_AT + (q - BOUNCE_AT) * retainedSpeed(weather, target), 0, 1);
+  const drift = weather === 'wind' ? wind.direction * wind.strength * seconds ** 2 / 2 : 0;
+  const x = clamp(target.x * progress + drift, -TARGET_X_MAX, TARGET_X_MAX);
+  let y = target.y * progress + Math.sin(Math.PI * progress) * BALL_LIFT;
+  if (target.y <= LOW_BALL_Y && weather === 'rain') {
+    if (progress <= BOUNCE_AT) y *= 1 - progress / BOUNCE_AT;
+    else {
+      const bounce = (progress - BOUNCE_AT) / (1 - BOUNCE_AT);
+      y = target.y * bounce + Math.sin(Math.PI * bounce) * BOUNCE_HEIGHT;
+    }
+  }
+  return { x, y: progress >= 1 - 1e-12 ? target.y : y, progress: progress >= 1 - 1e-12 ? 1 : progress };
+}
+export const impactTarget = (state) => {
+  const { x, y } = ballMotion(state.shot.target, flightMs(state.difficulty, state.weather, state.shot.target), state.difficulty, state.weather, state.wind);
+  return { x, y };
+};
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -88,6 +166,7 @@ const diveTo = (from, action) => clamp(from + (action === 'diveL' ? -DIVE_SHIFT 
 
 // 守門員當下姿勢:中心 x 與離地高度 h。
 export function keeperPose(k) {
+  if (k.ai) return { x: k.x, h: k.h };
   if (!k.action) return { x: k.x, h: 0 };
   const p = clamp(k.at / ACTION_MS, 0, 1);
   const arc = Math.sin(Math.PI * p);
@@ -143,11 +222,11 @@ export function judgeShot(keeper, target, difficulty) {
 // ---- 計分與結算 ----
 
 export const winThreshold = (n) => Math.ceil(n / 2);
-export const scoreFor = (saves, bestStreak) => saves * SAVE_SCORE + bestStreak * STREAK_SCORE;
+export const scoreFor = (saves, bestStreak, weather = 'sun') => Math.round((saves * SAVE_SCORE + bestStreak * STREAK_SCORE) * weatherFor(weather).bonus);
 export const resultFor = ({ saves, total }) => (saves >= winThreshold(total) ? 'win' : 'lose');
 
 // 依每球結果('save' / 'goal')算出統計。
-export function tally(log) {
+export function tally(log, weather = 'sun') {
   let saves = 0;
   let streak = 0;
   let bestStreak = 0;
@@ -158,13 +237,15 @@ export function tally(log) {
       bestStreak = Math.max(bestStreak, streak);
     } else streak = 0;
   }
-  return { saves, conceded: log.length - saves, streak, bestStreak, score: scoreFor(saves, bestStreak) };
+  return { saves, conceded: log.length - saves, streak, bestStreak, score: scoreFor(saves, bestStreak, weather) };
 }
 
 export const normalizeShots = (n) => (Number.isInteger(n) ? clamp(n, SHOTS_MIN, SHOTS_MAX) : SHOTS_DEFAULT);
 
 // ---- 狀態轉移(純函式,UI 只呼叫)----
-// state = { difficulty, total, log, phase, t, shot, keeper, move, paused, actions }
+// state = { difficulty, total, weather, weatherChoice, wind, log, phase, t, shot, keeper, move, velocity, dragTarget, paused, actions }
+//   weather 實際天氣;weatherChoice 選單偏好(random 或固定天氣);wind 本回合固定的方向與力道
+//   velocity 雨天滑行速度;dragTarget 雨雪拖曳目標(均不存檔)
 //   total   本回合球數 N
 //   log     已踢完每球的結果('save' / 'goal');log.length = 已踢球數
 //   phase   'ready'(開局或續玩還原,等開始) / 'wait' / 'runup' / 'flight' / 'result' / 'over'
@@ -175,10 +256,16 @@ export const normalizeShots = (n) => (Number.isInteger(n) ? clamp(n, SHOTS_MIN, 
 //   paused  球進行中暫停
 //   actions 本回合守門員有效動作數(§4.2 判斷「新遊戲」要不要記錄)
 
-export function initState({ difficulty = 'normal', total = SHOTS_DEFAULT } = {}) {
+// 無天氣參數的舊呼叫維持晴天;選單預設 random,開局即抽出實際天氣。
+export function initState({ difficulty = 'normal', total = SHOTS_DEFAULT, weather = 'sun', role = 'keeper' } = {}, rng = Math.random) {
+  role = ROLES.includes(role) ? role : 'keeper';
   return {
+    role,
+    ...(role === 'kicker' ? { aim: { ...AIM_DEFAULT }, curve: 'straight', power: 0, bonuses: [] } : {}),
+    ...roundWeather(weather, rng),
+    weatherChoice: WEATHER_CHOICES.includes(weather) ? weather : 'sun',
     difficulty: DIFFICULTIES.includes(difficulty) ? difficulty : 'normal',
-    total: normalizeShots(total),
+    total: role === 'kicker' ? KICKER_SHOTS : normalizeShots(total),
     log: [],
     phase: 'ready',
     t: 0,
@@ -186,6 +273,8 @@ export function initState({ difficulty = 'normal', total = SHOTS_DEFAULT } = {})
     keeper: idleKeeper(),
     move: 0,
     moved: false,
+    velocity: 0,
+    dragTarget: null,
     paused: false,
     actions: 0,
   };
@@ -194,34 +283,49 @@ export function initState({ difficulty = 'normal', total = SHOTS_DEFAULT } = {})
 // ready ⇒ 開始下一球(守門員回中央)。其他階段 ⇒ 原 state。
 export function startShot(state, rng = Math.random) {
   if (state.phase !== 'ready') return state;
-  return { ...state, phase: 'wait', t: 0, shot: newShot(state.difficulty, rng), keeper: idleKeeper(), paused: false };
+  if (roleOf(state) === 'kicker') return { ...state, phase: 'aim', t: 0, shot: null,
+    power: 0, keeper: idleKeeper(), paused: false };
+  return { ...state, phase: 'wait', t: 0, shot: newShot(state.difficulty, rng), keeper: idleKeeper(), velocity: 0, dragTarget: null, paused: false };
 }
 
-const PLAYING = ['wait', 'runup', 'flight'];
+const PLAYING = ['wait', 'runup', 'flight', 'aim', 'charge'];
 export const isPlaying = (state) => PLAYING.includes(state.phase) && !state.paused;
 
 export function actState(state, act) {
+  if (roleOf(state) === 'kicker') return state;
   if (!isPlaying(state)) return state;
+  if (['rain', 'snow'].includes(state.weather) && (act === 'left' || act === 'right')) {
+    return moveTo(state, state.keeper.x + (act === 'left' ? -MOVE_STEP : MOVE_STEP));
+  }
   const keeper = keeperAct(state.keeper, act);
   if (keeper === state.keeper) return state;
-  return { ...state, keeper, actions: state.actions + 1 };
+  return { ...state, keeper, velocity: 0, dragTarget: null, actions: state.actions + 1 };
 }
 
 // 按住/放開方向(鍵盤 ← →、畫面 ◀ ▶):只記住方向,時間推進時才移動。
 // 有效操作(§4.2)在每次按住期間「首次實際位移」時計一次(stepState 裡判斷);按住但沒動到(開始前、頂住邊界)不計。
 export function setMove(state, dir) {
+  if (roleOf(state) === 'kicker') return state;
   const move = Math.sign(dir || 0);
   if (move === (state.move ?? 0)) return state;
-  return { ...state, move, moved: false };
+  return { ...state, move, moved: false, dragTarget: null };
 }
 
-// 拖曳:守門員直接移到 x(限 ±118);動作中(跳/撲)或球沒在進行 ⇒ 原 state。
+// 拖曳:限 ±118;雨雪記目標由時間推進(受移速/加速度限制),其餘即時移到 x。
+// 動作中(跳/撲)或球沒在進行 ⇒ 原 state。
 export function moveTo(state, x) {
+  if (roleOf(state) === 'kicker') return state;
   if (!isPlaying(state) || state.keeper.action) return state;
   const nx = clamp(x, -X_LIMIT, X_LIMIT);
+  if (['rain', 'snow'].includes(state.weather)) {
+    if (nx === state.dragTarget || (nx === state.keeper.x && !state.velocity)) return state;
+    return { ...state, dragTarget: nx };
+  }
   if (nx === state.keeper.x) return state;
   return { ...state, keeper: idleKeeper(nx), actions: state.actions + 1 };
 }
+
+export const releaseDrag = (state) => state.dragTarget === null ? state : { ...state, dragTarget: null, moved: false };
 
 // 連續移動 dt 毫秒(動作中不動)。
 function slide(keeper, move, dt) {
@@ -240,11 +344,37 @@ function advanceAndSlide(keeper, move, dt) {
 
 // 一段時間的守門員推進;連續移動造成首次位移時計一次有效操作。
 function keeperStep(s, dt) {
+  if (['rain', 'snow'].includes(s.weather)) return weatherKeeperStep(s, dt);
   const before = s.keeper.action ? advanceKeeper(s.keeper, dt) : s.keeper;
   const keeper = advanceAndSlide(s.keeper, s.move ?? 0, dt);
   const slid = keeper.x !== before.x && !keeper.action;
   if (!slid || s.moved) return { ...s, keeper };
   return { ...s, keeper, moved: true, actions: s.actions + 1 };
+}
+
+function weatherKeeperStep(s, dt) {
+  let keeper = advanceKeeper(s.keeper, dt);
+  if (keeper.action) return { ...s, keeper, velocity: 0 };
+  const ms = s.keeper.action ? Math.max(0, dt - (ACTION_MS - s.keeper.at)) : dt;
+  const cfg = weatherFor(s.weather);
+  const speed = MOVE_SPEED * cfg.keeperSpeed;
+  // 拖曳也受最高速度/加速度限制,不會繞過天氣規則。
+  const distance = s.dragTarget === null ? null : s.dragTarget - keeper.x;
+  const desired = distance === null ? (s.move ?? 0) * speed : clamp(distance * DRAG_RESPONSE, -speed, speed);
+  const old = s.keeper.action ? 0 : s.velocity;
+  const seconds = ms / 1000;
+  const velocity = Number.isFinite(cfg.acceleration)
+    ? old + clamp(desired - old, -cfg.acceleration * seconds, cfg.acceleration * seconds) : desired;
+  const ramp = Number.isFinite(cfg.acceleration) ? Math.min(seconds, Math.abs(desired - old) / cfg.acceleration) : 0;
+  const dx = (old + velocity) * ramp / 2 + velocity * (seconds - ramp);
+  let x = clamp(keeper.x + dx, -X_LIMIT, X_LIMIT);
+  if (s.weather === 'snow' && distance !== null && Math.abs(dx) > Math.abs(distance)) x = s.dragTarget;
+  const slid = x !== keeper.x;
+  const active = s.move || distance !== null;
+  const counted = slid && active && !s.moved;
+  if (slid) keeper = idleKeeper(x);
+  return { ...s, keeper, velocity: x === X_LIMIT || x === -X_LIMIT ? 0 : velocity,
+    moved: s.moved || !!counted, actions: s.actions + (counted ? 1 : 0) };
 }
 
 // 球進行中與結果顯示中都可暫停(ready、over 不用暫停)。
@@ -263,7 +393,7 @@ export function resumeState(state) {
 const phaseLength = (state) => {
   if (state.phase === 'wait') return state.shot.wait;
   if (state.phase === 'runup') return RUNUP_MS;
-  if (state.phase === 'flight') return paramsFor(state.difficulty).flight;
+  if (state.phase === 'flight') return flightMs(state.difficulty, state.weather, state.shot.target);
   if (state.phase === 'result') return RESULT_MS;
   return Infinity;
 };
@@ -272,6 +402,7 @@ const phaseLength = (state) => {
 // 每球結果顯示完自動開下一球(rng 抽下一球);最後一球判定後直接進 'over'(結果照樣顯示)。
 // ready / over / 暫停 ⇒ 原 state。
 export function stepState(state, dt, rng = Math.random) {
+  if (roleOf(state) === 'kicker') return stepKicker(state, dt);
   if (state.paused || !['wait', 'runup', 'flight', 'result'].includes(state.phase)) return state;
   let s = state;
   let left = dt;
@@ -284,7 +415,7 @@ export function stepState(state, dt, rng = Math.random) {
     if (s.phase === 'wait') s = { ...s, phase: 'runup', t: 0 };
     else if (s.phase === 'runup') s = { ...s, phase: 'flight', t: 0 };
     else if (s.phase === 'flight') {
-      const log = [...s.log, judgeShot(s.keeper, s.shot.target, s.difficulty) ? 'save' : 'goal'];
+      const log = [...s.log, judgeShot(s.keeper, impactTarget(s), s.difficulty) ? 'save' : 'goal'];
       s = { ...s, log, phase: log.length >= s.total ? 'over' : 'result', t: 0 };
     } else s = startShot({ ...s, phase: 'ready', t: 0, shot: null }, rng);
   }
@@ -299,13 +430,135 @@ export const movesOf = (state) => state.actions;
 
 // 結算資料(finishPlay 用)。
 export function finishInfo(state) {
-  const t = tally(state.log);
+  if (roleOf(state) === 'kicker') {
+    const t = kickerTally(state);
+    return { result: t.goals >= KICKER_WIN_GOALS ? 'win' : 'lose', score: t.score, difficulty: state.difficulty,
+      detail: { role: 'kicker', goals: t.goals, shots: state.log.length, weather: state.weather } };
+  }
+  const t = tally(state.log, state.weather);
   return {
     result: resultFor({ saves: t.saves, total: state.total }),
     score: t.score,
     difficulty: state.difficulty,
-    detail: { shots: state.log.length, saves: t.saves, streak: t.bestStreak },
+    detail: { role: 'keeper', shots: state.log.length, saves: t.saves, streak: t.bestStreak, weather: state.weather },
   };
+}
+
+// ---- 踢球員：瞄準 → 按住蓄力 → 放開射門 → 電腦反應／判定 ----
+const aiming = (s) => roleOf(s) === 'kicker' && s.phase === 'aim' && !s.paused;
+export function aimAt(state, target) {
+  if (!aiming(state) || !Number.isFinite(target?.x) || !Number.isFinite(target?.y)) return state;
+  const aim = { x: clamp(target.x, -GOAL_HALF_W, GOAL_HALF_W), y: clamp(target.y, 0, GOAL_H) };
+  return aim.x === state.aim.x && aim.y === state.aim.y ? state : { ...state, aim, actions: state.actions + 1 };
+}
+export const nudgeAim = (s, dx, dy) => aimAt(s, { x: s.aim?.x + dx * AIM_STEP, y: s.aim?.y + dy * AIM_STEP });
+export function chooseCurve(state, curve) {
+  return aiming(state) && CURVES.includes(curve) && curve !== state.curve
+    ? { ...state, curve, actions: state.actions + 1 } : state;
+}
+export const chargeShot = (state) => aiming(state)
+  ? { ...state, phase: 'charge', t: 0, power: 0, actions: state.actions + 1 } : state;
+export const cancelCharge = (state) => roleOf(state) === 'kicker' && state.phase === 'charge'
+  ? { ...state, phase: 'aim', t: 0, power: 0 } : state;
+
+export function kickTarget(shot) {
+  const p = shot.power, cfg = KICK_PARAMS;
+  const direction = shot.curve === 'left' ? -1 : shot.curve === 'right' ? 1 : 0;
+  return { x: shot.target.x + direction * cfg.curveDrift,
+    y: (p < cfg.weak ? Math.min(shot.target.y, cfg.weakHeight) * p / cfg.weak : shot.target.y)
+      + Math.max(0, p - cfg.strong) * cfg.overshoot
+      + (shot.curve === 'lob' && p >= cfg.weak ? cfg.lobRise : 0) };
+}
+export function kickFlightMs(shot, weather = 'sun') {
+  const base = (KICK_PARAMS.flight - KICK_PARAMS.speedGain * shot.power) / weatherFor(weather).ballSpeed;
+  return base * (BOUNCE_AT + (1 - BOUNCE_AT) / retainedSpeed(weather, kickTarget(shot)));
+}
+export function kickMotion(shot, elapsed, weather = 'sun', wind = { direction: 0, strength: 0 }) {
+  const base = (KICK_PARAMS.flight - KICK_PARAMS.speedGain * shot.power) / weatherFor(weather).ballSpeed;
+  const seconds = clamp(elapsed, 0, kickFlightMs(shot, weather)) / 1000;
+  const q = clamp(elapsed / base, 0, 1), target = kickTarget(shot);
+  const p = clamp(q <= BOUNCE_AT ? q : BOUNCE_AT + (q - BOUNCE_AT) * retainedSpeed(weather, target), 0, 1);
+  const dir = shot.curve === 'left' ? -1 : shot.curve === 'right' ? 1 : 0;
+  const x = target.x * p + dir * Math.sin(Math.PI * p) * KICK_PARAMS.bend
+    + (weather === 'wind' ? wind.direction * wind.strength * seconds ** 2 / 2 : 0);
+  let y = target.y * p + Math.sin(Math.PI * p) * (shot.curve === 'lob' ? KICK_PARAMS.lobLift : KICK_PARAMS.lift);
+  if (shot.power < KICK_PARAMS.weak) y = target.y * p;
+  if (target.y <= LOW_BALL_Y && weather === 'rain') {
+    if (p <= BOUNCE_AT) y *= 1 - p / BOUNCE_AT;
+    else { const b = (p - BOUNCE_AT) / (1 - BOUNCE_AT); y = target.y * b + Math.sin(Math.PI * b) * BOUNCE_HEIGHT; }
+  }
+  return { x, y: p >= 1 - 1e-12 ? target.y : y, progress: p >= 1 - 1e-12 ? 1 : p };
+}
+export const kickImpact = (state) => {
+  const { x, y } = kickMotion(state.shot, kickFlightMs(state.shot, state.weather), state.weather, state.wind);
+  return { x, y };
+};
+
+// 在反應時刻觀察當時球路並外推，非直接讀取最終落點。誤差每球只抽一次。
+export function computerPrediction(state) {
+  const cfg = COMPUTER_PARAMS[state.difficulty];
+  const m = kickMotion(state.shot, cfg.reaction, state.weather, state.wind);
+  const p = Math.max(m.progress, 0.001);
+  const lift = state.shot.power < KICK_PARAMS.weak ? 0 : KICK_PARAMS.lift;
+  return { x: m.x / p + state.shot.error.x,
+    y: (m.y - Math.sin(Math.PI * m.progress) * lift) / p + state.shot.error.y };
+}
+export function computerKeeperAt(state, elapsed) {
+  const cfg = COMPUTER_PARAMS[state.difficulty], prediction = computerPrediction(state);
+  const seconds = Math.max(0, elapsed - cfg.reaction) / 1000;
+  const x = clamp(prediction.x, -X_LIMIT, X_LIMIT);
+  const h = clamp(prediction.y - REACH_BASE, COMPUTER_MIN_REACH - REACH_BASE, JUMP_PEAK);
+  return { ...idleKeeper(clamp(x, -cfg.speed * weatherFor(state.weather).keeperSpeed * seconds,
+    cfg.speed * weatherFor(state.weather).keeperSpeed * seconds)), ai: true,
+    h: clamp(h, -cfg.heightSpeed * seconds, cfg.heightSpeed * seconds) || 0 };
+}
+export function computerSaveZone(state) {
+  const cfg = COMPUTER_PARAMS[state.difficulty], { x, h } = keeperPose(state.keeper), reach = REACH_BASE + h;
+  return { x, reach, x0: x - cfg.tolerance, x1: x + cfg.tolerance,
+    y0: reach - cfg.heightTolerance, y1: reach + cfg.heightTolerance };
+}
+export function judgeKick(state) {
+  const target = kickImpact(state);
+  if (target.y > GOAL_H) return 'high';
+  if (Math.abs(target.x) > GOAL_HALF_W || target.y < 0) return 'miss';
+  const zone = computerSaveZone(state);
+  return target.x >= zone.x0 && target.x <= zone.x1 && target.y >= zone.y0 && target.y <= zone.y1 ? 'save' : 'goal';
+}
+export function releaseShot(state, rng = Math.random) {
+  if (roleOf(state) !== 'kicker' || state.phase !== 'charge' || state.paused) return state;
+  const error = COMPUTER_PARAMS[state.difficulty].error;
+  const shot = { target: { ...state.aim }, power: state.power, curve: state.curve,
+    error: { x: (rng() * 2 - 1) * error, y: (rng() * 2 - 1) * error } };
+  return { ...state, shot, phase: 'flight', t: 0, keeper: idleKeeper() };
+}
+export const cornerBonus = (target) => Math.round(KICK_PARAMS.cornerMax
+  * clamp(Math.abs(target.x) / GOAL_HALF_W, 0, 1) * clamp(target.y / GOAL_H, 0, 1));
+export function kickerTally(state) {
+  const goals = state.log.filter((r) => r === 'goal').length;
+  return { goals, saves: state.log.filter((r) => r === 'save').length,
+    misses: state.log.filter((r) => r === 'miss' || r === 'high').length,
+    score: Math.round((goals * SAVE_SCORE + state.bonuses.reduce((a, b) => a + b, 0)) * weatherFor(state.weather).bonus) };
+}
+function stepKicker(state, dt) {
+  if (state.paused || !Number.isFinite(dt) || dt <= 0) return state;
+  if (state.phase === 'charge') {
+    const t = state.t + dt;
+    return { ...state, t, power: powerAt(t) };
+  }
+  let s = state, left = dt;
+  while (left > 0 && ['flight', 'result'].includes(s.phase)) {
+    const duration = s.phase === 'flight' ? kickFlightMs(s.shot, s.weather) : RESULT_MS;
+    const step = Math.min(left, duration - s.t);
+    s = { ...s, t: s.t + step }; left -= step;
+    if (s.phase === 'flight') s = { ...s, keeper: computerKeeperAt(s, s.t) };
+    if (s.t < duration) break;
+    if (s.phase === 'flight') {
+      const result = judgeKick(s), log = [...s.log, result];
+      s = { ...s, log, bonuses: [...s.bonuses, result === 'goal' ? cornerBonus(s.shot.target) : 0],
+        phase: log.length === KICKER_SHOTS ? 'over' : 'result', t: 0 };
+    } else s = startShot({ ...s, phase: 'ready', t: 0 });
+  }
+  return s;
 }
 
 // ---- 手機手勢 ----
@@ -337,13 +590,18 @@ export const dragX = (startX, dxPx, cssWidth) => clamp(startX + (dxPx * FIELD_W)
 // ---- 存檔(續玩,存檔點 = 球與球之間)----
 
 // actions 一併保存:續玩後按「新遊戲」仍依玩家操作判斷 quit(§4.2)。
-export function toSave({ difficulty, total, log, actions }) {
-  return { difficulty, total, log: [...log], actions };
+export function toSave(state) {
+  const { difficulty, total, log, actions, weather, weatherChoice, wind } = state;
+  return { role: roleOf(state), difficulty, total, log: [...log], actions, weather, weatherChoice, wind: { ...wind },
+    ...(roleOf(state) === 'kicker' ? { aim: { ...state.aim }, curve: state.curve, bonuses: [...state.bonuses] } : {}) };
 }
 
 // 還原到「下一球開始前」。
 export function fromSave(saved) {
-  return { ...initState({ difficulty: saved.difficulty, total: saved.total }), log: [...saved.log], actions: saved.actions };
+  return { ...initState({ difficulty: saved.difficulty, total: saved.total, role: roleOf(saved) }),
+    weather: saved.weather ?? 'sun', weatherChoice: saved.weatherChoice ?? saved.weather ?? 'sun',
+    wind: saved.wind ? { ...saved.wind } : { direction: 0, strength: 0 }, log: [...saved.log], actions: saved.actions,
+    ...(roleOf(saved) === 'kicker' ? { aim: { ...saved.aim }, curve: saved.curve, bonuses: [...saved.bonuses] } : {}) };
 }
 
 // 存檔 state 格式檢查(匯入驗證與載入防呆;不合格的存檔不還原)。
@@ -351,9 +609,28 @@ export function fromSave(saved) {
 export function isValidState(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return false;
   const { difficulty, total, log, actions } = s;
+  if ('role' in s && !ROLES.includes(s.role)) return false;
   if (!DIFFICULTIES.includes(difficulty)) return false;
   if (!Number.isInteger(total) || total < SHOTS_MIN || total > SHOTS_MAX) return false;
   if (!Array.isArray(log) || log.length >= total) return false;
   if (!Number.isInteger(actions) || actions < 0) return false;
+  // 相容舊晴天存檔;新增欄位必須整組合法,不可將未知天氣當晴天還原。
+  if ('weather' in s || 'wind' in s || 'weatherChoice' in s) {
+    if (!WEATHERS.includes(s.weather) || !WEATHER_CHOICES.includes(s.weatherChoice)) return false;
+    if (s.weatherChoice !== 'random' && s.weatherChoice !== s.weather) return false;
+    if (!s.wind || typeof s.wind !== 'object' || Array.isArray(s.wind)) return false;
+    const { direction, strength } = s.wind;
+    if (s.weather === 'wind') {
+      if (![1, -1].includes(direction) || !Number.isInteger(strength) || strength < WIND_MIN || strength > WIND_MAX) return false;
+    } else if (direction !== 0 || strength !== 0) return false;
+  }
+  if (roleOf(s) === 'kicker') {
+    if (total !== KICKER_SHOTS || !('weather' in s) || !CURVES.includes(s.curve)) return false;
+    if (!s.aim || Array.isArray(s.aim) || !Number.isFinite(s.aim.x) || !Number.isFinite(s.aim.y)
+      || Math.abs(s.aim.x) > GOAL_HALF_W || s.aim.y < 0 || s.aim.y > GOAL_H) return false;
+    if (!Array.isArray(s.bonuses) || s.bonuses.length !== log.length) return false;
+    if (!Array.from(s.bonuses).every((b, i) => Number.isInteger(b) && b >= 0 && b <= KICK_PARAMS.cornerMax && (log[i] === 'goal' || b === 0))) return false;
+    return Array.from(log).every((r) => ['save', 'goal', 'miss', 'high'].includes(r));
+  }
   return log.every((r) => r === 'save' || r === 'goal');
 }

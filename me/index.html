@@ -63,18 +63,19 @@
       <h2 id="account-title">帳號</h2>
       <div class="account-row">
         <img id="account-avatar" alt="帳號頭像" width="40" height="40" referrerpolicy="no-referrer" hidden>
-        <span id="account-name"></span>
+        <span id="account-name">未登入:紀錄只存在這台裝置</span>
         <span id="sync-status" role="status" aria-live="polite"></span>
       </div>
       <div class="me-io">
         <button class="btn" id="sign-in-google" type="button">用 Google 登入</button>
         <button class="btn" id="sign-in" type="button">用 GitHub 登入</button>
         <button class="btn" id="sign-out" type="button" hidden>登出</button>
+        <button class="btn" id="clear-cloud" type="button" hidden>清除帳號裡的雲端紀錄</button>
       </div>
       <p id="account-msg" role="status" aria-live="polite"></p>
       <div id="backups" class="me-io" aria-label="本機紀錄備份"></div>
+      <p class="me-sub"><a href="../privacy/">隱私權政策</a></p>
     </section>
-    <p id="local-record-note" class="me-sub">未登入:紀錄只存在這台裝置</p>
     <section class="me-card" aria-label="等級">
       <div class="me-level">
         <span class="me-lv" id="lv"></span>

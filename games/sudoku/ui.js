@@ -3,6 +3,7 @@ import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
+import { play as playSound } from '../../shared/sound.js';
 import { setupHelp } from '../../shared/help.js';
 import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
@@ -145,6 +146,8 @@ function play(value, index = cursor, asNote = noteMode) {
   input();
   const next = stepState(state, index, value, asNote);
   if (next === state) return;
+  playSound('tap');
+  if (next.result === 'win' && !state.result) playSound('win');
   state = next; activeHint = null; afterChange();
 }
 function undo() {

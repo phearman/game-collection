@@ -7,6 +7,7 @@ import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
+import { play } from '../../shared/sound.js';
 import { setupHelp } from '../../shared/help.js';
 import { swipe } from '../../shared/touch.js';
 import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
@@ -120,6 +121,7 @@ function afterChange(prevWon) {
 
 // 無效移動回饋:棋盤水平抖動(減少動態時改為邊框閃一下,見 style.css)。
 function shake() {
+  play('tap');
   const board = $('board');
   board.classList.remove('shake');
   void board.offsetWidth; // 重新觸發動畫
@@ -134,6 +136,7 @@ function step(dir) {
     return;
   }
   const prevWon = state.won;
+  if (next.score > state.score) play('score');
   state = next;
   afterChange(prevWon);
 }

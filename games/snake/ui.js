@@ -7,6 +7,7 @@ import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
+import { play } from '../../shared/sound.js';
 import { setupHelp } from '../../shared/help.js';
 import { swipe, dpad } from '../../shared/touch.js';
 import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
@@ -108,6 +109,8 @@ async function newGame(difficulty) {
 function tick() {
   const next = tickState(state);
   if (next === state) return;
+  if (next.score > state.score) play('score');
+  if (next.over && !next.won) play('lose');
   state = next;
   if (state.over) {
     finish(resultOnGameOver({ everWon: state.won }));

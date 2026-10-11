@@ -68,6 +68,7 @@ export function setupHelp({ gameId, title, rules, demo, mountAfter }) {
       <button class="btn" type="button" data-close aria-label="關閉">✕</button>
     </div>
     <div class="help-rules">${rules}</div>
+    <p class="help-rules">頂列 🔊 可關閉音效</p>
     ${demo ? `
       <div class="help-demo">
         <div class="help-demo-head">

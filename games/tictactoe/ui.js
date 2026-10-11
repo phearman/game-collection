@@ -3,6 +3,7 @@ import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
+import { play as playSound } from '../../shared/sound.js';
 import { setupHelp } from '../../shared/help.js';
 import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
@@ -124,6 +125,8 @@ function scheduleAi() {
     aiTimer = null;
     if (token !== generation || ended || restarting) return;
     state = aiStepState(state);
+    playSound('tap');
+    if (state.result === 'win' || state.result === 'lose') playSound(state.result);
     afterChange();
   }, 300);
 }
@@ -143,6 +146,8 @@ function play(index) {
   if (ended || restarting) return;
   const next = stepState(state, index);
   if (next === state) return;
+  playSound('tap');
+  if (next.result === 'win' || next.result === 'lose') playSound(next.result);
   state = next;
   afterChange();
 }

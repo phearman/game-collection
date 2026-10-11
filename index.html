@@ -18,7 +18,7 @@
     </header>
     <p id="local-record-note" class="me-sub">未登入:紀錄只存在這台裝置</p>
     <section class="cards" id="cards" aria-label="遊戲清單"></section>
-    <footer class="lobby-footer"><a href="changelog/">更新紀錄</a></footer>
+    <footer class="lobby-footer"><a href="changelog/">更新紀錄</a><span aria-hidden="true"> · </span><a href="privacy/">隱私權政策</a></footer>
   </main>
   <script type="module">
     import { GAMES } from './shared/games.js';
@@ -26,6 +26,7 @@
     import { LocalStore } from './shared/stores/local.js';
     import { bindThemeToggle } from './shared/theme.js';
     import { cloudEnabled } from './shared/supabase-config.js';
+    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js';
 
     bindThemeToggle(document.getElementById('theme'));
 
@@ -81,6 +82,7 @@
       if (best) card.append(node('p', 'card-meta', `最佳 ${best.toLocaleString()}`));
       document.getElementById('cards').append(card);
     }
+    setupWhatsNew({ hasHistory: hasPlayHistory(sum) });
   </script>
 </body>
 </html>

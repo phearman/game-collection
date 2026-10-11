@@ -7,6 +7,7 @@ import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
+import { play } from '../../shared/sound.js';
 import { setupHelp } from '../../shared/help.js';
 import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
@@ -109,10 +110,12 @@ function act(i, kind) {
   if (ended || isOver(state)) return;
   const next = kind === 'flag' ? flagState(state, i) : revealState(state, i);
   if (next === state) { render(); return; }
+  play(kind === 'flag' ? 'move' : 'tap');
   state = next;
   render();
   const result = resultOf(state);
   if (result) {
+    if (result === 'win' || result === 'lose') play(result);
     finish(result);
   } else {
     const saved = toSave(state);

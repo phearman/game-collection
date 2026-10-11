@@ -2,8 +2,9 @@
 .topbar .btn { white-space: nowrap; padding-left: 10px; padding-right: 10px; }
 .stats { display: flex; gap: 6px; align-items: stretch; }
 .stats .stat { min-width: 56px; padding: 2px 8px; }
-.actions { display: flex; gap: 6px; margin-bottom: 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .actions .btn { flex: 1 1 0; min-width: 0; white-space: nowrap; padding-left: 4px; padding-right: 4px; }
+.actions #weather { flex: 1.25 1 0; font-size: 13px; }
 select.btn { appearance: auto; }
 select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -67,6 +68,17 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
 .pad { flex: none; display: flex; gap: 6px; touch-action: none; -webkit-touch-callout: none; }
 .pad-btn { flex: 1 1 0; min-width: 52px; min-height: 52px; padding-left: 2px; padding-right: 2px; font-size: 16px; font-weight: 600; white-space: nowrap; user-select: none; -webkit-user-select: none; }
 .pad-btn:active { background: var(--accent-bg); }
+[hidden] { display: none !important; }
+.kicker-controls { flex: none; display: flex; flex-direction: column; gap: 6px; }
+.curves { display: flex; gap: 6px; }
+.curve-btn { flex: 1; min-width: 48px; min-height: 48px; padding: 4px; }
+.curve-btn[aria-pressed="true"] { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+.shoot-btn { min-width: 64px; min-height: 64px; font-weight: 700; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+@media (max-width: 480px) {
+  .actions .btn { flex-basis: calc((100% - 12px) / 3); }
+  .actions #weather { flex: 1 1 calc((100% - 12px) / 3); }
+  .page-fit { padding-top: 8px; padding-bottom: 8px; }
+}
 /* ◀ ▶ 方向鍵放最外側、做成拇指好按的大圓角 */
 .pad-move { flex: 1.15 1 0; font-size: 22px; border-radius: 16px; background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
 
@@ -78,6 +90,12 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
 
 /* 球場色票(畫布讀這些變數繪圖;RS12:淺色=白天球場、深色=夜間照明) */
 :root {
+  --kp-rain: rgba(190, 224, 255, .85);
+  --kp-wet: rgba(203, 232, 250, .4);
+  --kp-snow: #f2f8ff;
+  --kp-snow-shade: #d6e5ed;
+  --kp-wind: #ffd45a;
+  --kp-night-shade: rgba(5, 12, 36, .68);
   --kp-night: 0;
   --kp-sky-top: #8fd0ff;
   --kp-sky-bot: #d9f0ff;
@@ -125,6 +143,12 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
   --kp-hud: rgba(255, 252, 240, 0.9);
 }
 :root[data-theme="dark"] {
+  --kp-rain: rgba(159, 205, 247, .8);
+  --kp-wet: rgba(141, 188, 222, .35);
+  --kp-snow: #dbe7f3;
+  --kp-snow-shade: #a8becd;
+  --kp-wind: #ffe178;
+  --kp-night-shade: rgba(2, 6, 20, .45);
   --kp-night: 1;
   --kp-sky-top: #0b1230;
   --kp-sky-bot: #22305a;
@@ -173,6 +197,12 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --kp-rain: rgba(159, 205, 247, .8);
+    --kp-wet: rgba(141, 188, 222, .35);
+    --kp-snow: #dbe7f3;
+    --kp-snow-shade: #a8becd;
+    --kp-wind: #ffe178;
+    --kp-night-shade: rgba(2, 6, 20, .45);
     --kp-night: 1;
     --kp-sky-top: #0b1230;
     --kp-sky-bot: #22305a;
@@ -220,3 +250,16 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
     --kp-hud: rgba(16, 18, 30, 0.85);
   }
 }
+/* IR18(同 RS22 下樓梯):窄螢幕保留大廳、玩法、版本、分數、暫停、音效與主題，圖示鈕仍為 40px。 */
+@media (max-width: 400px) {
+  .page .topbar:has(.topbar-toggles) { flex-wrap: nowrap; gap: 4px; }
+  .topbar .navigation { gap: 2px; }
+  .topbar .navigation .btn { width: 40px; padding-inline: 0; font-size: 14px; gap: 0; }
+  .topbar .topbar-label { display: none; }
+  .topbar .navigation .game-code { font-size: 10px; padding-inline: 2px; }
+  .topbar .navigation .game-version { font-size: 10px; margin-inline: 0; }
+  .topbar .stats { flex: 1; min-width: 0; gap: 2px; }
+  .topbar .stats .stat { flex: 1; min-width: 0; min-height: 46px; padding: 2px; }
+  .topbar .stats .stat-value { font-size: 12px; }
+  .topbar .stats .btn { width: 40px; padding-inline: 0; }
+  .topbar .topbar-toggles { gap: 2px; }

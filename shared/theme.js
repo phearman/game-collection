@@ -1,4 +1,5 @@
 import { load, save } from './storage.js';
+import { mountSoundToggle } from './sound.js';
 
 const root = document.documentElement;
 
@@ -19,6 +20,7 @@ const saved = load('theme');
 if (saved === 'light' || saved === 'dark') root.dataset.theme = saved;
 
 export function bindThemeToggle(btn) {
+  mountSoundToggle(btn);
   label(btn);
   btn.addEventListener('click', () => {
     const next = current() === 'dark' ? 'light' : 'dark';

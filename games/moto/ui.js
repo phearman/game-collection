@@ -8,6 +8,7 @@ import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
+import { play } from '../../shared/sound.js';
 import { setupHelp } from '../../shared/help.js';
 import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
@@ -100,6 +101,7 @@ function pause() {
 function resume() {
   if (!state.paused || state.over || ended || document.visibilityState === 'hidden' || document.querySelector('dialog[open]')) return;
   clearInput(); state = resumeState(state);
+  if (state.ticks === 0 && state.countdown > 0) play('countdown');
   run(() => { profile.setVisible(true); profile.input(); }); render();
 }
 function togglePause() { if (state.paused) resume(); else pause(); }
@@ -135,6 +137,9 @@ function frame(t) {
         throttle: [...held.values()].includes('throttle'), brake: [...held.values()].includes('brake'), dir: pendingDir,
       }, DT);
       pendingDir = 0;
+      if (Math.ceil(state.countdown) < Math.ceil(prev.countdown)) play(state.countdown > 0 ? 'countdown' : 'go');
+      if (playerOf(state).crash > playerOf(prev).crash) play('crash');
+      if (state.over && !prev.over) play('win');
       fxEvents(fx, prev, state, { reduced: reduced.matches });
       if (state.over) finish();
       else if (state.ticks % SAVE_EVERY === 0) persist();

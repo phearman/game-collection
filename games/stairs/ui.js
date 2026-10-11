@@ -9,6 +9,7 @@ import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
 import { bindThemeToggle } from '../../shared/theme.js';
+import { play } from '../../shared/sound.js';
 import { setupHelp } from '../../shared/help.js';
 import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js';
 import { settlePlay } from '../../shared/settle.js';
@@ -187,6 +188,13 @@ function frame(t) {
       const prev = state;
       const dir = inputDir();
       state = stepState(state, { dir });
+      if ((prev.player.on === null && state.player.on !== null)
+        || (prev.player.vy >= 0 && state.player.vy < 0 && state.player.on === null
+          && state.platforms.some((p) => p.kind === 'bounce' && Math.abs(p.y - state.player.y - PLAYER) < 0.3))) play('land');
+      if (state.hurt > prev.hurt) play('hurt');
+      if (state.picked) play('coin');
+      if (state.stageCleared && !prev.stageCleared) play('win');
+      if (state.over && !prev.over && !state.won) play('lose');
       fxEvents(fx, prev, state, { dir, reduced: reducedMotion.matches });
       if (state.over) {
         timerPause();
@@ -529,3 +537,8 @@ setupHelp({
     ],
   },
 });
+const helpButton = document.querySelector('.topbar .navigation button');
+if (helpButton) {
+  helpButton.setAttribute('aria-label', '玩法說明與示範');
+  helpButton.innerHTML = '<span aria-hidden="true">?</span><span class="topbar-label">玩法</span>';
+}

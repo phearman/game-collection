@@ -2,7 +2,9 @@
 // 畫風比照下樓梯(D71、guides/art-style.md):大頭可愛角色、深色描邊+背光側陰影、平塗為主、深淺兩套色票、形狀可辨。
 // 座標:畫布單位 FIELD_W × FIELD_H(呼叫端先縮放好);世界 x 以球門中央為 0、往右為正,世界 y 為離地高度(往上為正)。
 import {
-  FIELD_W, GOAL_HALF_W, GOAL_H, RUNUP_MS, ACTION_MS, PARAMS, keeperPose, saveZone, lastResult, tally,
+  FIELD_W, GOAL_HALF_W, GOAL_H, RUNUP_MS, ACTION_MS, keeperPose, saveZone, lastResult, tally,
+  ballMotion, flightMs, impactTarget, weatherFor, BOUNCE_AT, LOW_BALL_Y,
+  roleOf, kickMotion, kickFlightMs, kickImpact, computerSaveZone, CURVE_NAMES, KICK_PARAMS,
 } from './logic.js';
 
 export const FIELD_H = 420;
@@ -11,6 +13,13 @@ const GROUND = 200; // 門線(世界 y = 0)在畫面上的高度
 export const SPOT = { x: CX, y: 360 }; // 罰球點
 export const sx = (x) => CX + x;
 export const sy = (y) => GROUND - y;
+// 點擊球門才瞄準；拖曳時允許拖出球門，準星停在邊界。CSS 縮放後仍對齊球門。
+export function aimFromPoint(clientX, clientY, rect, dragging = false) {
+  const x = (clientX - rect.left) * FIELD_W / rect.width - CX;
+  const y = GROUND - (clientY - rect.top) * FIELD_H / rect.height;
+  if (!dragging && (Math.abs(x) > GOAL_HALF_W || y < 0 || y > GOAL_H)) return null;
+  return { x: Math.max(-GOAL_HALF_W, Math.min(GOAL_HALF_W, x)), y: Math.max(0, Math.min(GOAL_H, y)) };
+}
 const STAND_H = 92; // 看台高度
 const BOARD_Y = 92; // 廣告圍板上緣
 const BOARD_H = 18;
@@ -25,6 +34,7 @@ export const PALETTE_KEYS = [
   'skin', 'hair', 'jersey', 'jersey-dark', 'shorts', 'sock', 'glove', 'glove-dark', 'boot', 'eye', 'cheek',
   'kid-jersey', 'kid-cap', 'kid-shorts', 'ball', 'ball-dark', 'shadow', 'ink', 'zone', 'zone-line',
   'save', 'goal', 'star', 'text', 'hud',
+  'rain', 'wet', 'snow', 'snow-shade', 'wind', 'night-shade',
 ];
 
 // cs = getComputedStyle(document.documentElement)(由呼叫端傳入,本模組不碰 DOM 全域)。
@@ -41,16 +51,21 @@ const hash = (a, b) => {
 
 // ---- 球的軌跡(畫面座標):起腳點 → 目標點,中段略抬高;半徑由近而遠變小 ----
 
-export function ballAt(target, p) {
-  const tx = sx(target.x);
-  const ty = sy(target.y);
-  const lift = Math.sin(Math.PI * p) * 30;
-  return { x: SPOT.x + (tx - SPOT.x) * p, y: SPOT.y + (ty - SPOT.y) * p - lift, r: 10 - 4 * p };
+function motionAt(target, p, state) {
+  const difficulty = state?.difficulty ?? 'normal', weather = state?.weather ?? 'sun';
+  if (roleOf(state) === 'kicker') return kickMotion(state.shot, p * kickFlightMs(state.shot, weather), weather, state.wind);
+  return ballMotion(target, p * flightMs(difficulty, weather, target), difficulty, weather, state?.wind);
+}
+
+export function ballAt(target, p, state = null) {
+  const b = motionAt(target, p, state);
+  return { x: sx(b.x), y: SPOT.y + (GROUND - SPOT.y) * b.progress - b.y, r: 10 - 4 * b.progress };
 }
 
 // 球的地面影子:水平跟著目標 x,由罰球點的地面移到門線(看影子就知道球往哪裡去)
-export function shadowAt(target, p) {
-  return { x: SPOT.x + (sx(target.x) - SPOT.x) * p, y: SPOT.y + 8 + (GROUND - SPOT.y - 8) * p, r: 9 - 3 * p };
+export function shadowAt(target, p, state = null) {
+  const b = motionAt(target, p, state);
+  return { x: sx(b.x), y: SPOT.y + 8 + (GROUND - SPOT.y - 8) * b.progress, r: 9 - 3 * b.progress };
 }
 
 // ---- 特效狀態(畫面層自己的,不進存檔)----
@@ -71,33 +86,35 @@ export function createFx() {
 
 export const fxBusy = (fx) => fx.particles.length > 0 || fx.shake > 0 || (fx.pop && fx.pop.t < POP_MS) || (fx.net && fx.net.t < 900);
 
-function burst(fx, kind, x, y, n, reduced) {
+function burst(fx, kind, x, y, n, reduced, rng) {
   const cap = reduced ? MAX_PARTICLES_REDUCED : MAX_PARTICLES;
   const count = reduced ? Math.ceil(n / 3) : n;
   for (let i = 0; i < count && fx.particles.length < cap; i++) {
-    const a = Math.PI * 2 * (i / count) + Math.random() * 0.5;
-    const v = 60 + Math.random() * 90;
+    const a = Math.PI * 2 * (i / count) + rng() * 0.5;
+    const v = 60 + rng() * 90;
     fx.particles.push({ kind, x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 40, life: 0.7, max: 0.7 });
   }
 }
 
 // 比對一幀前後的 state,觸發特效。
-export function fxEvents(fx, prev, next, { reduced = false } = {}) {
+export function fxEvents(fx, prev, next, { reduced = false, rng = Math.random } = {}) {
   const pk = keeperPose(prev.keeper);
   const nk = keeperPose(next.keeper);
   if (nk.x !== pk.x && !next.keeper.action) fx.facing = nk.x > pk.x ? 1 : -1;
   if (next.log.length > prev.log.length && next.shot) {
     const r = lastResult(next);
-    const b = ballAt(next.shot.target, 1);
-    if (r === 'save') {
+    const b = ballAt(next.shot.target, 1, next);
+    if (r === 'miss' || r === 'high') {
+      fx.pop = { text: r === 'high' ? '高出橫梁!' : '打偏了!', kind: 'goal', t: 0 };
+    } else if (r === 'save') {
       const streak = tally(next.log).streak;
-      fx.pop = { text: streak >= 2 ? `撲到了!連撲 ×${streak}` : '撲到了!', kind: 'save', t: 0 };
-      burst(fx, 'star', b.x, b.y, 12, reduced);
+      fx.pop = { text: roleOf(next) === 'kicker' ? '被撲出!' : streak >= 2 ? `撲到了!連撲 ×${streak}` : '撲到了!', kind: 'save', t: 0 };
+      burst(fx, 'star', b.x, b.y, 12, reduced, rng);
     } else {
       fx.pop = { text: 'GOAL!', kind: 'goal', t: 0 };
       fx.net = { x: b.x, y: b.y, t: 0 };
       if (!reduced) fx.shake = 0.35;
-      burst(fx, 'spark', b.x, b.y, 8, reduced);
+      burst(fx, 'spark', b.x, b.y, 8, reduced, rng);
     }
   }
 }
@@ -166,7 +183,7 @@ function limb(c, x, y, ex, ey, color, w, pal) {
 
 // ---- 背景(靜態,快取成圖層):看台+觀眾、廣告圍板、草地條紋、禁區線 ----
 
-function paintBackground(c, pal) {
+function paintBackground(c, pal, weather = 'sun') {
   const g = c.createLinearGradient(0, 0, 0, STAND_H);
   g.addColorStop(0, pal['sky-top']);
   g.addColorStop(1, pal['sky-bot']);
@@ -219,7 +236,7 @@ function paintBackground(c, pal) {
   let y = top;
   for (let i = 0; y < FIELD_H; i++) {
     const h = 16 + i * 4;
-    c.fillStyle = i % 2 ? pal['grass-a'] : pal['grass-b'];
+    c.fillStyle = weather === 'snow' ? (i % 2 ? pal.snow : pal['snow-shade']) : i % 2 ? pal['grass-a'] : pal['grass-b'];
     c.fillRect(0, y, FIELD_W, h);
     y += h;
   }
@@ -238,6 +255,77 @@ function paintBackground(c, pal) {
   c.beginPath();
   c.ellipse(SPOT.x, SPOT.y + 8, 4, 2.5, 0, 0, Math.PI * 2);
   c.fill();
+  if (weather === 'rain') {
+    c.fillStyle = pal.wet;
+    for (let i = 0; i < 12; i++) {
+      const x = 18 + hash(i, 11) * (FIELD_W - 36);
+      const y = GROUND + 15 + hash(i, 12) * 180;
+      c.beginPath(); c.ellipse(x, y, 10 + hash(i, 13) * 18, 3, 0, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = pal.rain; c.lineWidth = 1;
+      c.beginPath(); c.moveTo(x - 8, y); c.lineTo(x + 8, y); c.stroke();
+    }
+  }
+  if (weather === 'night') {
+    c.fillStyle = pal['night-shade']; c.fillRect(0, 0, FIELD_W, FIELD_H);
+    for (const x of [24, FIELD_W - 24]) {
+      const glow = c.createRadialGradient(x, 24, 4, x, 100, 155);
+      glow.addColorStop(0, pal.glow); glow.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = glow; c.fillRect(x - 155, 0, 310, 270);
+      c.strokeStyle = pal.ink; c.lineWidth = 4;
+      c.beginPath(); c.moveTo(x, 20); c.lineTo(x, 110); c.stroke();
+      c.fillStyle = pal.light; roundRect(c, x - 16, 15, 32, 12, 3); c.fill(); ink(c, pal);
+    }
+  }
+}
+
+export const weatherParticleCount = (weather, reduced = false) => ['rain', 'snow'].includes(weather) ? (reduced ? 8 : 40) : 0;
+
+function drawWeather(c, s, pal, fx, reduced) {
+  const t = (fx?.t ?? 0) / 1000;
+  const count = weatherParticleCount(s.weather, reduced);
+  c.save();
+  c.strokeStyle = pal.rain; c.fillStyle = pal.snow; c.lineWidth = 1.2;
+  for (let i = 0; i < count; i++) {
+    const speed = s.weather === 'rain' ? 220 : 30;
+    const y = (hash(i, 90) * FIELD_H + t * speed) % FIELD_H;
+    const x = (hash(i, 91) * FIELD_W + (s.weather === 'snow' ? Math.sin(t + i) * 6 : -t * 25) % FIELD_W + FIELD_W) % FIELD_W;
+    if (s.weather === 'rain') {
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x - 3, y + 12); c.stroke();
+      if (y > GROUND) { // 雨點落在草地上的小水花
+        c.beginPath(); c.moveTo(x - 3, y + 3); c.lineTo(x - 6, y); c.moveTo(x + 2, y + 3); c.lineTo(x + 5, y); c.stroke();
+      }
+    } else { circle(c, x, y, 1.5 + hash(i, 92) * 1.5); c.fill(); }
+  }
+  if (s.weather === 'rain' && s.shot && s.phase === 'flight' && s.shot.target.y <= LOW_BALL_Y) {
+    const b = roleOf(s) === 'kicker' ? kickMotion(s.shot, s.t, s.weather, s.wind)
+      : ballMotion(s.shot.target, s.t, s.difficulty, s.weather, s.wind);
+    if (Math.abs(b.progress - BOUNCE_AT) < 0.07) {
+      const duration = roleOf(s) === 'kicker' ? kickFlightMs(s.shot, s.weather) : flightMs(s.difficulty, s.weather, s.shot.target);
+      const spot = shadowAt(s.shot.target, s.t / duration, s);
+      for (let i = 0; i < (reduced ? 2 : 6); i++) {
+        const dx = (i - 2.5) * 4;
+        c.beginPath(); c.moveTo(spot.x, spot.y); c.lineTo(spot.x + dx, spot.y - 8 + Math.abs(dx) / 2); c.stroke();
+      }
+    }
+  }
+  if (s.weather === 'wind') {
+    const dir = s.wind.direction;
+    for (const x of [12, FIELD_W - 12]) {
+      c.strokeStyle = pal.ink; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(x, 140); c.lineTo(x, 95); c.stroke();
+      c.fillStyle = pal.wind;
+      const flutter = reduced ? 0 : Math.sin(t * 5) * 3;
+      c.beginPath(); c.moveTo(x, 96); c.lineTo(x + dir * 24, 100 + flutter); c.lineTo(x + dir * 24, 112 + flutter); c.lineTo(x, 108); c.closePath(); c.fill(); ink(c, pal);
+    }
+    c.strokeStyle = pal['grass-a']; c.lineWidth = 1.4;
+    for (let i = 0; i < 16; i++) {
+      const x = hash(i, 93) * FIELD_W; const y = 225 + hash(i, 94) * 180;
+      const sway = reduced ? 3 : 3 + Math.sin(t * 3 + i) * 2;
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x + dir * sway, y - 6); c.stroke();
+    }
+    tag(c, pal, `${dir < 0 ? '←' : '→'} 風力 ${s.wind.strength}`, CX, 240);
+  }
+  c.restore();
 }
 
 // ---- 球門:門柱(雙色立體+描邊)+球網(網格,進球時震動)----
@@ -346,14 +434,14 @@ function drawGlove(c, pal, x, y, r) {
 function drawKeeper(c, s, pal, fx, held) {
   const k = s.keeper;
   const { h } = keeperPose(k);
-  const z = saveZone(k, s.difficulty);
+  const z = roleOf(s) === 'kicker' ? computerSaveZone(s) : saveZone(k, s.difficulty);
   const cx = sx(z.x);
   const shoulder = sy(z.reach);
-  const feet = sy(h);
+  const feet = sy(k.ai ? Math.max(0, h) : h); // 低球蹲撲時腳仍在地面
   const t = fx?.t ?? 0;
-  const dive = k.action === 'diveL' ? -1 : k.action === 'diveR' ? 1 : 0;
+  const dive = k.ai ? (Math.abs(k.x) > 20 ? Math.sign(k.x) : 0) : k.action === 'diveL' ? -1 : k.action === 'diveR' ? 1 : 0;
   const prog = k.action ? clamp(k.at / ACTION_MS, 0, 1) : 0;
-  const air = k.action ? Math.sin(Math.PI * prog) : 0;
+  const air = k.ai ? Math.min(1, Math.abs(k.x) / 52) : k.action ? Math.sin(Math.PI * prog) : 0;
   const bob = k.action ? 0 : Math.sin(t / 260) * 1.2;
   const walk = fx ? Math.sin(fx.walk * 6) : 0;
   const lean = dive * air * 0.55; // 撲救時身體往撲的方向倒(手臂維持水平,手套位置才對得上判定)
@@ -529,7 +617,9 @@ function drawShooter(c, s, pal) {
 
 // ---- 足球:白底+五邊形花紋+描邊;影子、拖尾 ----
 
-function drawBall(c, pal, { x, y, r }) {
+function drawBall(c, pal, { x, y, r }, weather) {
+  c.save();
+  if (weather === 'night') { c.shadowColor = pal.light; c.shadowBlur = 10; }
   circle(c, x, y, r);
   c.fillStyle = pal.ball;
   c.fill();
@@ -546,6 +636,7 @@ function drawBall(c, pal, { x, y, r }) {
   c.fillStyle = 'rgba(255,255,255,0.7)';
   circle(c, x - r * 0.35, y - r * 0.4, r * 0.18);
   c.fill();
+  c.restore();
 }
 
 function drawShadow(c, pal, { x, y, r }) {
@@ -555,11 +646,11 @@ function drawShadow(c, pal, { x, y, r }) {
   c.fill();
 }
 
-function drawTrail(c, pal, target, p) {
+function drawTrail(c, pal, target, p, state) {
   for (let i = 5; i >= 1; i--) {
     const q = p - i * 0.035;
     if (q <= 0) continue;
-    const b = ballAt(target, q);
+    const b = ballAt(target, q, state);
     c.globalAlpha = 0.09 * (6 - i);
     c.fillStyle = pal.ball;
     circle(c, b.x, b.y, b.r * (1 - i * 0.08));
@@ -627,10 +718,10 @@ function tag(c, pal, text, x, y, align = 'center') {
 
 // 球門(門柱+靜止的球網)也是靜態的,另存一層;只有進球震動時才逐幀重畫。
 const layers = new Map();
-function cachedLayers(c, pal) {
+function cachedLayers(c, pal, weather) {
   const scale = typeof OffscreenCanvas === 'function' ? c.getTransform?.()?.a : 0;
   if (!scale) return null;
-  const key = Math.round(scale * 100);
+  const key = `${Math.round(scale * 100)}|${weather}`;
   const hit = layers.get(key);
   if (hit && hit.pal === pal) return hit;
   const make = (paint) => {
@@ -640,55 +731,93 @@ function cachedLayers(c, pal) {
     paint(g);
     return cv;
   };
-  const out = { pal, bg: make((g) => paintBackground(g, pal)), goal: make((g) => drawGoal(g, pal, null, true)) };
+  const out = { pal, bg: make((g) => paintBackground(g, pal, weather)), goal: make((g) => drawGoal(g, pal, null, true)) };
   layers.set(key, out);
   return out;
 }
 
 // 畫一整個場面。fx = createFx() 的特效狀態(示範圖可傳 null);opts = { reduced }。
+function drawKickerView(c, s, pal) {
+  // 從罰球點看球門：近景只有自己的紅襪與球鞋，電腦守門員在遠處。
+  const kick = s.phase === 'flight' ? Math.max(0, 1 - s.t / 220) : 0;
+  for (const side of [-1, 1]) {
+    const x = CX + side * 35;
+    limb(c, x + side * 12, 392, x, 365 - (side > 0 ? kick * 30 : 0), pal['kid-jersey'], 12, pal);
+    c.fillStyle = pal.boot;
+    c.beginPath(); c.ellipse(x, 365 - (side > 0 ? kick * 30 : 0), 14, 7, side * 0.3, 0, Math.PI * 2); c.fill(); ink(c, pal);
+  }
+  if (['ready', 'aim', 'charge'].includes(s.phase)) {
+    const x = sx(s.aim.x), y = sy(s.aim.y);
+    // 弧度圖示只表示選擇，不預先洩露風偏後的落點。
+    c.strokeStyle = pal['zone-line']; c.lineWidth = 2; c.setLineDash([4, 5]);
+    c.beginPath(); c.moveTo(SPOT.x, SPOT.y);
+    const bend = s.curve === 'left' ? -60 : s.curve === 'right' ? 60 : 0;
+    c.quadraticCurveTo(CX + bend, s.curve === 'lob' ? 160 : 260, x, y); c.stroke(); c.setLineDash([]);
+    c.strokeStyle = pal.ink; c.lineWidth = 5;
+    circle(c, x, y, 11); c.stroke();
+    c.strokeStyle = pal.glove; c.lineWidth = 2.5; c.stroke();
+    c.beginPath(); c.moveTo(x - 17, y); c.lineTo(x + 17, y); c.moveTo(x, y - 17); c.lineTo(x, y + 17); c.stroke();
+    tag(c, pal, `${CURVE_NAMES[s.curve]} · ${s.phase === 'charge' ? '放開射門' : '點球門瞄準'}`, CX, 286);
+  }
+  // 力道條顏色與文字同時表示弱／適中／強，指示位置直接讀取規則狀態。
+  const x = 70, y = 315, w = 220;
+  roundRect(c, x, y, w, 16, 8); c.fillStyle = pal.hud; c.fill(); ink(c, pal);
+  c.fillStyle = pal.save; c.fillRect(x + w * KICK_PARAMS.weak, y + 3, w * (KICK_PARAMS.strong - KICK_PARAMS.weak), 10);
+  c.fillStyle = pal.goal; c.fillRect(x + w * KICK_PARAMS.strong, y + 3, w * (1 - KICK_PARAMS.strong) - 3, 10);
+  c.strokeStyle = pal.ink; c.lineWidth = 3;
+  const marker = x + w * s.power;
+  c.beginPath(); c.moveTo(marker, y - 3); c.lineTo(marker, y + 19); c.stroke();
+  tag(c, pal, `弱 ← 力道 ${Math.round(s.power * 100)}% → 強`, CX, 345);
+}
+
 export function drawScene(c, s, pal, fx = null, opts = {}) {
   c.save();
   if (fx && fx.shake > 0 && !opts.reduced) {
     const m = 5 * (fx.shake / 0.35);
     c.translate(Math.sin(fx.t / 11) * m, Math.cos(fx.t / 13) * m);
   }
-  const L = cachedLayers(c, pal);
+  const L = cachedLayers(c, pal, s.weather);
   if (L) c.drawImage(L.bg, 0, 0, FIELD_W, FIELD_H);
-  else paintBackground(c, pal);
+  else paintBackground(c, pal, s.weather);
   const shaking = fx?.net && fx.net.t < 900 && !opts.reduced;
   if (L && !shaking) c.drawImage(L.goal, 0, 0, FIELD_W, FIELD_H);
   else drawGoal(c, pal, fx, opts.reduced);
 
   const shot = s.shot;
   const r = (s.phase === 'result' || s.phase === 'over') ? lastResult(s) : null;
-  const flight = PARAMS[s.difficulty].flight;
+  const kicker = roleOf(s) === 'kicker';
+  const flight = kicker && shot ? kickFlightMs(shot, s.weather) : flightMs(s.difficulty, s.weather, shot?.target);
   const p = s.phase === 'flight' && shot ? s.t / flight : null;
 
-  drawZone(c, pal, saveZone(s.keeper, s.difficulty), p !== null);
-  if (p !== null) drawShadow(c, pal, shadowAt(shot.target, p));
+  drawZone(c, pal, kicker ? computerSaveZone(s) : saveZone(s.keeper, s.difficulty), p !== null);
+  if (p !== null) drawShadow(c, pal, shadowAt(shot.target, p, s));
   const hands = drawKeeper(c, s, pal, fx, r);
-  drawShooter(c, s, pal);
+  if (kicker) drawKickerView(c, s, pal);
+  else drawShooter(c, s, pal);
 
   if (p !== null) {
-    drawTrail(c, pal, shot.target, p);
-    drawBall(c, pal, ballAt(shot.target, p));
-  } else if (r === 'goal' && shot) {
-    drawBall(c, pal, ballAt(shot.target, 1));
+    drawTrail(c, pal, shot.target, p, s);
+    drawBall(c, pal, ballAt(shot.target, p, s), s.weather);
+  } else if (['goal', 'miss', 'high'].includes(r) && shot) {
+    drawBall(c, pal, ballAt(shot.target, 1, s), s.weather);
   } else if (r === 'save' && shot) { // 撲到:球停在比較近的那隻手套上
-    const tx = sx(shot.target.x);
+    const tx = sx(kicker ? kickImpact(s).x : impactTarget(s).x);
     const gx = Math.abs(tx - hands.gl) < Math.abs(tx - hands.grx) ? hands.gl : hands.grx;
-    drawBall(c, pal, { x: gx, y: hands.y - 7, r: 7 });
+    drawBall(c, pal, { x: gx, y: hands.y - 7, r: 7 }, s.weather);
   } else {
     drawShadow(c, pal, { x: SPOT.x, y: SPOT.y + 8, r: 9 });
-    drawBall(c, pal, { x: SPOT.x, y: SPOT.y, r: 10 });
+    drawBall(c, pal, { x: SPOT.x, y: SPOT.y, r: 10 }, s.weather);
   }
 
+  drawWeather(c, s, pal, fx, opts.reduced);
+  tag(c, pal, `${weatherFor(s.weather).name} · 分數 ×${weatherFor(s.weather).bonus}`, CX, 404);
   if (fx) drawParticles(c, fx, pal);
   // 連撲數、最後一球提示
   const streak = tally(s.log).streak;
-  if (streak >= 2 && s.phase !== 'ready') tag(c, pal, `連撲 ×${streak}`, FIELD_W - 10, 128, 'right');
-  if (s.log.length === s.total - 1 && ['wait', 'runup'].includes(s.phase)) tag(c, pal, '最後一球!', CX, 128);
+  if (!kicker && streak >= 2 && s.phase !== 'ready') tag(c, pal, `連撲 ×${streak}`, FIELD_W - 10, 128, 'right');
+  if (s.log.length === s.total - 1 && ['wait', 'runup', 'aim', 'charge'].includes(s.phase)) tag(c, pal, '最後一球!', CX, 128);
   if (fx?.pop && fx.pop.t < POP_MS) drawPop(c, pal, fx.pop);
-  else if (!fx && r) drawPop(c, pal, { text: r === 'save' ? '撲到了!' : 'GOAL!', kind: r, t: POP_MS * 0.5 });
+  else if (!fx && r) drawPop(c, pal, { text: r === 'save' ? (kicker ? '被撲出!' : '撲到了!')
+    : r === 'high' ? '高出橫梁!' : r === 'miss' ? '打偏了!' : 'GOAL!', kind: r, t: POP_MS * 0.5 });
   c.restore();
 }
