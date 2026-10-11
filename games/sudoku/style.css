@@ -21,6 +21,8 @@ h1 { font-size: 22px; margin: 0; }
 .cell.selected { background: var(--accent-bg); box-shadow: inset 0 0 0 2px var(--accent); }
 .cell.conflict { color: #b42318; background: #ffe4df; }
 .cell.conflict::after { content: '!'; position: absolute; top: 1px; right: 2px; font-size: 9px; font-weight: 700; }
+.cell.hint-related { background: var(--accent-bg); }
+.cell.hint-target { z-index: 1; box-shadow: inset 0 0 0 3px var(--accent); }
 .cell:focus-visible { z-index: 1; outline: 3px solid var(--accent); outline-offset: -3px; }
 .pencil { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); height: 100%; padding: 2px; font-size: clamp(8px, 2.4vw, 11px); color: var(--text-sub); }
 .pencil span { display: flex; justify-content: center; align-items: center; }
@@ -34,6 +36,15 @@ button:disabled { opacity: 0.55; cursor: default; }
 .overlay-info p { margin: 4px 0; }
 .overlay-xp { font-size: 18px; font-weight: 700; }
 .hint { font-size: 12px; color: var(--text-sub); text-align: center; }
+.assist-tools, .hint-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.assist-tools { margin-top: 8px; font-size: 14px; }
+.assist-tools label { display: flex; align-items: center; gap: 4px; min-height: 40px; }
+.assist-tools input { accent-color: var(--accent); }
+#assist-label { color: var(--text-sub); font-size: 12px; }
+.hint-message { padding: 8px; margin-top: 8px; background: var(--accent-bg); border-radius: var(--radius); }
+.hint-message[hidden] { display: none; }
+.hint-message p { font-size: 13px; line-height: 1.4; margin: 0 0 6px; overflow-wrap: anywhere; }
+.hint-actions .btn { flex: 1; }
 .demo-board .cell { display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: default; }
 @media (max-width: 400px) {
   .topbar { gap: 8px; }

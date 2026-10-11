@@ -1,0 +1,68 @@
+:root {
+  --mt-night: 0; --mt-grass: #a8ba83; --mt-grass-dark: #7a9960;
+  --mt-road: #d3b68b; --mt-road-hi: #e5cba4; --mt-road-dark: #ab8963;
+  --mt-ink: rgba(52,34,20,.85); --mt-shadow: rgba(60,40,20,.3);
+  --mt-mud: #876342; --mt-mud-hi: #b29163; --mt-wood: #be7446;
+  --mt-danger: #e85542; --mt-ramp: #65b786; --mt-skin: #ffdab5;
+  --mt-player: #ec5e55; --mt-blue: #448dd3; --mt-yellow: #edb842; --mt-purple: #a67bd4;
+  --mt-white: #fff7e4; --mt-eye: #292533; --mt-cheek: #f49b91;
+  --mt-metal: #6a7180; --mt-tire: #32313d; --mt-hud: rgba(255,250,240,.92);
+  --mt-text: #302c29; --mt-dust: #d4ad7a; --mt-lamp: #ffe2a6;
+}
+:root[data-theme="dark"] {
+  --mt-night: 1; --mt-grass: #354638; --mt-grass-dark: #26342e;
+  --mt-road: #6c605e; --mt-road-hi: #8d7970; --mt-road-dark: #51464b;
+  --mt-ink: rgba(6,5,12,.9); --mt-shadow: rgba(0,0,0,.45);
+  --mt-mud: #413333; --mt-mud-hi: #88705a; --mt-wood: #bd7752;
+  --mt-danger: #ff7961; --mt-ramp: #75d6a5; --mt-skin: #ffdab5;
+  --mt-player: #ff796d; --mt-blue: #70b2fa; --mt-yellow: #ffd165; --mt-purple: #c49af5;
+  --mt-white: #fff7e4; --mt-eye: #17151e; --mt-cheek: #f49b91;
+  --mt-metal: #a4a9bc; --mt-tire: #292832; --mt-hud: rgba(22,21,33,.92);
+  --mt-text: #fff0df; --mt-dust: #ad9990; --mt-lamp: #ffe2a6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --mt-night: 1; --mt-grass: #354638; --mt-grass-dark: #26342e;
+    --mt-road: #6c605e; --mt-road-hi: #8d7970; --mt-road-dark: #51464b;
+    --mt-ink: rgba(6,5,12,.9); --mt-shadow: rgba(0,0,0,.45);
+    --mt-mud: #413333; --mt-mud-hi: #88705a; --mt-wood: #bd7752;
+    --mt-danger: #ff7961; --mt-ramp: #75d6a5; --mt-skin: #ffdab5;
+    --mt-player: #ff796d; --mt-blue: #70b2fa; --mt-yellow: #ffd165; --mt-purple: #c49af5;
+    --mt-white: #fff7e4; --mt-eye: #17151e; --mt-cheek: #f49b91;
+    --mt-metal: #a4a9bc; --mt-tire: #292832; --mt-hud: rgba(22,21,33,.92);
+    --mt-text: #fff0df; --mt-dust: #ad9990; --mt-lamp: #ffe2a6;
+  }
+}
+.page-fit { display: flex; flex-direction: column; height: 100vh; height: 100dvh; padding: 12px 12px 8px; }
+.page-fit .topbar { flex-wrap: nowrap; gap: 4px; margin-bottom: 8px; }
+.topbar .btn { white-space: nowrap; padding-inline: 6px; }
+.topbar .navigation { gap: 2px; }
+.topbar .navigation .btn { padding-inline: 5px; font-size: 13px; }
+.topbar .stats { display: flex; gap: 3px; }
+.topbar .stats .stat { min-width: 0; padding: 2px 3px; }
+.topbar .stats .stat-value { font-size: 14px; }
+.topbar .stats .btn { padding-inline: 6px; }
+.actions { display: flex; gap: 6px; margin-bottom: 8px; }
+.actions .btn { flex: 1; min-width: 0; white-space: nowrap; padding-inline: 6px; }
+select.btn { appearance: auto; }
+.stage-area { flex: 1 1 auto; min-height: 0; container-type: size; display: flex; justify-content: center; align-items: flex-start; }
+.stage { position: relative; aspect-ratio: 9 / 16; width: min(100cqw, 100cqh * 9 / 16); }
+.stage canvas { display: block; width: 100%; height: 100%; border: 1px solid var(--border); border-radius: 12px; background: var(--mt-road); }
+.controls { display: grid; grid-template-columns: 1fr 1fr 1.25fr 1.25fr; gap: 6px; margin-top: 8px; }
+.controls .btn { min-width: 56px; min-height: 56px; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; white-space: nowrap; font-size: 18px; }
+.controls .brake { border-color: var(--mt-danger); }
+.controls .throttle { border-color: var(--mt-ramp); }
+.controls .held { background: var(--mt-road-dark); color: var(--mt-white); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.overlay { position: absolute; inset: 0; border-radius: 12px; background: rgba(15,12,22,.8); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 8px; }
+.overlay[hidden] { display: none; }
+.overlay-title { font-size: 23px; font-weight: 700; margin: 0; }
+.overlay-info { font-size: 13px; text-align: center; }
+.overlay-info p { margin: 4px 0; }
+.overlay-info a { color: #ffe2a6; }
+.overlay-xp { font-size: 17px; font-weight: 700; }
+.overlay-actions .btn { min-height: 48px; min-width: 120px; }
+.hint { flex: none; color: var(--text-sub); text-align: center; font-size: 11px; margin: 6px 0 0; white-space: nowrap; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.demo-field { display: block; width: 100%; max-width: 150px; margin: auto; border: 1px solid var(--border); border-radius: 8px; }
+@media (max-width: 359px) { .topbar .navigation .game-version { display: none; } .page-fit { padding-inline: 8px; } }

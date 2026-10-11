@@ -1,4 +1,4 @@
-import { initState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, clockState, resumeState, demoSteps } from './logic.js';
+import { initState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave } from './logic.js';
 import { createProfile } from '../../shared/profile.js';
 import { LocalStore } from '../../shared/stores/local.js';
 import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
@@ -13,13 +13,15 @@ const $ = (id) => document.getElementById(id);
 const visible = () => document.visibilityState !== 'hidden';
 const profile = await createProfile({ store: new LocalStore() });
 const saved = await profile.loadSave(GAME_ID);
-let state = saved ? resumeState(saved, Date.now(), visible()) : initState();
+let state = saved ? resumeState(fromSave(saved), Date.now(), visible()) : initState();
 let best = await profile.best(GAME_ID);
 let cursor = Math.max(0, state.puzzle.indexOf(0));
 let noteMode = false;
 let ended = null;
 let restarting = false;
 let profileStarted = false;
+let activeHint = null;
+let pendingAssist = null;
 let queue = Promise.resolve();
 const run = (fn) => { queue = queue.then(fn).catch((error) => console.error(error)); return queue; };
 const cells = Array.from({ length: 81 }, (_, i) => {
@@ -45,7 +47,7 @@ function input() {
   state = clockState(state, 'input', Date.now(), visible());
 }
 function persist() {
-  if (ended || restarting || !state.moves) return queue;
+  if (ended || restarting) return queue;
   const snap = structuredClone(state);
   return run(() => profile.saveState(GAME_ID, snap));
 }
@@ -57,14 +59,24 @@ function render() {
   const bad = new Set(conflicts(state.board));
   const locked = !!ended || restarting || !!state.result;
   cells.forEach((cell, i) => {
-    cell.className = `cell${state.puzzle[i] ? ' given' : ''}${i === cursor ? ' selected' : ''}${bad.has(i) ? ' conflict' : ''}`;
-    cell.innerHTML = state.board[i] ? String(state.board[i]) : `<span class="pencil">${numbers.map((_, n) => `<span>${state.notes[i].includes(n + 1) ? n + 1 : ''}</span>`).join('')}</span>`;
-    cell.setAttribute('aria-label', `第 ${Math.floor(i / 9) + 1} 列第 ${i % 9 + 1} 格，${state.board[i] || '空格'}${state.puzzle[i] ? '，題目給定' : ''}${state.notes[i].length ? `，筆記 ${state.notes[i].join('、')}` : ''}${bad.has(i) ? '，衝突' : ''}`);
+    cell.className = `cell${state.puzzle[i] ? ' given' : ''}${i === cursor ? ' selected' : ''}${bad.has(i) ? ' conflict' : ''}${activeHint?.related.includes(i) ? ' hint-related' : ''}${activeHint?.index === i ? ' hint-target' : ''}`;
+    const shown = state.autoCand ? candidates(state.board, i) : state.notes[i];
+    cell.replaceChildren();
+    if (state.board[i]) cell.textContent = state.board[i];
+    else {
+      cell.textContent = '';
+      const pencil = document.createElement('span'); pencil.className = 'pencil';
+      for (let n = 1; n <= 9; n++) {
+        const digit = document.createElement('span'); digit.textContent = shown.includes(n) ? n : ''; pencil.append(digit);
+      }
+      cell.append(pencil);
+    }
+    cell.setAttribute('aria-label', `第 ${Math.floor(i / 9) + 1} 列第 ${i % 9 + 1} 格，${state.board[i] || '空格'}${state.puzzle[i] ? '，題目給定' : ''}${shown.length ? `，${state.autoCand ? '候選' : '筆記'} ${shown.join('、')}` : ''}${bad.has(i) ? '，衝突' : ''}${activeHint?.index === i ? '，提示格' : ''}`);
     cell.setAttribute('aria-disabled', String(locked || !!state.puzzle[i]));
     cell.tabIndex = !locked && i === cursor ? 0 : -1;
   });
   $('score').textContent = state.score;
-  $('best').textContent = Math.max(best, state.score);
+  $('best').textContent = state.assist ? best : Math.max(best, state.score);
   $('clues').textContent = clueCount(state.puzzle);
   $('difficulty').value = state.difficulty;
   $('difficulty').disabled = restarting || !!ended;
@@ -74,6 +86,14 @@ function render() {
   $('notes').setAttribute('aria-pressed', String(noteMode));
   $('notes').textContent = `✎ 筆記：${noteMode ? '開' : '關'}`;
   $('clear').disabled = locked || !!state.puzzle[cursor];
+  $('hint-button').disabled = locked;
+  $('auto-cand').disabled = locked;
+  $('auto-cand').checked = state.autoCand;
+  $('assist-label').hidden = !state.assist;
+  $('hint-message').hidden = !activeHint;
+  $('hint-text').textContent = activeHint?.text ?? '';
+  $('hint-apply').textContent = activeHint?.type === 'wrong' ? '清除這格' : '填入答案';
+  $('hint-apply').disabled = locked;
   numbers.forEach((btn) => { btn.disabled = locked || !!state.puzzle[cursor]; });
   $('status').textContent = restarting ? '正在產生唯一解題目…' : state.result ? '本局已完成' : bad.size ? `${bad.size} 格有衝突，紅色 ! 格可修改` : state.puzzle[cursor] ? '這是題目給定格，請選空格' : noteMode ? '筆記模式：再按同一數字可移除' : '選一格，再填入數字';
   renderTime();
@@ -88,11 +108,12 @@ function render() {
   add(`本局 +${ended.xpGained} XP`, 'overlay-xp');
   appendXpBreakdown(info, ended.xpBreakdown, document);
   add(`${secondsFor(state)} 秒 · ${state.score} 分`);
+  if (ended.assist) add('🧩 輔助局:不刷新最佳');
   if (ended.newAchievements.length) add(`新成就：${ended.newAchievements.map((id) => {
     const a = ACHIEVEMENTS.find((item) => item.id === id);
     return a ? `${a.icon} ${a.name}` : id;
   }).join('、')}`);
-  const bestText = bestLine({ isBest: ended.play.is_best, bestBefore: ended.bestBefore, score: state.score });
+  const bestText = bestLine({ isBest: ended.play.is_best, bestBefore: ended.bestBefore, score: state.score, assist: ended.assist });
   if (bestText) add(bestText);
 }
 
@@ -103,14 +124,14 @@ function finish(result) {
   return run(async () => {
     const bestBefore = best;
     const out = await settlePlay(profile, GAME_ID, { result, score: snap.score,
-      difficulty: snap.difficulty, detail: detailFor(snap) });
+      difficulty: snap.difficulty, detail: detailFor(snap), assist: snap.assist });
     if (!out) { // 結算失敗且選「不存了」:不記錄、開新局(IR6);開新局流程中則交給它
       ended = { abandoned: true };
       if (!restarting) newGame();
       return;
     }
     if (out.play.is_best) best = Math.max(best, snap.score);
-    ended = { ...out, bestBefore }; render();
+    ended = { ...out, bestBefore, assist: snap.assist }; render();
     if (snap.result && !document.querySelector('dialog[open]')) $('again').focus();
   });
 }
@@ -119,23 +140,39 @@ function afterChange() {
   if (state.result) return finish('win');
   return persist();
 }
-function play(value) {
+function play(value, index = cursor, asNote = noteMode) {
   if (ended || restarting) return;
   input();
-  const next = stepState(state, cursor, value, noteMode);
+  const next = stepState(state, index, value, asNote);
   if (next === state) return;
-  state = next; afterChange();
+  state = next; activeHint = null; afterChange();
 }
 function undo() {
   if (ended || restarting) return;
   input();
   const next = undoState(state);
   if (next === state) return;
-  state = next; afterChange();
+  state = next; activeHint = null; afterChange();
 }
 function toggleNotes() {
   if (ended || restarting || state.result) return;
   input(); noteMode = !noteMode; render();
+}
+
+function useAssist(kind) {
+  if (ended || restarting || state.result) return;
+  input();
+  state = assistState(state);
+  if (kind === 'hint') activeHint = nextHint(state);
+  else state = autoCandState(state, true);
+  persist(); render();
+}
+function requestAssist(kind) {
+  if (ended || restarting || state.result) return;
+  if (kind === 'hint' && activeHint) { activeHint = null; render(); return; }
+  if (state.assist) { useAssist(kind); return; }
+  pendingAssist = kind;
+  $('assist-dlg').showModal();
 }
 let confirmingQuit = false;
 async function newGame(difficulty = state.difficulty) {
@@ -153,18 +190,22 @@ async function newGame(difficulty = state.difficulty) {
   state = clockState(state, 'tick', Date.now());
   restarting = true; render();
   if (!ended && result) await finish(result);
+  else if (!ended) await run(() => profile.discardSave(GAME_ID));
   await queue;
   state = initState(difficulty);
-  ended = null; noteMode = false; cursor = Math.max(0, state.puzzle.indexOf(0)); profileStarted = false;
+  ended = null; noteMode = false; activeHint = null; cursor = Math.max(0, state.puzzle.indexOf(0)); profileStarted = false;
   best = await profile.best(GAME_ID);
-  restarting = false; render(); cells[cursor].focus();
+  restarting = false; render(); persist(); cells[cursor].focus();
 }
 
 $('board').addEventListener('click', (event) => {
   if (ended || restarting || state.result) return;
   const cell = event.target.closest('[data-index]');
   if (!cell) return;
-  input(); cursor = Number(cell.dataset.index); render(); cells[cursor].focus();
+  input();
+  const index = Number(cell.dataset.index);
+  if (index !== activeHint?.index) activeHint = null;
+  cursor = index; render(); cells[cursor].focus();
 });
 document.addEventListener('keydown', (event) => {
   if (document.querySelector('dialog[open]') || ended || restarting || state.result || event.altKey) return;
@@ -172,7 +213,10 @@ document.addEventListener('keydown', (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); undo(); return; }
   if (event.ctrlKey || event.metaKey) return;
   if (event.key.startsWith('Arrow')) {
-    event.preventDefault(); input(); cursor = cursorMove(cursor, event.key); render(); cells[cursor].focus();
+    event.preventDefault(); input();
+    const index = cursorMove(cursor, event.key);
+    if (index !== activeHint?.index) activeHint = null;
+    cursor = index; render(); cells[cursor].focus();
   } else if (/^[1-9]$/.test(event.key)) { event.preventDefault(); play(Number(event.key)); }
   else if (['0', 'Backspace', 'Delete'].includes(event.key)) { event.preventDefault(); play(0); }
   else if (event.key.toLowerCase() === 'n') { event.preventDefault(); toggleNotes(); }
@@ -187,6 +231,32 @@ $('undo').addEventListener('click', undo);
 $('notes').addEventListener('click', toggleNotes);
 $('clear').addEventListener('click', () => play(0));
 $('difficulty').addEventListener('change', () => newGame($('difficulty').value));
+$('hint-button').addEventListener('click', () => requestAssist('hint'));
+$('auto-cand').addEventListener('change', () => {
+  const on = $('auto-cand').checked;
+  $('auto-cand').checked = state.autoCand;
+  if (ended || restarting || state.result) return;
+  if (on) requestAssist('candidates');
+  else { input(); state = autoCandState(state, false); persist(); render(); }
+});
+$('assist-dlg').addEventListener('click', (event) => {
+  const act = event.target.closest('[data-act]')?.dataset.act;
+  if (act !== 'assist' && act !== 'cancel') return;
+  const kind = pendingAssist;
+  pendingAssist = null;
+  $('assist-dlg').close();
+  if (act === 'assist' && kind) useAssist(kind);
+});
+$('assist-dlg').addEventListener('cancel', () => { pendingAssist = null; });
+$('assist-dlg').addEventListener('close', () => { pendingAssist = null; cells[cursor].focus(); });
+$('hint-dismiss').addEventListener('click', () => { activeHint = null; render(); cells[cursor].focus(); });
+$('hint-apply').addEventListener('click', () => {
+  if (!activeHint || ended || restarting || state.result) return;
+  const hint = activeHint;
+  cursor = hint.index;
+  play(hint.type === 'wrong' ? 0 : hint.value, hint.index, false);
+  if (!state.result) cells[cursor].focus();
+});
 document.addEventListener('visibilitychange', () => {
   state = clockState(state, visible() ? 'visible' : 'hidden', Date.now());
   if (!visible()) persist();
@@ -208,15 +278,23 @@ if (state.result) finish('win');
 setupHelp({
   gameId: GAME_ID, title: '數獨玩法', mountAfter: document.querySelector('.navigation .btn'),
   rules: `<ol>
-    <li>每列、欄、3×3 宮的 1–9 各一次；題目格不可改。</li>
-    <li>點格或方向鍵選格，按 1–9／數字盤填入；0、退格、Delete 或清除可清空。</li>
-    <li>筆記可多選，再按移除；正式填入會清除同行、欄、宮的同數字筆記。</li>
-    <li>重複數字標紅但可填；復原不限步數，完成後鎖定。</li>
-    <li>重開／切難度：已操作未完成記退出；第一次輸入開始計時。</li>
-    <li>填滿且無衝突即勝；分數=max(1,10000−秒數)，最佳為單局最高分。</li>
+    <li>每列、欄、3×3 宮的 1–9 各一次，題目格不可改。入門有 46 提示。</li>
+    <li>點格／方向鍵選格，1–9 填入，0／退格／Delete 清空。</li>
+    <li>筆記可多選再按移除；正式填入清除同列、欄、宮同數筆記。衝突標紅，可復原，完成後鎖定。</li>
+    <li>💡 提示會說明理由；自動候選取代筆記顯示。入門預設開啟。</li>
+    <li>入門或用了提示就是輔助局：不刷新最佳、XP 打對折。</li>
+    <li>首次輸入計時；操作後重開記退出。填滿無衝突即勝，分數=max(1,10000−秒數)。</li>
   </ol>`,
-  demo: { steps: demoSteps().map((s, i) => ({ ...s, kind: ['fail', 'fail', 'ok'][i] })), render: (board) => {
+  demo: { steps: demoSteps().map((s, i) => ({ ...s, kind: ['fail', 'fail', undefined, 'ok'][i] })), render: (frame) => {
+    const board = frame.board ?? frame;
+    const hint = frame.hint;
     const bad = new Set(conflicts(board));
-    return `<div class="board demo-board">${board.map((v, i) => `<div class="cell${bad.has(i) ? ' conflict' : ''}">${v || ''}</div>`).join('')}</div>`;
+    const demo = document.createElement('div'); demo.className = 'board demo-board';
+    board.forEach((v, i) => {
+      const cell = document.createElement('div');
+      cell.className = `cell${bad.has(i) ? ' conflict' : ''}${hint?.related.includes(i) ? ' hint-related' : ''}${hint?.index === i ? ' hint-target' : ''}`;
+      cell.textContent = v || ''; demo.append(cell);
+    });
+    return demo.outerHTML;
   } },
 });

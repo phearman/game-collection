@@ -2,7 +2,7 @@
 import { timerInit, timerEvent } from '../../shared/progress.js';
 
 export const SIZE = 9;
-export const DIFFICULTIES = { normal: 40, hard: 32, expert: 26 };
+export const DIFFICULTIES = { easy: 46, normal: 40, hard: 32, expert: 26 };
 const ALL = 0x3fe;
 const indices = Array.from({ length: 81 }, (_, i) => i);
 const rowOf = (i) => Math.floor(i / 9);
@@ -79,6 +79,67 @@ export const solve = (board) => search(board, 1).solution;
 export const generateSolution = (rng = Math.random) => search(Array(81).fill(0), 1, rng).solution;
 export const clueCount = (board) => board.filter(Boolean).length;
 
+export function candidates(board, index) {
+  if (!isBoard(board) || !isIndex(index) || board[index]) return [];
+  const used = new Set(peers[index].map((i) => board[i]));
+  return digits(ALL).filter((n) => !used.has(n));
+}
+
+// 先排除玩家錯誤，再以固定格序／列、欄、宮順序推理。
+// value 一律來自題目的正解；related 是畫面需要淡色標示的格子。
+export function nextHint(state) {
+  if (state.result || !isBoard(state.puzzle) || !isBoard(state.board)) return null;
+  const solution = solve(state.puzzle);
+  if (!solution) return null;
+  const hint = (type, index, text, related = [], unit = null) => ({
+    type, index, value: solution[index], text, related, unit,
+  });
+  for (const i of indices) {
+    if (!state.puzzle[i] && state.board[i] && state.board[i] !== solution[i]) {
+      return hint('wrong', i, `這格填錯了,正確答案不是 ${state.board[i]}`);
+    }
+  }
+  const empty = indices.filter((i) => !state.board[i]);
+  const options = empty.map((i) => candidates(state.board, i));
+  for (let j = 0; j < empty.length; j++) {
+    if (options[j].length === 1) {
+      const i = empty[j], n = options[j][0];
+      return hint('naked', i, `第 ${rowOf(i) + 1} 列第 ${colOf(i) + 1} 欄:同列、同欄、同宮已經出現其他 8 個數字,只剩 ${n} 能填`, peers[i]);
+    }
+  }
+  for (let u = 0; u < UNITS.length; u++) {
+    const unit = UNITS[u];
+    for (const i of unit) {
+      const at = empty.indexOf(i);
+      if (at === -1) continue;
+      for (const n of options[at]) {
+        const places = empty.filter((j, k) => unit.includes(j) && options[k].includes(n));
+        if (places.length !== 1) continue;
+        const label = u < 9 ? `第 ${u + 1} 列` : u < 18 ? `第 ${u - 8} 欄` : '這個宮';
+        return hint('hidden', i, `${label}裡,${n} 只能放在這格`, unit.slice(),
+          { type: u < 9 ? 'row' : u < 18 ? 'column' : 'box', index: u % 9 });
+      }
+    }
+  }
+  if (!empty.length) return null;
+  let at = 0;
+  for (let j = 1; j < empty.length; j++) if (options[j].length < options[at].length) at = j;
+  return hint('answer', empty[at], '這一步需要進階推理,直接告訴你一格答案');
+}
+
+export function assistState(state) {
+  return state.result || state.assist ? state : { ...state, assist: true };
+}
+
+export function autoCandState(state, on) {
+  if (state.result || typeof on !== 'boolean') return state;
+  const next = on ? assistState(state) : state;
+  return next.autoCand === on ? next : { ...next, autoCand: on };
+}
+
+// 舊存檔缺少輔助欄位時補 false，不改動棋盤、筆記與歷史。
+export const fromSave = (state) => ({ ...state, assist: state.assist ?? false, autoCand: state.autoCand ?? false });
+
 // 無法移除的格放回；走完全部格仍達不到目標時保留最接近的唯一解。
 export function carvePuzzle(solution, target, rng = Math.random) {
   if (!hasWon(solution) || !Number.isInteger(target) || target < 0 || target > 81) throw new Error('invalid puzzle source');
@@ -128,7 +189,8 @@ export function stateWithPuzzle(puzzle, difficulty = 'normal') {
   if (!Object.hasOwn(DIFFICULTIES, difficulty) || countSolutions(puzzle) !== 1) throw new Error('invalid puzzle');
   const result = hasWon(puzzle) ? 'win' : null;
   return { puzzle: puzzle.slice(), board: puzzle.slice(), notes: indices.map(() => []), history: [],
-    difficulty, moves: 0, clock: null, result, score: scoreFor(result, 0) };
+    difficulty, assist: difficulty === 'easy', autoCand: difficulty === 'easy',
+    moves: 0, clock: null, result, score: scoreFor(result, 0) };
 }
 export const initState = (difficulty = 'normal', rng = Math.random) => stateWithPuzzle(generatePuzzle(difficulty, rng), difficulty);
 
@@ -192,7 +254,7 @@ function validSnapshot(s, puzzle) {
     && Array.isArray(s.notes) && s.notes.length === 81 && Array.from(s.notes).every((n, i) => Array.isArray(n)
       && (!s.board[i] || !n.length) && Array.from(n).every((v, j) => Number.isInteger(v) && v >= 1 && v <= 9 && (j === 0 || n[j - 1] < v)));
 }
-// 提示數區間:下限 = 該難度提示數,上限 = 低一級難度的提示數(不含);一般難度無上限。
+// 提示數區間:下限 = 該難度提示數,上限 = 低一級難度的提示數(不含);入門難度無上限。
 export function inClueRange(clues, difficulty) {
   const min = DIFFICULTIES[difficulty];
   const easier = Object.values(DIFFICULTIES).filter((n) => n > min);
@@ -202,6 +264,10 @@ export function inClueRange(clues, difficulty) {
 export function isValidState(s) {
   if (!s || !Object.hasOwn(DIFFICULTIES, s.difficulty) || !isBoard(s.puzzle)
     || clueCount(s.puzzle) < DIFFICULTIES[s.difficulty] || !validSnapshot(s, s.puzzle) || !count(s.moves)) return false;
+  if ((s.assist !== undefined && typeof s.assist !== 'boolean')
+    || (s.autoCand !== undefined && typeof s.autoCand !== 'boolean')
+    || (s.difficulty === 'easy' && s.assist !== true)
+    || (s.autoCand === true && s.assist !== true)) return false;
   if (!Array.isArray(s.history) || s.history.length > s.moves
     || !Array.from(s.history).every((p) => validSnapshot(p, s.puzzle) && !hasWon(p.board))) return false;
   if (s.clock !== null && (!s.clock || !Number.isFinite(s.clock.ms) || s.clock.ms < 0
@@ -223,9 +289,11 @@ export function demoSteps() {
   const puzzle = solution.slice(); puzzle[0] = 0;
   const start = stateWithPuzzle(puzzle);
   const bad = stepState(start, 0, 2);
+  const hint = nextHint(start);
   return [
     { before: start.board, after: stepState(start, 1, 8).board, caption: '題目給定格不能改，盤面保持原樣。' },
     { before: start.board, after: bad.board, caption: '填入重複的 2，衝突格標紅，仍可修改。' },
+    { before: start.board, after: { board: start.board, hint }, caption: '按 💡 提示，先看推理理由，不會自動填入。', result: hint.text, hint },
     { before: bad.board, after: stepState(bad, 0, 1).board, caption: '改成 1，填滿且沒有衝突，完成數獨。' },
   ];
 }
