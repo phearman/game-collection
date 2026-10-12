@@ -1,36 +1,59 @@
-import { cloudEnabled } from '../shared/supabase-config.js?v=a780d21';
-import { GAMES } from '../shared/games.js?v=a780d21';
-import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=a780d21';
+import { cloudEnabled } from '../shared/supabase-config.js?v=71fb506';
+import { GAMES } from '../shared/games.js?v=71fb506';
+import { createPendingGroupsClient } from './line.js?v=71fb506';
+import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=71fb506';
 
 // 注入 runtime/client 供測試；未通過管理者檢查不讀取回饋。
-export async function initAdmin({ doc = globalThis.document, runtime, client } = {}) {
+export async function initAdmin({ doc = globalThis.document, view = doc.defaultView ?? globalThis.window,
+  runtime, client, pendingClient, confirm = (text) => globalThis.confirm(text) } = {}) {
   const $ = (id) => doc.getElementById(id);
   const node = (tag, text, cls) => element(doc, tag, text, cls);
   let rows = [];
   let epoch = 0;
   let loading = false;
-  $('admin-content').hidden = true;
+  let groupEpoch = 0;
+  let groupsLoading = false;
+  let authorized = false;
+  const tabs = ['feedback', 'line-groups'];
+  const selectTab = (tab, focus = false) => {
+    if (!authorized) return;
+    if (!tabs.includes(tab)) tab = 'feedback';
+    for (const name of tabs) {
+      const button = $(`tab-${name}`);
+      const selected = name === tab;
+      button.setAttribute('aria-selected', String(selected)); button.tabIndex = selected ? 0 : -1;
+      $(name === 'feedback' ? 'admin-content' : 'line-groups-panel').hidden = !selected;
+    }
+    if (view?.location && view.location.hash !== `#${tab}`) view.location.hash = tab;
+    if (focus) $(`tab-${tab}`).focus();
+  };
+  for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel']) $(id).hidden = true;
   const hideData = () => {
+    authorized = false;
     rows = [];
-    $('admin-content').hidden = true;
+    for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel']) $(id).hidden = true;
     $('feedback-rows').replaceChildren();
+    for (const id of ['pending-groups', 'allowed-groups', 'group-actions']) $(id).replaceChildren();
     $('count').textContent = '';
+    $('groups-status').textContent = '';
+    $('tab-line-groups').textContent = 'LINE 群組';
   };
   const addOptions = (select, options) => {
     for (const [value, label] of Object.entries(options)) {
       const option = node('option', label); option.value = value; select.append(option);
     }
   };
-  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=a780d21')).getCloudRuntime() : null);
+  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=71fb506')).getCloudRuntime() : null);
   if (!rt?.auth.session) {
     hideData();
     $('access').textContent = '登入後才能查看回饋後台'; $('login').hidden = false;
     return;
   }
   client ??= createFeedbackClient({ auth: rt.auth });
+  pendingClient ??= createPendingGroupsClient({ auth: rt.auth, client });
   const userId = rt.auth.session.user.id;
   const filters = () => ({ game: $('filter-game').value, kind: $('filter-kind').value,
-    status: $('filter-status').value, keyword: $('keyword').value });
+    status: $('filter-status').value, keyword: $('keyword').value, channel: $('filter-channel').value });
   const visible = () => filterFeedback(rows, filters());
 
   const render = () => {
@@ -39,12 +62,30 @@ export async function initAdmin({ doc = globalThis.document, runtime, client } =
     $('feedback-rows').replaceChildren();
     for (const row of selected) {
       const tr = node('tr');
+      const isLine = row.channel === 'line';
       const game = GAMES.find((g) => g.id === row.game_id)?.title ?? (row.game_id === 'lobby' ? '大廳' : row.game_id);
-      for (const [index, text] of [new Date(row.created_at).toLocaleString(), displayName(row.display_name), game,
-        KINDS[row.kind] ?? row.kind, row.body, DEVICES[row.device] ?? row.device, row.app_version].entries()) {
-        tr.append(node('td', text, index === 4 ? 'body' : ''));
+      const author = isLine
+        ? `${displayName(row.display_name)} · ${LINE_SOURCES[row.source_type] ?? '來源未提供'}` : displayName(row.display_name);
+      const created = new Date(row.created_at);
+      const pad = (value) => String(value).padStart(2, '0');
+      const time = node('td', '', 'feedback-time');
+      time.append(node('span', `${created.getFullYear()}/${pad(created.getMonth() + 1)}/${pad(created.getDate())}`),
+        node('span', `${pad(created.getHours())}:${pad(created.getMinutes())}`));
+      tr.append(time);
+      for (const [cls, label, text] of [
+        ['feedback-channel', '', CHANNELS[row.channel ?? 'web'] ?? row.channel],
+        ['feedback-author', '送出者與來源', author],
+        ['feedback-game', '遊戲', isLine ? '—' : game],
+        ['feedback-kind', '類型', KINDS[row.kind] ?? row.kind],
+        ['body', '內容', row.body],
+        ['feedback-device', '裝置', isLine ? '—' : DEVICES[row.device] ?? row.device],
+        ['feedback-version', '版本', isLine ? '—' : row.app_version],
+      ]) {
+        const cell = node('td', text, cls);
+        if (label) cell.setAttribute('data-label', label);
+        tr.append(cell);
       }
-      const actions = node('td');
+      const actions = node('td', '', 'feedback-actions');
       const statusLabel = node('label', '狀態');
       const status = node('select'); addOptions(status, STATUSES); status.value = row.status;
       statusLabel.append(status);
@@ -107,7 +148,7 @@ export async function initAdmin({ doc = globalThis.document, runtime, client } =
           const updated = await client.update(row.id, status.value, note.value, fields);
           if (savedEpoch !== epoch || rt.auth.session?.user.id !== userId) return;
           const index = rows.findIndex((r) => r.id === row.id);
-          if (index >= 0) rows[index] = { ...updated, display_name: row.display_name };
+          if (index >= 0) rows[index] = { ...updated, display_name: row.display_name, source_type: row.source_type };
           message.textContent = '已儲存';
           if (history.open) await loadHistory();
           // 改狀態後讓篩選結果一致；無篩選時保留儲存提示與焦點。
@@ -121,18 +162,98 @@ export async function initAdmin({ doc = globalThis.document, runtime, client } =
     }
   };
 
+  const groupLabel = (group) => group.group_name || '(未取得名稱)';
+  const groupButtons = (container, group, approved) => {
+    const buttons = [];
+    const message = node('p'); message.setAttribute('role', 'status');
+    for (const action of approved ? ['revoke', 'refresh_name'] : ['approve', 'ignore']) {
+      const label = { approve: '核准', ignore: '忽略', revoke: '撤銷', refresh_name: '更新名稱' }[action];
+      const button = node('button', label, 'btn'); button.type = 'button'; buttons.push(button);
+      button.addEventListener('click', async () => {
+        if (button.disabled || groupsLoading || !authorized || rt.auth.session?.user.id !== userId) return;
+        const prompt = action === 'revoke' ? `撤銷「${groupLabel(group)}」？之後的訊息不再收，已收到的回饋保留。`
+          : action === 'ignore' ? `忽略「${groupLabel(group)}」？將移除待核准登記，之後加入或傳 #回饋 會再次登記。`
+            : `核准「${groupLabel(group)}」？之後的文字回饋將開始收取。`;
+        if (action !== 'refresh_name' && !confirm(prompt)) return;
+        const savedEpoch = groupEpoch;
+        buttons.forEach((item) => { item.disabled = true; }); message.textContent = '處理中…';
+        try {
+          // Recheck approval in case another admin approved a row already on this screen.
+          const duplicate = action === 'approve' && (await pendingClient.listAllowedGroups())
+            .some((item) => item.group_id === group.group_id);
+          if (groupEpoch !== savedEpoch || rt.auth.session?.user.id !== userId) return;
+          const method = duplicate ? 'ignoreGroup' : action === 'refresh_name' ? 'refreshGroupName' : `${action}Group`;
+          await pendingClient[method](group.group_id);
+          if (groupEpoch !== savedEpoch || rt.auth.session?.user.id !== userId) return;
+          await loadGroups(duplicate ? '此群組已核准,已清除重複的待核准紀錄'
+            : action === 'refresh_name' ? '已更新群組名稱' : '');
+        } catch (err) {
+          if (groupEpoch === savedEpoch && rt.auth.session?.user.id === userId) message.textContent = `操作失敗：${err.message}`;
+        } finally { buttons.forEach((item) => { item.disabled = false; }); }
+      });
+      container.append(button);
+    }
+    container.append(message);
+  };
+  const renderGroups = (pending, allowed, actions) => {
+    const allowedIds = new Set(allowed.map((group) => group.group_id));
+    pending = pending.filter((group) => !allowedIds.has(group.group_id));
+    $('tab-line-groups').textContent = pending.length ? `LINE 群組 (${pending.length})` : 'LINE 群組';
+    for (const id of ['pending-groups', 'allowed-groups', 'group-actions']) $(id).replaceChildren();
+    if (!pending.length) $('pending-groups').append(node('p', '目前沒有待核准群組。'));
+    if (!allowed.length) $('allowed-groups').append(node('p', '目前沒有已核准群組。'));
+    if (!actions.length) $('group-actions').append(node('p', '尚無操作紀錄。'));
+    for (const [groups, approved, target] of [[pending, false, 'pending-groups'], [allowed, true, 'allowed-groups']]) {
+      for (const group of groups) {
+        const item = node('div', '', 'admin-card');
+        const times = approved ? `核准：${new Date(group.approved_at).toLocaleString()} · ${group.bot_present ? '機器人在群組' : '機器人已不在群組'}`
+          : `首次：${new Date(group.first_seen_at).toLocaleString()} · 最後：${new Date(group.last_seen_at).toLocaleString()}`;
+        item.append(node('p', `${groupLabel(group)} · ${group.source_type === 'room' ? '多人聊天室' : '群組'} · groupId：${group.group_id}`), node('p', times));
+        groupButtons(item, group, approved); $(target).append(item);
+      }
+    }
+    for (const entry of actions) $('group-actions').append(node('p',
+      `${new Date(entry.created_at).toLocaleString()} · ${{ approve: '核准', ignore: '忽略', revoke: '撤銷' }[entry.action] ?? entry.action} · ${groupLabel(entry)} · 操作者：${displayName(entry.actor_display_name)}`));
+  };
+
+  const loadGroups = async (successMessage = '') => {
+    const current = ++groupEpoch;
+    groupsLoading = true; $('reload-groups').disabled = true;
+    $('groups-status').textContent = '載入中…';
+    try {
+      const pending = await pendingClient.listPendingGroups();
+      if (groupEpoch !== current || rt.auth.session?.user.id !== userId) return;
+      const allowed = await pendingClient.listAllowedGroups();
+      if (groupEpoch !== current || rt.auth.session?.user.id !== userId) return;
+      const actions = await pendingClient.listGroupActions();
+      if (groupEpoch !== current || rt.auth.session?.user.id !== userId) return;
+      renderGroups(pending, allowed, actions);
+      $('groups-status').textContent = successMessage;
+    } catch (err) {
+      if (groupEpoch !== current || rt.auth.session?.user.id !== userId) return;
+      if (err.message.startsWith('沒有權限')) { ++epoch; hideData(); $('access').textContent = '沒有權限'; }
+      else $('groups-status').textContent = `讀取失敗:${err.message}，請重新載入重試。`;
+    } finally {
+      if (groupEpoch === current) { groupsLoading = false; $('reload-groups').disabled = false; }
+    }
+  };
+
   const load = async () => {
     const current = ++epoch;
     loading = true;
-    hideData();
     $('reload').disabled = true; $('export-csv').disabled = true;
-    $('access').textContent = '載入中…';
+    $('count').textContent = '載入中…';
     try {
       const data = await client.listAdmin();
       if (epoch !== current || rt.auth.session?.user.id !== userId) return;
       rows = data;
       $('access').textContent = '';
-      $('admin-content').hidden = false;
+      if (!authorized) {
+        authorized = true; $('admin-tabs').hidden = false;
+        selectTab(view?.location?.hash.slice(1));
+        await loadGroups();
+        if (epoch !== current || !authorized || rt.auth.session?.user.id !== userId) return;
+      }
       // 保留篩選，補入資料裡的遊戲（含未知遊戲 id）。
       const chosen = $('filter-game').value;
       const all = node('option', '全部遊戲'); all.value = '';
@@ -142,21 +263,35 @@ export async function initAdmin({ doc = globalThis.document, runtime, client } =
       addOptions($('filter-game'), games); $('filter-game').value = chosen;
       render();
     } catch (err) {
-      if (epoch !== current) return;
-      hideData();
-      $('access').textContent = err.message === '沒有權限' ? '沒有權限' : `讀取失敗:${err.message}`;
-      // 失敗時仍提供重試按鈕，不顯示資料。
+      if (epoch !== current || rt.auth.session?.user.id !== userId) return;
+      rows = []; $('feedback-rows').replaceChildren();
+      const denied = err.message.startsWith('沒有權限');
+      if (denied) { ++groupEpoch; hideData(); }
+      const message = authorized ? $('count') : $('access');
+      message.textContent = denied ? '沒有權限' : `讀取失敗:${err.message}`;
       const retry = node('button', '重試', 'btn'); retry.type = 'button';
       retry.addEventListener('click', () => { retry.remove(); load(); });
-      if (err.message !== '沒有權限') $('access').append(retry);
+      if (!denied) message.append(retry);
     } finally {
       if (epoch === current) { loading = false; $('reload').disabled = false; $('export-csv').disabled = false; }
     }
   };
 
-  addOptions($('filter-kind'), KINDS); addOptions($('filter-status'), STATUSES);
-  for (const id of ['filter-game', 'filter-kind', 'filter-status', 'keyword']) $(id).addEventListener('input', render);
+  addOptions($('filter-kind'), KINDS); addOptions($('filter-status'), STATUSES); addOptions($('filter-channel'), CHANNELS);
+  for (const id of ['filter-game', 'filter-kind', 'filter-status', 'filter-channel', 'keyword']) $(id).addEventListener('input', render);
   $('reload').addEventListener('click', load);
+  $('reload-groups').addEventListener('click', () => loadGroups());
+  for (const [index, name] of tabs.entries()) {
+    $(`tab-${name}`).addEventListener('click', () => selectTab(name));
+    $(`tab-${name}`).addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+        : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+      selectTab(tabs[next], true);
+    });
+  }
+  view?.addEventListener('hashchange', () => selectTab(view.location.hash.slice(1)));
   $('export-csv').addEventListener('click', () => {
     if (loading || $('admin-content').hidden || rt.auth.session?.user.id !== userId) return;
     const url = URL.createObjectURL(new Blob([feedbackCSV(visible())], { type: 'text/csv;charset=utf-8' }));
@@ -166,17 +301,17 @@ export async function initAdmin({ doc = globalThis.document, runtime, client } =
   });
   rt.auth.subscribe(({ session }) => {
     if (session?.user.id !== userId) {
-      ++epoch; hideData(); $('access').textContent = '沒有權限';
+      ++epoch; ++groupEpoch; hideData(); $('access').textContent = '沒有權限';
     }
   });
   await load();
 }
 
 if (typeof document !== 'undefined') {
-  const { bindThemeToggle } = await import('../shared/theme.js?v=a780d21');
+  const { bindThemeToggle } = await import('../shared/theme.js?v=71fb506');
   bindThemeToggle(document.getElementById('theme'));
   initAdmin().catch(() => {
-    document.getElementById('admin-content').hidden = true;
+    for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel']) document.getElementById(id).hidden = true;
     document.getElementById('access').textContent = '後台暫時無法使用，請重新載入';
   });
 }

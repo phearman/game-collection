@@ -4,28 +4,61 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>意見回饋後台 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=a780d21">
+  <link rel="stylesheet" href="../shared/style.css?v=71fb506">
   <style>
+    .page.admin { max-width: 1280px; }
     .admin-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin: 20px 0; }
     .admin-filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
     .admin-filters label { display: grid; gap: 4px; }
     .admin input, .admin select, .admin textarea { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; min-height: 40px; }
-    .admin textarea { display: block; width: 220px; max-width: 100%; resize: vertical; }
+    .admin-filters label, .admin-filters input, .admin-filters select { min-width: 0; max-width: 100%; }
+    .admin textarea { display: block; resize: vertical; }
     .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
     .admin table { border-collapse: collapse; width: 100%; font-size: 14px; }
     .admin th, .admin td { padding: 8px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
-    .admin th { white-space: nowrap; background: var(--surface-sub); }
-    .admin .body { min-width: 200px; max-width: 350px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .admin th { background: var(--surface-sub); }
+    .admin .body { min-width: 120px; width: 30%; white-space: pre-wrap; overflow-wrap: anywhere; }
     .admin td { overflow-wrap: anywhere; }
-    .admin td:last-child { min-width: 230px; }
-    .admin td:last-child .btn { margin-top: 8px; }
-    .admin td:last-child label { display: block; margin-bottom: 8px; }
-    .admin td:last-child label[hidden] { display: none; }
-    .admin td:last-child input { display: block; width: 220px; max-width: 100%; }
+    .admin .feedback-time, .admin .feedback-channel { white-space: nowrap; overflow-wrap: normal; }
+    .admin .feedback-time { width: 104px; }
+    .admin .feedback-time span { display: block; }
+    .admin .feedback-channel { width: 60px; }
+    .admin .feedback-actions { width: 280px; min-width: 280px; }
+    .admin .feedback-actions .btn { margin-top: 8px; }
+    .admin .feedback-actions label { display: block; margin-bottom: 8px; }
+    .admin .feedback-actions label[hidden] { display: none; }
+    .admin .feedback-actions input, .admin .feedback-actions textarea, .admin .feedback-actions select {
+      display: block; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;
+    }
     .admin details { margin-top: 12px; white-space: pre-wrap; }
     .admin summary { cursor: pointer; }
     .admin [role="status"] { overflow-wrap: anywhere; }
     .admin-count { color: var(--text-sub); }
+    .admin-tabs { display: flex; flex-wrap: nowrap; gap: 8px; }
+    .admin-tabs .btn { flex: 1; min-width: 0; min-height: 44px; white-space: nowrap; padding-inline: 8px; }
+    .admin-tabs [aria-selected="true"] { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+    @media (width < 900px) {
+      .admin .table-wrap { overflow: visible; border: 0; }
+      .admin table { display: block; }
+      .admin thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+      .admin tbody { display: grid; gap: 16px; }
+      .admin tbody tr {
+        display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas: "time channel" "author author" "game kind" "device version" "body body" "actions actions";
+        border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
+      }
+      .admin tbody td { min-width: 0; width: auto; max-width: 100%; border-bottom: 0; }
+      .admin .feedback-time { grid-area: time; }
+      .admin .feedback-channel { grid-area: channel; }
+      .admin .feedback-author { grid-area: author; }
+      .admin .feedback-game { grid-area: game; }
+      .admin .feedback-kind { grid-area: kind; }
+      .admin .feedback-device { grid-area: device; }
+      .admin .feedback-version { grid-area: version; }
+      .admin .body { grid-area: body; border-top: 1px solid var(--border); }
+      .admin .feedback-actions { grid-area: actions; border-top: 1px solid var(--border); }
+      .admin td[data-label]::before { content: attr(data-label); display: block; color: var(--text-sub); font-size: 12px; }
+    }
   </style>
 </head>
 <body>
@@ -35,10 +68,15 @@
       <button class="btn" id="theme" type="button"></button>
     </header>
     <h1 class="brand">意見回饋後台</h1>
+    <div class="admin-tabs" id="admin-tabs" role="tablist" aria-label="後台頁籤" hidden>
+      <button class="btn" id="tab-feedback" type="button" role="tab" aria-selected="true" aria-controls="admin-content">意見回饋</button>
+      <button class="btn" id="tab-line-groups" type="button" role="tab" aria-selected="false" aria-controls="line-groups-panel" tabindex="-1">LINE 群組</button>
+    </div>
     <p id="access" role="status">確認權限中…</p>
     <a class="btn" id="login" href="../me/" hidden>前往我的紀錄登入</a>
-    <section class="admin-card" id="admin-content" hidden aria-label="回饋列表">
+    <section class="admin-card" id="admin-content" role="tabpanel" aria-labelledby="tab-feedback" tabindex="0" hidden>
       <div class="admin-filters">
+        <label>管道<select id="filter-channel"><option value="">全部管道</option></select></label>
         <label>遊戲<select id="filter-game"><option value="">全部遊戲</option></select></label>
         <label>類型<select id="filter-kind"><option value="">全部類型</option></select></label>
         <label>狀態<select id="filter-status"><option value="">全部狀態</option></select></label>
@@ -49,12 +87,24 @@
       <p class="admin-count" id="count" role="status"></p>
       <div class="table-wrap">
         <table>
-          <thead><tr><th scope="col">時間</th><th scope="col">送出者</th><th scope="col">遊戲</th><th scope="col">類型</th><th scope="col">內容</th><th scope="col">裝置</th><th scope="col">版本</th><th scope="col">狀態、工項與歷程</th></tr></thead>
+          <thead><tr><th scope="col">時間</th><th scope="col">管道</th><th scope="col">送出者與來源</th><th scope="col">遊戲</th><th scope="col">類型</th><th scope="col">內容</th><th scope="col">裝置</th><th scope="col">版本</th><th scope="col">狀態、工項與歷程</th></tr></thead>
           <tbody id="feedback-rows"></tbody>
         </table>
       </div>
     </section>
+    <section class="admin-card" id="line-groups-panel" role="tabpanel" aria-labelledby="tab-line-groups" tabindex="0" hidden>
+        <h2 id="line-groups-title">LINE 群組</h2>
+        <p>未核准時只登記群組資訊，不保存聊天內容。核准只收取之後的回饋。</p>
+        <button class="btn" id="reload-groups" type="button">重新載入</button>
+        <p id="groups-status" role="status"></p>
+        <h3>待核准群組</h3>
+        <div id="pending-groups"></div>
+        <h3>已核准群組</h3>
+        <div id="allowed-groups"></div>
+        <h3>操作紀錄（最近 20 筆）</h3>
+        <div id="group-actions"></div>
+    </section>
   </main>
-  <script type="module" src="ui.js?v=a780d21"></script>
+  <script type="module" src="ui.js?v=71fb506"></script>
 </body>
 </html>

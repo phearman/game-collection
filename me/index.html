@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>我的紀錄 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=a780d21">
+  <link rel="stylesheet" href="../shared/style.css?v=71fb506">
   <style>
     .me-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; }
     .me-level { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -73,6 +73,7 @@
         <button class="btn" id="sign-in" type="button">用 GitHub 登入</button>
         <button class="btn" id="sign-out" type="button" hidden>登出</button>
         <button class="btn" id="clear-cloud" type="button" hidden>清除帳號裡的雲端紀錄</button>
+        <a class="btn" id="feedback-admin" href="../admin/" hidden>🛠 意見回饋後台</a>
       </div>
       <p id="account-msg" role="status" aria-live="polite"></p>
       <div id="backups" class="me-io" aria-label="本機紀錄備份"></div>
@@ -127,6 +128,6 @@
       <button class="btn" type="button" data-act="confirm">確認覆蓋</button>
     </div>
   </dialog>
-  <script type="module" src="ui.js?v=a780d21"></script>
+  <script type="module" src="ui.js?v=71fb506"></script>
 </body>
 </html>

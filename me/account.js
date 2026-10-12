@@ -1,9 +1,7 @@
-import { getCloudRuntime } from '../shared/auth.js?v=a780d21';
-import { exportData, exportFileName } from '../shared/progress.js?v=a780d21';
-import { createFeedbackClient, KINDS, playerFeedbackStatus, element, displayName } from '../shared/feedback.js?v=a780d21';
-import { GAMES } from '../shared/games.js?v=a780d21';
-
-const $ = (id) => document.getElementById(id);
+import { getCloudRuntime } from '../shared/auth.js?v=71fb506';
+import { exportData, exportFileName } from '../shared/progress.js?v=71fb506';
+import { createFeedbackClient, KINDS, playerFeedbackStatus, element, displayName } from '../shared/feedback.js?v=71fb506';
+import { GAMES } from '../shared/games.js?v=71fb506';
 
 export function renderMyFeedback(doc, rows) {
   const items = doc.getElementById('feedback-items');
@@ -30,9 +28,24 @@ export async function clearCloudRecords(store, ask = (message) => globalThis.con
   return true;
 }
 
-export async function initAccount() {
-  const rt = await getCloudRuntime();
-  const feedback = createFeedbackClient({ auth: rt.auth });
+export async function initAccount({ doc = globalThis.document, runtime, client } = {}) {
+  const $ = (id) => doc.getElementById(id);
+  const rt = runtime ?? await getCloudRuntime();
+  const feedback = client ?? createFeedbackClient({ auth: rt.auth });
+  let adminEpoch = 0;
+  const renderAdmin = async () => {
+    const epoch = ++adminEpoch;
+    const userId = rt.auth.session?.user.id;
+    $('feedback-admin').hidden = true;
+    if (!userId) return;
+    try {
+      const isAdmin = await feedback.isAdmin();
+      if (epoch === adminEpoch && rt.auth.session?.user.id === userId) {
+        $('feedback-admin').hidden = isAdmin !== true;
+      }
+    } catch { /* 資格檢查失敗視為非管理者，不顯示錯誤 */ }
+  };
+  rt.auth.subscribe(renderAdmin);
   let feedbackEpoch = 0;
   const renderFeedback = async () => {
     const epoch = ++feedbackEpoch;
@@ -44,7 +57,7 @@ export async function initAccount() {
       const rows = await feedback.listMine();
       if (epoch !== feedbackEpoch) return;
       $('feedback-message').textContent = rows.length ? '最近 20 則' : '還沒有送出的意見。';
-      renderMyFeedback(document, rows);
+      renderMyFeedback(doc, rows);
     } catch (err) {
       if (epoch === feedbackEpoch) $('feedback-message').textContent = `讀取失敗:${err.message}。可按重新載入再試。`;
     }
@@ -125,6 +138,7 @@ export async function initAccount() {
   } catch { $('account-msg').textContent = '無法讀取本機備份'; }
   };
   render();
+  renderAdmin();
   renderFeedback();
   return () => {
     render();

@@ -1,5 +1,5 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=a780d21';
-import { GAMES } from './games.js?v=a780d21';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=71fb506';
+import { GAMES } from './games.js?v=71fb506';
 
 export const KINDS = { problem: '問題', suggestion: '建議', other: '其他' };
 export const STATUSES = { new: '新的', triage: '評估中', need_info: '需要更多資訊', planned: '已排工項',
@@ -11,9 +11,11 @@ export const STATUS_FIELDS = {
   duplicate_of: { label: '重複來源（回饋 id 或 IN-3、G7-4）', status: 'duplicate', max: 100 },
   tracker_id: { label: 'Tracker 編號（如 IN-3）', max: 100 },
 };
-export const DEVICES = { phone: '手機', tablet: '平板', desktop: '電腦' };
+export const DEVICES = { phone: '手機', tablet: '平板', desktop: '電腦', line: 'LINE' };
+export const CHANNELS = { web: '網站', line: 'LINE' };
+export const LINE_SOURCES = { user: '私訊', group: '群組', room: '多人聊天室' };
 export const LOGIN_NOTICE = '登入後才能送出意見(到「我的紀錄」用 Google 或 GitHub 登入)';
-const FIELDS = 'id,user_id,game_id,kind,body,app_version,path,device,status,created_at,handled_at,note,work_item,released_version,reason,duplicate_of,tracker_id';
+const FIELDS = 'id,user_id,game_id,kind,body,app_version,path,device,status,created_at,handled_at,note,work_item,released_version,reason,duplicate_of,tracker_id,channel';
 const own = (object, key) => Object.hasOwn(object, key);
 
 export function validateFeedbackUpdate(status, note, fields = {}) {
@@ -127,13 +129,22 @@ export function createFeedbackClient({ auth, url = SUPABASE_URL, key = SUPABASE_
         if (page.length < 100) break;
         cursor = page.at(-1);
       }
-      const ids = [...new Set(rows.map((r) => r.user_id))];
+      const ids = [...new Set(rows.map((r) => r.user_id).filter(Boolean))];
       const names = new Map();
       for (let i = 0; i < ids.length; i += 100) {
         const authors = await call('rpc/feedback_authors', { method: 'POST', body: { ids: ids.slice(i, i + 100) } });
         for (const author of authors ?? []) names.set(author.user_id, displayName(author.display_name));
       }
-      return rows.map((row) => ({ ...row, display_name: names.get(row.user_id) ?? '玩家' }));
+      const sources = new Map();
+      const lineIds = rows.filter((row) => row.channel === 'line').map((row) => row.id);
+      for (let i = 0; i < lineIds.length; i += 100) {
+        const query = new URLSearchParams({ select: 'feedback_id,source_type,display_name',
+          feedback_id: `in.(${lineIds.slice(i, i + 100).join(',')})` });
+        for (const source of (await call(`feedback_line_sources?${query}`)) ?? []) sources.set(source.feedback_id, source);
+      }
+      return rows.map((row) => ({ ...row, source_type: sources.get(row.id)?.source_type,
+        display_name: row.channel === 'line' ? displayName(sources.get(row.id)?.display_name)
+          : names.get(row.user_id) ?? '玩家' }));
     },
     async listEvents(id) {
       await requireAdmin();
@@ -161,16 +172,17 @@ export function createFeedbackClient({ auth, url = SUPABASE_URL, key = SUPABASE_
   };
 }
 
-export function filterFeedback(rows, { game = '', kind = '', status = '', keyword = '' } = {}) {
+export function filterFeedback(rows, { game = '', kind = '', status = '', keyword = '', channel = '' } = {}) {
   const term = keyword.trim().toLocaleLowerCase();
-  return rows.filter((row) => (!game || row.game_id === game) && (!kind || row.kind === kind)
+  return rows.filter((row) => (!channel || (row.channel ?? 'web') === channel)
+    && (!game || row.game_id === game) && (!kind || row.kind === kind)
     && (!status || row.status === status) && (!term || [row.body, row.note, row.display_name,
       ...Object.keys(STATUS_FIELDS).map((key) => row[key])]
       .some((value) => String(value ?? '').toLocaleLowerCase().includes(term))));
 }
 
 export function feedbackCSV(rows) {
-  const columns = ['id', 'created_at', 'display_name', 'game_id', 'kind', 'body', 'device', 'app_version', 'path', 'status', 'handled_at', 'note', ...Object.keys(STATUS_FIELDS)];
+  const columns = ['id', 'created_at', 'display_name', 'game_id', 'kind', 'body', 'device', 'app_version', 'path', 'status', 'handled_at', 'note', ...Object.keys(STATUS_FIELDS), 'channel', 'source_type'];
   const cell = (value) => {
     let text = String(value ?? '');
     // 玩家內容與備註不應在試算表中被當作公式執行。
@@ -207,7 +219,7 @@ export async function openFeedback({ gameId = 'lobby', meHref = 'me/', doc = glo
   doc.body.append(dialog);
   dialog.showModal();
   try {
-    const rt = runtime ?? (cloudEnabled ? await (await import('./auth.js?v=a780d21')).getCloudRuntime() : null);
+    const rt = runtime ?? (cloudEnabled ? await (await import('./auth.js?v=71fb506')).getCloudRuntime() : null);
     if (!dialog.open) return;
     if (!rt?.auth.session) {
       message.textContent = LOGIN_NOTICE;

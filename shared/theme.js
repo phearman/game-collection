@@ -1,5 +1,5 @@
-import { load, save } from './storage.js?v=a780d21';
-import { mountSoundToggle } from './sound.js?v=a780d21';
+import { load, save } from './storage.js?v=71fb506';
+import { mountSoundToggle } from './sound.js?v=71fb506';
 
 const root = document.documentElement;
 
