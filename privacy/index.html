@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>隱私權政策 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css">
+  <link rel="stylesheet" href="../shared/style.css?v=a780d21">
 </head>
 <body>
   <main class="page privacy">
@@ -13,13 +13,13 @@
       <button class="btn" id="theme" type="button"></button>
     </header>
     <h1 class="brand">隱私權政策</h1>
-    <p class="privacy-updated">最後更新:<time datetime="2026-10-11">2026-10-11</time></p>
+    <p class="privacy-updated">最後更新:<time datetime="2026-10-13">2026-10-13</time></p>
 
     <section>
       <h2>簡單說</h2>
       <ul>
         <li>不登入也能玩,紀錄只存在你自己的瀏覽器裡。</li>
-        <li>登入是為了讓不同裝置看到同一份紀錄,只會用到你的顯示名稱、頭像和遊戲紀錄。</li>
+        <li>登入可讓不同裝置看到同一份紀錄,也可送出意見回饋;會用到你的顯示名稱、頭像、遊戲紀錄與你送出的意見。</li>
         <li>不放廣告、不做追蹤,也不會分享或出售你的資料。</li>
       </ul>
     </section>
@@ -38,6 +38,13 @@
         <li><b>Email</b>:登入服務(Supabase 的帳號系統)會記錄你登入用的 email,用來辨認是同一個帳號;遊戲集錦本身不把 email 存進遊戲紀錄,也不會顯示或使用它。</li>
         <li><b>登入狀態</b>:為了不必每次重新登入,登入憑證會存在這台裝置的瀏覽器;登出時刪除。</li>
       </ul>
+    </section>
+
+    <section>
+      <h2>意見回饋</h2>
+      <p>登入後才能送出意見回饋。我們會儲存回饋內容、類型、遊戲、版本、網址路徑、裝置類型(手機、平板或電腦)與時間,並和你的帳號連結,用來改善遊戲。除了你可在「我的紀錄」看到自己送出的意見與狀態,只有管理者能查看全部回饋與送出者的顯示名稱。</p>
+      <p>回饋不另存 email、IP 或瀏覽器指紋;網址只記路徑,不記查詢參數。請不要在內容中填入 email 或其他個人資料。為防止大量送出,資料庫另保留每個帳號最近送出時間與當日次數,不保留額外的回饋內容;清除回饋不會重設當日上限。</p>
+      <p>你可以在<a href="../me/">「我的紀錄」</a>清除自己的回饋,或到下方 GitHub Issues 要求刪除。</p>
     </section>
 
     <section>
@@ -62,7 +69,7 @@
       <h2>匯出與刪除</h2>
       <ul>
         <li><b>匯出</b>:在<a href="../me/">「我的紀錄」</a>可以把紀錄匯出成檔案。</li>
-        <li><b>清除雲端紀錄</b>:登入後,在<a href="../me/">「我的紀錄」</a>的帳號區塊按「清除帳號裡的雲端紀錄」,確認兩次後清除;這台裝置上的紀錄不受影響。</li>
+        <li><b>清除雲端紀錄</b>:登入後,在<a href="../me/">「我的紀錄」</a>的帳號區塊按「清除帳號裡的雲端紀錄」,確認兩次後一併清除遊戲紀錄與自己送出的意見回饋;這台裝置上的紀錄不受影響。</li>
         <li><b>刪除登入身分</b>:帳號本身(登入服務裡的帳號資料)需要由我們刪除,請到下方聯絡方式提出,我們會在 30 天內處理。</li>
         <li><b>只用本機時</b>:清除瀏覽器的網站資料即可。</li>
       </ul>
@@ -83,6 +90,6 @@
       <p>這份政策有變動時會更新本頁,並修改上方的「最後更新」日期。</p>
     </section>
   </main>
-  <script type="module" src="ui.js"></script>
+  <script type="module" src="ui.js?v=a780d21"></script>
 </body>
 </html>

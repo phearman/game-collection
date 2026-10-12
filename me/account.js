@@ -1,26 +1,60 @@
-import { getCloudRuntime } from '../shared/auth.js';
-import { exportData, exportFileName } from '../shared/progress.js';
+import { getCloudRuntime } from '../shared/auth.js?v=a780d21';
+import { exportData, exportFileName } from '../shared/progress.js?v=a780d21';
+import { createFeedbackClient, KINDS, playerFeedbackStatus, element, displayName } from '../shared/feedback.js?v=a780d21';
+import { GAMES } from '../shared/games.js?v=a780d21';
 
 const $ = (id) => document.getElementById(id);
 
-// 清除帳號裡的雲端紀錄(RS25):整份覆蓋成空資料(既有 import_all RPC),本機紀錄不動。
+export function renderMyFeedback(doc, rows) {
+  const items = doc.getElementById('feedback-items');
+  items.replaceChildren();
+  for (const row of rows) {
+    const item = element(doc, 'li');
+    const game = GAMES.find((g) => g.id === row.game_id)?.title ?? (row.game_id === 'lobby' ? '大廳' : row.game_id);
+    item.append(element(doc, 'p', `${new Date(row.created_at).toLocaleString()} · ${game} · ${KINDS[row.kind] ?? row.kind} · ${playerFeedbackStatus(row)}`),
+      element(doc, 'p', row.body));
+    if (row.note) item.append(element(doc, 'p', `備註：${row.note}`));
+    items.append(item);
+  }
+}
+
+// RPC 在單一交易清除帳號紀錄與自己的回饋，本機紀錄不動。
 export const CLEAR_ASK = [
-  '要清除帳號裡的雲端紀錄嗎?這台裝置上的紀錄不受影響。',
-  '清除後無法復原,其他裝置登入後也會看到空白紀錄。確定清除?',
+  '要清除帳號裡的雲端紀錄和你送出的意見回饋嗎?這台裝置上的紀錄不受影響。',
+  '清除紀錄和意見回饋後無法復原,其他裝置登入後也會看到空白紀錄。確定清除?',
 ];
 // 二次確認,兩次都按「確定」才清除;→ true 已清除、false 已取消。失敗時丟錯(呼叫端顯示訊息)。
 export async function clearCloudRecords(store, ask = (message) => globalThis.confirm(message)) {
   for (const message of CLEAR_ASK) if (!ask(message)) return false;
-  await store.importAll({ profile: null, stats: {}, plays: [], saves: [] });
+  await store.request('rpc/clear_cloud_records', { method: 'POST', body: {} });
   return true;
 }
 
 export async function initAccount() {
   const rt = await getCloudRuntime();
+  const feedback = createFeedbackClient({ auth: rt.auth });
+  let feedbackEpoch = 0;
+  const renderFeedback = async () => {
+    const epoch = ++feedbackEpoch;
+    $('my-feedback').hidden = !rt.auth.session;
+    $('feedback-items').replaceChildren();
+    if (!rt.auth.session) return;
+    $('feedback-message').textContent = '載入中…';
+    try {
+      const rows = await feedback.listMine();
+      if (epoch !== feedbackEpoch) return;
+      $('feedback-message').textContent = rows.length ? '最近 20 則' : '還沒有送出的意見。';
+      renderMyFeedback(document, rows);
+    } catch (err) {
+      if (epoch === feedbackEpoch) $('feedback-message').textContent = `讀取失敗:${err.message}。可按重新載入再試。`;
+    }
+  };
+  $('feedback-reload').addEventListener('click', renderFeedback);
+  rt.auth.subscribe(renderFeedback);
   $('account').hidden = false;
   const render = () => {
     const meta = rt.auth.session?.user.user_metadata ?? {};
-    $('account-name').textContent = rt.auth.session ? (meta.user_name || meta.preferred_username || meta.name || '帳號') : '未登入:紀錄只存在這台裝置';
+    $('account-name').textContent = rt.auth.session ? displayName(meta.user_name || meta.preferred_username || meta.name || '帳號') : '未登入:紀錄只存在這台裝置';
     $('sign-in').hidden = Boolean(rt.auth.session);
     $('sign-in-google').hidden = Boolean(rt.auth.session);
     $('sign-out').hidden = !rt.auth.session;
@@ -91,6 +125,7 @@ export async function initAccount() {
   } catch { $('account-msg').textContent = '無法讀取本機備份'; }
   };
   render();
+  renderFeedback();
   return () => {
     render();
     $('account-msg').textContent = rt.notice || oldNotice;

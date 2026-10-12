@@ -1,13 +1,13 @@
 // 畫面 C「我的」:等級、成就、各遊戲統計、最近 50 局、匯出/匯入。只顯示 profile.summary(),不寫規則。
-import { createProfile } from '../shared/profile.js';
-import { LocalStore } from '../shared/stores/local.js';
-import { bindThemeToggle } from '../shared/theme.js';
-import { ACHIEVEMENTS, xpBreakdown } from '../shared/progress.js';
-import { XP_EXAMPLES, signedXp } from '../shared/xp-explain.js';
-import { cloudEnabled } from '../shared/supabase-config.js';
+import { createProfile } from '../shared/profile.js?v=a780d21';
+import { LocalStore } from '../shared/stores/local.js?v=a780d21';
+import { bindThemeToggle } from '../shared/theme.js?v=a780d21';
+import { ACHIEVEMENTS, xpBreakdown } from '../shared/progress.js?v=a780d21';
+import { XP_EXAMPLES, signedXp } from '../shared/xp-explain.js?v=a780d21';
+import { cloudEnabled } from '../shared/supabase-config.js?v=a780d21';
 
 const $ = (id) => document.getElementById(id);
-const accountReady = cloudEnabled ? await (await import('./account.js')).initAccount() : null;
+const accountReady = cloudEnabled ? await (await import('./account.js?v=a780d21')).initAccount() : null;
 const profile = await createProfile({ store: new LocalStore() });
 accountReady?.();
 const RESULT = { win: '勝', lose: '敗', quit: '放棄' };

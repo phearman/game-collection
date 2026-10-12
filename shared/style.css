@@ -121,19 +121,6 @@ a.card:hover { border-color: var(--accent); }
 .topbar .navigation { display: flex; gap: 4px; align-items: center; }
 /* 頂列已偏滿,加了編號後左組按鈕收窄內距(點擊區仍 ≥ 40px);窄螢幕再縮字級 */
 .topbar .navigation .btn { padding-inline: 10px; }
-@media (max-width: 400px) {
-  .topbar .navigation .btn { padding-inline: 6px; font-size: 13px; }
-  /* 窄螢幕頂列(IR11):≥360px 8 款都單行。選擇器加權重,蓋過各款 style.css 的 .topbar / .stats .stat 設定;點擊區仍 ≥ 40px */
-  .page .topbar { gap: 6px; }
-  .topbar .stats { gap: 4px; }
-  .topbar .stats .stat { min-width: 0; padding: 2px 6px; }
-  .topbar .stats .stat-value { font-size: 14px; }
-  .topbar .stats .btn { padding-inline: 8px; }
-  @media (max-width: 374px) {
-    /* 360px 時版本連結兩側間距各收至 2px,保留分數區空間;375px 以上維持原樣。 */
-    .topbar .navigation .game-version { font-size: 10px; margin-inline: -2px; }
-  }
-}
 .card-code { margin-right: 6px; vertical-align: 1px; }
 
 .game-version { font-size: 11px; line-height: 1.4; color: var(--text-sub); white-space: nowrap; }
@@ -167,12 +154,38 @@ a.card:hover { border-color: var(--accent); }
 .help-step { font-size: 12px; color: var(--text-muted); text-align: center; margin: 0; }
 .help-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
 
+/* 意見回饋對話框 */
+.feedback-dialog { width: min(480px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); padding: 20px; }
+.feedback-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+.feedback-dialog h2 { font-size: 18px; margin: 0 0 12px; }
+.feedback-dialog label { display: block; margin: 12px 0; }
+.feedback-dialog select, .feedback-dialog textarea { display: block; width: 100%; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; margin-top: 4px; }
+.feedback-dialog textarea { resize: vertical; }
+.feedback-dialog p { overflow-wrap: anywhere; }
+.feedback-dialog > .btn { margin: 12px 8px 0 0; }
+
 .topbar-actions { display: flex; align-items: center; gap: 8px; }
 .topbar-toggles { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .topbar .topbar-toggles .btn { padding-inline: 6px; }
-@media (max-width: 400px) {
-  /* 保留兩顆按鈕的 40px 點擊區；頂列空間不足時整組換行。 */
-  .page .topbar:has(.topbar-toggles) { flex-wrap: wrap; }
+/* IR20:遊戲頁通常限寬 420px,視窗放寬仍需壓縮頂列。360~1024px 共用 RS22 規則,
+   保留大廳、玩法、編號、版本、分數、暫停、音效與主題;按鈕點擊區仍 ≥40px。
+   選擇器加 .page,避免被遊戲樣式的同名規則蓋過;大廳不受影響。 */
+@media (max-width: 1024px) {
+  .page .topbar:has(.navigation) { flex-wrap: nowrap; gap: 4px; flex-shrink: 0; }
+  .page .topbar .navigation { gap: 2px; flex-shrink: 0; }
+  .page .topbar .navigation .btn { width: 40px; padding-inline: 0; font-size: 14px; gap: 0; }
+  .page .topbar .topbar-label { display: none; }
+  /* setupHelp 產生的純文字按鈕也收成 ?;原始文字保留為無障礙名稱。 */
+  .page .topbar .navigation > button.btn { font-size: 0; }
+  .page .topbar .navigation > button::before { content: '?'; font-size: 14px; }
+  .page .topbar .navigation > button > span { display: none; }
+  .page .topbar .navigation .game-code { font-size: 10px; padding-inline: 2px; }
+  .page .topbar .navigation .game-version { font-size: 10px; margin-inline: 0; }
+  .page .topbar .stats { flex: 1; min-width: 0; gap: 2px; }
+  .page .topbar .stats .stat { flex: 1; min-width: 0; min-height: 46px; padding: 2px; }
+  .page .topbar .stats .stat-value { font-size: 12px; }
+  .page .topbar .stats .btn { width: 40px; padding-inline: 0; }
+  .page .topbar .topbar-toggles { gap: 2px; }
 }
 .lobby-footer { margin-top: 24px; font-size: 12px; }
 .lobby-footer a { color: var(--text-sub); }

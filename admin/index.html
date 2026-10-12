@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>意見回饋後台 · 遊戲集錦</title>
+  <link rel="stylesheet" href="../shared/style.css?v=a780d21">
+  <style>
+    .admin-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin: 20px 0; }
+    .admin-filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+    .admin-filters label { display: grid; gap: 4px; }
+    .admin input, .admin select, .admin textarea { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; min-height: 40px; }
+    .admin textarea { display: block; width: 220px; max-width: 100%; resize: vertical; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+    .admin table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    .admin th, .admin td { padding: 8px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+    .admin th { white-space: nowrap; background: var(--surface-sub); }
+    .admin .body { min-width: 200px; max-width: 350px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .admin td { overflow-wrap: anywhere; }
+    .admin td:last-child { min-width: 230px; }
+    .admin td:last-child .btn { margin-top: 8px; }
+    .admin td:last-child label { display: block; margin-bottom: 8px; }
+    .admin td:last-child label[hidden] { display: none; }
+    .admin td:last-child input { display: block; width: 220px; max-width: 100%; }
+    .admin details { margin-top: 12px; white-space: pre-wrap; }
+    .admin summary { cursor: pointer; }
+    .admin [role="status"] { overflow-wrap: anywhere; }
+    .admin-count { color: var(--text-sub); }
+  </style>
+</head>
+<body>
+  <main class="page admin">
+    <header class="topbar">
+      <a class="btn" href="../">← 大廳</a>
+      <button class="btn" id="theme" type="button"></button>
+    </header>
+    <h1 class="brand">意見回饋後台</h1>
+    <p id="access" role="status">確認權限中…</p>
+    <a class="btn" id="login" href="../me/" hidden>前往我的紀錄登入</a>
+    <section class="admin-card" id="admin-content" hidden aria-label="回饋列表">
+      <div class="admin-filters">
+        <label>遊戲<select id="filter-game"><option value="">全部遊戲</option></select></label>
+        <label>類型<select id="filter-kind"><option value="">全部類型</option></select></label>
+        <label>狀態<select id="filter-status"><option value="">全部狀態</option></select></label>
+        <label>關鍵字<input id="keyword" type="search" placeholder="搜尋內容、備註、顯示名稱或工項編號"></label>
+        <button class="btn" id="reload" type="button">重新載入</button>
+        <button class="btn" id="export-csv" type="button">匯出目前篩選 CSV</button>
+      </div>
+      <p class="admin-count" id="count" role="status"></p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">時間</th><th scope="col">送出者</th><th scope="col">遊戲</th><th scope="col">類型</th><th scope="col">內容</th><th scope="col">裝置</th><th scope="col">版本</th><th scope="col">狀態、工項與歷程</th></tr></thead>
+          <tbody id="feedback-rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="ui.js?v=a780d21"></script>
+</body>
+</html>

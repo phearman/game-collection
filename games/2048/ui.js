@@ -2,19 +2,19 @@
 import {
   move, initState, stepState, undoState, continueState, settleState, canUndo, isInvalidMove, shownBest,
   toSave, fromSave, maxTile, overlayFor, isValidState, suggestMove,
-} from './logic.js';
-import { createProfile } from '../../shared/profile.js';
-import { LocalStore } from '../../shared/stores/local.js';
-import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js';
-import { bindThemeToggle } from '../../shared/theme.js';
-import { play } from '../../shared/sound.js';
-import { setupHelp } from '../../shared/help.js';
-import { swipe } from '../../shared/touch.js';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
-import { settlePlay } from '../../shared/settle.js';
-import { quitBestNote } from '../../shared/quit.js';
-import { DEMO_STUCK_LEFT, DEMO_FULL } from './demo.js';
-import { load, save } from '../../shared/storage.js';
+} from './logic.js?v=a780d21';
+import { createProfile } from '../../shared/profile.js?v=a780d21';
+import { LocalStore } from '../../shared/stores/local.js?v=a780d21';
+import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js?v=a780d21';
+import { bindThemeToggle } from '../../shared/theme.js?v=a780d21';
+import { play } from '../../shared/sound.js?v=a780d21';
+import { setupHelp } from '../../shared/help.js?v=a780d21';
+import { swipe } from '../../shared/touch.js?v=a780d21';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=a780d21';
+import { settlePlay } from '../../shared/settle.js?v=a780d21';
+import { quitBestNote } from '../../shared/quit.js?v=a780d21';
+import { DEMO_STUCK_LEFT, DEMO_FULL } from './demo.js?v=a780d21';
+import { load, save } from '../../shared/storage.js?v=a780d21';
 
 const GAME_ID = '2048';
 const MODE_KEY = 'mode:2048'; // 上次選的模式:normal / kids(RS6 小朋友模式 = 輔助局)

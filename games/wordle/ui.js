@@ -3,18 +3,18 @@ import {
   WORD_LEN, MAX_GUESSES, DIFFICULTIES, evaluate, isWord, initState, typeState, eraseState, guessError, submitState,
   keyStates, scoreFor, overlayFor, toSave, fromSave, isValidState, routeKey,
   assistState, letterHint, canReveal, revealState, candidatesState, fillState, visibleCandidates,
-} from './logic.js';
-import { HINTS } from './hints.js';
-import { createProfile } from '../../shared/profile.js';
-import { LocalStore } from '../../shared/stores/local.js';
-import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js';
-import { bindThemeToggle } from '../../shared/theme.js';
-import { play } from '../../shared/sound.js';
-import { setupHelp } from '../../shared/help.js';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
-import { settlePlay } from '../../shared/settle.js';
-import { quitBestNote } from '../../shared/quit.js';
-import { load, save } from '../../shared/storage.js';
+} from './logic.js?v=a780d21';
+import { HINTS } from './hints.js?v=a780d21';
+import { createProfile } from '../../shared/profile.js?v=a780d21';
+import { LocalStore } from '../../shared/stores/local.js?v=a780d21';
+import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js?v=a780d21';
+import { bindThemeToggle } from '../../shared/theme.js?v=a780d21';
+import { play } from '../../shared/sound.js?v=a780d21';
+import { setupHelp } from '../../shared/help.js?v=a780d21';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=a780d21';
+import { settlePlay } from '../../shared/settle.js?v=a780d21';
+import { quitBestNote } from '../../shared/quit.js?v=a780d21';
+import { load, save } from '../../shared/storage.js?v=a780d21';
 
 const GAME_ID = 'wordle';
 const DIFF_KEY = 'difficulty:wordle'; // 上次選的難度(開新局用)

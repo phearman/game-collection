@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>我的紀錄 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css">
+  <link rel="stylesheet" href="../shared/style.css?v=a780d21">
   <style>
     .me-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; }
     .me-level { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -37,6 +37,8 @@
     .me-io { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
     .me-msg { font-size: 14px; margin: 8px 0 0; min-height: 1.6em; }
     .me-msg.is-error { color: #d85a30; }
+    #feedback-items { padding-left: 20px; }
+    #feedback-items p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; }
     .import-dlg { width: min(400px, calc(100vw - 32px)); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); }
     .import-dlg::backdrop { background: rgba(0, 0, 0, 0.45); }
     .import-dlg h2 { font-size: 18px; margin: 0 0 8px; }
@@ -96,6 +98,12 @@
         <ol id="xp-examples"></ol>
       </details>
     </section>
+    <section class="me-card" id="my-feedback" hidden>
+      <h2>我送出的意見</h2>
+      <button class="btn" id="feedback-reload" type="button">重新載入</button>
+      <p id="feedback-message" role="status"></p>
+      <ul id="feedback-items"></ul>
+    </section>
     <h2 id="ach-title">成就</h2>
     <section class="ach" id="ach" aria-labelledby="ach-title"></section>
     <h2>各遊戲</h2>
@@ -119,6 +127,6 @@
       <button class="btn" type="button" data-act="confirm">確認覆蓋</button>
     </div>
   </dialog>
-  <script type="module" src="ui.js"></script>
+  <script type="module" src="ui.js?v=a780d21"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js';
-import { levelFor } from './progress.js';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=a780d21';
+import { levelFor } from './progress.js?v=a780d21';
 
 const AUTH_KEY = 'gc:auth';
 const PKCE_KEY = 'gc:pkce';
@@ -359,7 +359,7 @@ export async function selectCloudStore(local) {
   };
   if (!rt.auth.session) { showNotice(); return guarded(local); }
   if (!rt.store) {
-    const { SupabaseStore } = await import('./stores/supabase.js');
+    const { SupabaseStore } = await import('./stores/supabase.js?v=a780d21');
     rt.store = new SupabaseStore({ auth: rt.auth });
     try {
       rt.notice = await prepareCloudStore({ auth: rt.auth, local, cloud: rt.store });

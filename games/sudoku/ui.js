@@ -1,13 +1,13 @@
-import { initState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave } from './logic.js';
-import { createProfile } from '../../shared/profile.js';
-import { LocalStore } from '../../shared/stores/local.js';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
-import { bindThemeToggle } from '../../shared/theme.js';
-import { play as playSound } from '../../shared/sound.js';
-import { setupHelp } from '../../shared/help.js';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js';
-import { settlePlay } from '../../shared/settle.js';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js';
+import { initState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave } from './logic.js?v=a780d21';
+import { createProfile } from '../../shared/profile.js?v=a780d21';
+import { LocalStore } from '../../shared/stores/local.js?v=a780d21';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=a780d21';
+import { bindThemeToggle } from '../../shared/theme.js?v=a780d21';
+import { play as playSound } from '../../shared/sound.js?v=a780d21';
+import { setupHelp } from '../../shared/help.js?v=a780d21';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=a780d21';
+import { settlePlay } from '../../shared/settle.js?v=a780d21';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=a780d21';
 
 const GAME_ID = 'sudoku';
 const $ = (id) => document.getElementById(id);

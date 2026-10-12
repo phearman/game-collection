@@ -117,14 +117,6 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
 .demo-board { display: grid; gap: 4px; max-width: 200px; margin: 0 auto; }
 .demo-board .cell { font-size: 18px; }
 
-@media (max-width: 400px) {
-  .topbar { gap: 8px; }
-  .topbar .btn { padding: 6px 10px; }
-  .stats { gap: 6px; }
-  .stat { min-width: 0; padding: 2px 8px; }
-  .stat-value { font-size: 14px; }
-}
-
 /* 提示(RS9):輔助局才顯示。精簡成分頁式:三鈕 + 一格固定高度的內容(只顯示最後按的那種)(H4) */
 .hints { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 8px; margin: 0 0 8px; }
 .hint-buttons { display: flex; gap: 6px; }

@@ -2,17 +2,17 @@
 import {
   DIFFICULTIES, initState, stateWithMines, revealState, flagState, tickState, scoreFor, resultOf, isOver,
   remainingMines, cellView, toSave, fromSave, isValidState, confirmModeFor, cellTapAction,
-} from './logic.js';
-import { createProfile } from '../../shared/profile.js';
-import { LocalStore } from '../../shared/stores/local.js';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js';
-import { bindThemeToggle } from '../../shared/theme.js';
-import { play } from '../../shared/sound.js';
-import { setupHelp } from '../../shared/help.js';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js';
-import { settlePlay } from '../../shared/settle.js';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js';
-import { load, save } from '../../shared/storage.js';
+} from './logic.js?v=a780d21';
+import { createProfile } from '../../shared/profile.js?v=a780d21';
+import { LocalStore } from '../../shared/stores/local.js?v=a780d21';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=a780d21';
+import { bindThemeToggle } from '../../shared/theme.js?v=a780d21';
+import { play } from '../../shared/sound.js?v=a780d21';
+import { setupHelp } from '../../shared/help.js?v=a780d21';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=a780d21';
+import { settlePlay } from '../../shared/settle.js?v=a780d21';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=a780d21';
+import { load, save } from '../../shared/storage.js?v=a780d21';
 
 const GAME_ID = 'minesweeper';
 const LONG_PRESS_MS = 400;

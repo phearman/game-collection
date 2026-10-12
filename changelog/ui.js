@@ -1,5 +1,5 @@
-import { CHANGELOG, filterChangelog } from '../shared/changelog.js';
-import { bindThemeToggle } from '../shared/theme.js';
+import { CHANGELOG, filterChangelog } from '../shared/changelog.js?v=a780d21';
+import { bindThemeToggle } from '../shared/theme.js?v=a780d21';
 
 bindThemeToggle(document.getElementById('theme'));
 

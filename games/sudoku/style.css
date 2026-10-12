@@ -46,13 +46,6 @@ button:disabled { opacity: 0.55; cursor: default; }
 .hint-message p { font-size: 13px; line-height: 1.4; margin: 0 0 6px; overflow-wrap: anywhere; }
 .hint-actions .btn { flex: 1; }
 .demo-board .cell { display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: default; }
-@media (max-width: 400px) {
-  .topbar { gap: 8px; }
-  .topbar .btn { padding: 6px 10px; }
-  .stats { gap: 6px; }
-  .stat { min-width: 0; padding: 2px 8px; }
-  .stat-value { font-size: 14px; }
-}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .cell.conflict { color: #ffb4a9; background: #602620; }
 }
