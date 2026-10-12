@@ -1,7 +1,7 @@
-import { cloudEnabled } from '../shared/supabase-config.js?v=71fb506';
-import { GAMES } from '../shared/games.js?v=71fb506';
-import { createPendingGroupsClient } from './line.js?v=71fb506';
-import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=71fb506';
+import { cloudEnabled } from '../shared/supabase-config.js?v=53f349a';
+import { GAMES } from '../shared/games.js?v=53f349a';
+import { createPendingGroupsClient } from './line.js?v=53f349a';
+import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=53f349a';
 
 // 注入 runtime/client 供測試；未通過管理者檢查不讀取回饋。
 export async function initAdmin({ doc = globalThis.document, view = doc.defaultView ?? globalThis.window,
@@ -43,7 +43,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
       const option = node('option', label); option.value = value; select.append(option);
     }
   };
-  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=71fb506')).getCloudRuntime() : null);
+  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=53f349a')).getCloudRuntime() : null);
   if (!rt?.auth.session) {
     hideData();
     $('access').textContent = '登入後才能查看回饋後台'; $('login').hidden = false;
@@ -308,7 +308,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
 }
 
 if (typeof document !== 'undefined') {
-  const { bindThemeToggle } = await import('../shared/theme.js?v=71fb506');
+  const { bindThemeToggle } = await import('../shared/theme.js?v=53f349a');
   bindThemeToggle(document.getElementById('theme'));
   initAdmin().catch(() => {
     for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel']) document.getElementById(id).hidden = true;

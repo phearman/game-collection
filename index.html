@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>遊戲集錦</title>
-  <link rel="stylesheet" href="shared/style.css?v=71fb506">
+  <link rel="stylesheet" href="shared/style.css?v=53f349a">
 </head>
 <body>
   <main class="page">
@@ -21,23 +21,23 @@
     <footer class="lobby-footer"><a href="changelog/">更新紀錄</a><span aria-hidden="true"> · </span><a href="privacy/">隱私權政策</a><span aria-hidden="true"> · </span><a id="feedback-link" href="me/">意見回饋</a></footer>
   </main>
   <script type="module">
-    import { GAMES } from './shared/games.js?v=71fb506';
-    import { createProfile } from './shared/profile.js?v=71fb506';
-    import { LocalStore } from './shared/stores/local.js?v=71fb506';
-    import { bindThemeToggle } from './shared/theme.js?v=71fb506';
-    import { cloudEnabled } from './shared/supabase-config.js?v=71fb506';
-    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=71fb506';
+    import { GAMES } from './shared/games.js?v=53f349a';
+    import { createProfile } from './shared/profile.js?v=53f349a';
+    import { LocalStore } from './shared/stores/local.js?v=53f349a';
+    import { bindThemeToggle } from './shared/theme.js?v=53f349a';
+    import { cloudEnabled } from './shared/supabase-config.js?v=53f349a';
+    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=53f349a';
 
     bindThemeToggle(document.getElementById('theme'));
     document.getElementById('feedback-link').addEventListener('click', async (event) => {
       event.preventDefault();
-      const { openFeedback } = await import('./shared/feedback.js?v=71fb506');
+      const { openFeedback } = await import('./shared/feedback.js?v=53f349a');
       await openFeedback();
     });
 
     const sum = await (await createProfile({ store: new LocalStore() })).summary();
     if (cloudEnabled) {
-      const { auth, notice } = await (await import('./shared/auth.js?v=71fb506')).getCloudRuntime();
+      const { auth, notice } = await (await import('./shared/auth.js?v=53f349a')).getCloudRuntime();
       const icon = document.getElementById('account-link');
       icon.hidden = false;
       const renderAccount = () => {

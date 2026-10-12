@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>綁定 LINE · 遊戲集錦</title>
+  <link rel="stylesheet" href="../../shared/style.css?v=53f349a">
+  <style>
+    .me-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 20px; }
+    .me-io { display: flex; gap: 8px; flex-wrap: wrap; }
+    #link-message, #link-question { overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <main class="page me">
+    <header class="topbar">
+      <a class="btn" href="../">← 我的紀錄</a>
+      <button class="btn" id="theme" type="button"></button>
+    </header>
+    <section class="me-card" aria-labelledby="link-title">
+      <h1 id="link-title">綁定 LINE</h1>
+      <p id="link-message" role="status" aria-live="polite">載入中…</p>
+      <div class="me-io" id="link-login" hidden>
+        <button class="btn" id="link-google" type="button">用 Google 登入</button>
+        <button class="btn" id="link-github" type="button">用 GitHub 登入</button>
+      </div>
+      <p id="link-question" hidden></p>
+      <p id="link-warning" hidden>重新綁定會取代原綁定並退出原有群組排行。請確認這是你自己的 LINE 與遊戲帳號。</p>
+      <button class="btn" id="link-confirm" type="button" hidden>確認綁定</button>
+      <p><a href="../../privacy/">隱私權政策</a></p>
+    </section>
+  </main>
+  <script type="module" src="ui.js?v=53f349a"></script>
+</body>
+</html>
