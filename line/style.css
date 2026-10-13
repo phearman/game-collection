@@ -1,0 +1,52 @@
+.line-guide a { color: var(--accent); }
+.line-guide .topbar a { color: var(--text); }
+.line-guide h2 { font-size: 20px; margin: 0 0 12px; }
+.line-guide h3 { font-size: 18px; margin: 0 0 12px; }
+.line-guide p { margin: 8px 0; }
+.line-guide code { font-family: var(--mono); font-size: 0.95em; overflow-wrap: anywhere; }
+.line-guide section, .line-guide article { min-width: 0; overflow-wrap: anywhere; }
+.guide-hero, .guide-panel, .command-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.guide-hero { border-top: 4px solid var(--accent); }
+.guide-hero .brand { display: block; font-size: 26px; }
+.guide-kicker, .guide-note { color: var(--text-sub); font-size: 14px; }
+.line-guide .add-friend { color: var(--surface); background: var(--accent); margin-top: 8px; }
+.line-guide .add-friend:hover { color: var(--text); background: var(--accent-bg); }
+.guide-panel, .guide-commands { margin-top: 24px; }
+.guide-steps { margin: 0; padding-left: 24px; }
+.guide-steps li + li { margin-top: 8px; }
+.guide-nav { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 16px; font-size: 14px; }
+.command-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.command-card { padding: 16px; }
+.command-list { margin: 0; font-size: 14px; }
+.command-list > div { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.command-list dt { font-weight: 600; }
+.command-list dd { margin: 4px 0 0; color: var(--text-sub); }
+.command-scope { display: inline-block; font-size: 12px; color: var(--accent); background: var(--accent-bg); border-radius: 6px; padding: 1px 6px; margin-left: 4px; }
+.coming-soon .availability { display: inline-block; color: var(--text); background: var(--surface-sub); border: 1px dashed var(--text-muted); border-radius: 6px; padding: 0 6px; font-size: 12px; }
+.example { margin: 16px 0 0; }
+.example figcaption { font-size: 12px; color: var(--text-sub); margin-bottom: 8px; }
+.chat { list-style: none; margin: 0; padding: 12px; border-radius: 10px; background: var(--surface-sub); font-size: 14px; }
+.chat > li { display: flex; align-items: flex-start; gap: 6px; margin-top: 10px; min-width: 0; }
+.chat > li:first-child { margin-top: 0; }
+.chat .player { justify-content: flex-end; padding-left: 24px; }
+.chat .bot::before { content: '🎮'; display: grid; place-items: center; flex: 0 0 28px; height: 28px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); font-size: 16px; }
+.bubble { min-width: 0; max-width: 100%; padding: 8px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 0 12px 12px; }
+.player .bubble { background: var(--accent-bg); border-radius: 12px 0 12px 12px; }
+.speaker { display: block; color: var(--text-sub); font-size: 11px; margin-bottom: 2px; }
+.bubble p { margin: 4px 0; }
+.sample-card { margin-top: 6px; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface); }
+.sample-card strong { display: block; }
+.sample-card ul, .sample-card ol { margin: 6px 0; padding-left: 20px; }
+.sample-action { display: block; text-align: center; border-radius: 6px; padding: 6px; margin-top: 8px; background: var(--accent-bg); color: var(--accent); }
+.quick-options { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.quick-options span { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 2px 8px; color: var(--accent); font-size: 12px; }
+.guide-panel ul { padding-left: 20px; }
+.guide-panel li + li { margin-top: 8px; }
+.guide-faq details { border-top: 1px solid var(--border); padding: 12px 0; }
+.guide-faq summary { cursor: pointer; font-weight: 600; }
+.guide-faq details p { font-size: 14px; color: var(--text-sub); }
+.line-guide :is(a, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.guide-footer { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 24px; font-size: 14px; }
+@media (min-width: 768px) {
+  .command-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

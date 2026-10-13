@@ -1,5 +1,5 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=87c9d94';
-import { GAMES } from './games.js?v=87c9d94';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=4a02c9a';
+import { GAMES } from './games.js?v=4a02c9a';
 
 export const KINDS = { problem: '問題', suggestion: '建議', other: '其他' };
 export const STATUSES = { new: '新的', triage: '評估中', need_info: '需要更多資訊', planned: '已排工項',
@@ -219,7 +219,7 @@ export async function openFeedback({ gameId = 'lobby', meHref = 'me/', doc = glo
   doc.body.append(dialog);
   dialog.showModal();
   try {
-    const rt = runtime ?? (cloudEnabled ? await (await import('./auth.js?v=87c9d94')).getCloudRuntime() : null);
+    const rt = runtime ?? (cloudEnabled ? await (await import('./auth.js?v=4a02c9a')).getCloudRuntime() : null);
     if (!dialog.open) return;
     if (!rt?.auth.session) {
       message.textContent = LOGIN_NOTICE;

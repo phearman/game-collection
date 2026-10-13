@@ -1,6 +1,6 @@
 // Wordle 規則層:純函式,不碰 DOM。單字一律小寫。
 // 規則正典:workbook/plans/wordle.md「規則(驗收依據)」。
-import { ANSWERS, ALLOWED } from './words.js?v=87c9d94';
+import { ANSWERS, ALLOWED } from './words.js?v=4a02c9a';
 
 export const WORD_LEN = 5;
 export const MAX_GUESSES = 6;

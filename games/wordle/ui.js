@@ -3,18 +3,18 @@ import {
   WORD_LEN, MAX_GUESSES, DIFFICULTIES, evaluate, isWord, initState, typeState, eraseState, guessError, submitState,
   keyStates, scoreFor, overlayFor, toSave, fromSave, isValidState, routeKey,
   assistState, letterHint, canReveal, revealState, candidatesState, fillState, visibleCandidates,
-} from './logic.js?v=87c9d94';
-import { HINTS } from './hints.js?v=87c9d94';
-import { createProfile } from '../../shared/profile.js?v=87c9d94';
-import { LocalStore } from '../../shared/stores/local.js?v=87c9d94';
-import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js?v=87c9d94';
-import { bindThemeToggle } from '../../shared/theme.js?v=87c9d94';
-import { play } from '../../shared/sound.js?v=87c9d94';
-import { setupHelp } from '../../shared/help.js?v=87c9d94';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=87c9d94';
-import { settlePlay } from '../../shared/settle.js?v=87c9d94';
-import { quitBestNote } from '../../shared/quit.js?v=87c9d94';
-import { load, save } from '../../shared/storage.js?v=87c9d94';
+} from './logic.js?v=4a02c9a';
+import { HINTS } from './hints.js?v=4a02c9a';
+import { createProfile } from '../../shared/profile.js?v=4a02c9a';
+import { LocalStore } from '../../shared/stores/local.js?v=4a02c9a';
+import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js?v=4a02c9a';
+import { bindThemeToggle } from '../../shared/theme.js?v=4a02c9a';
+import { play } from '../../shared/sound.js?v=4a02c9a';
+import { setupHelp } from '../../shared/help.js?v=4a02c9a';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=4a02c9a';
+import { settlePlay } from '../../shared/settle.js?v=4a02c9a';
+import { quitBestNote } from '../../shared/quit.js?v=4a02c9a';
+import { load, save } from '../../shared/storage.js?v=4a02c9a';
 
 const GAME_ID = 'wordle';
 const DIFF_KEY = 'difficulty:wordle'; // 上次選的難度(開新局用)

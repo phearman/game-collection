@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=87c9d94';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=4a02c9a';
 
 // Admin-only lists and mutations; player queries never carry LINE identifiers.
 export function createPendingGroupsClient({ auth, client, url = SUPABASE_URL,

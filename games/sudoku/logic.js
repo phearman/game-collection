@@ -1,5 +1,5 @@
 // 數獨規則與狀態轉移：純函式；亂數、時間均由呼叫端注入。
-import { timerInit, timerEvent } from '../../shared/progress.js?v=87c9d94';
+import { timerInit, timerEvent } from '../../shared/progress.js?v=4a02c9a';
 
 export const SIZE = 9;
 export const DIFFICULTIES = { easy: 46, normal: 40, hard: 32, expert: 26 };

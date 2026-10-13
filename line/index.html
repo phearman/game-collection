@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="遊戲集錦 LINE 小幫手使用說明：開遊戲、傳回饋、綁定成績、加入群組排行與查天氣的指令及對話範例。">
+  <title>LINE 小幫手使用說明 · 遊戲集錦</title>
+  <link rel="stylesheet" href="../shared/style.css?v=4a02c9a">
+  <link rel="stylesheet" href="style.css?v=4a02c9a">
+</head>
+<body>
+  <main class="page line-guide">
+    <header class="topbar">
+      <a class="btn" href="../">← 大廳</a>
+      <button class="btn" id="theme" type="button"></button>
+    </header>
+
+    <section class="guide-hero" aria-labelledby="guide-title">
+      <p class="guide-kicker">🎮 在 LINE 裡也能找到遊戲集錦</p>
+      <h1 class="brand" id="guide-title">LINE 小幫手使用說明</h1>
+      <p>「遊戲集錦回饋」是我們的 LINE 小幫手，可以開遊戲、收意見、查自己的成績與群組排行，也能查天氣、送問候和說笑話。</p>
+      <a class="btn add-friend" href="https://line.me/R/ti/p/@400aeser" rel="noopener">加好友</a>
+      <p class="guide-note">手機點「加好友」即可開啟 LINE；電腦瀏覽時，請用手機開啟本頁後點「加好友」。</p>
+      <nav class="guide-nav" aria-label="本頁導覽">
+        <a href="#start">快速開始</a><a href="#commands">指令總表與範例</a><a href="#groups">群組使用須知</a><a href="#faq">常見問題</a>
+      </nav>
+    </section>
+
+    <section class="guide-panel" id="start" aria-labelledby="start-title">
+      <h2 id="start-title">3 步快速開始</h2>
+      <ol class="guide-steps">
+        <li>點上方「加好友」，開啟「遊戲集錦回饋」的私訊。</li>
+        <li>先傳 <code>#功能</code>（也可用 <code>#介紹</code>）認識小幫手，或傳 <code>#說明</code> 查看可用指令與用法。</li>
+        <li>試著傳 <code>#遊戲</code>，點回覆卡片上的「開始玩」，就能開啟遊戲。</li>
+      </ol>
+      <p class="guide-note">以下對話與卡片都是簡化示意；小明、小美及分數、天氣皆為範例資料，並非即時資訊。泡泡裡的選項僅供示意，請到 LINE 操作。</p>
+    </section>
+
+    <section class="guide-commands" id="commands" aria-labelledby="commands-title">
+      <h2 id="commands-title">指令總表與對話範例</h2>
+      <p class="guide-note">「兩者」指私訊與已核准群組。指令的 # 可用半形或全形；指令和內容、縣市之間請留一個空白。</p>
+      <div class="command-grid">
+        <article class="command-card" aria-labelledby="games-title">
+          <h3 id="games-title">🎮 遊戲</h3>
+          <dl class="command-list">
+            <div data-command="遊戲" data-scopes="user group"><dt><code>#遊戲</code><span class="command-scope">兩者</span></dt><dd>挑選遊戲或進大廳；「開始玩」會用外部瀏覽器開啟網站，不必登入也能玩。</dd></div>
+          </dl>
+          <figure class="example">
+            <figcaption>私訊或群組 · 開一局遊戲</figcaption>
+            <ol class="chat">
+              <li class="player"><div class="bubble"><span class="speaker">小明</span>#遊戲</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>選一款開始玩<div class="sample-card"><strong>🔢 2048</strong><p>滑動合併數字，挑戰更高分！</p><span class="sample-action">開始玩</span></div><div class="sample-card"><strong>🎮 遊戲大廳</strong><p>瀏覽所有遊戲，挑一款開始玩。</p><span class="sample-action">開始玩</span></div></div></li>
+            </ol>
+          </figure>
+        </article>
+
+        <article class="command-card" aria-labelledby="feedback-title">
+          <h3 id="feedback-title">💬 意見回饋</h3>
+          <dl class="command-list">
+            <div data-command="直接私訊" data-scopes="user"><dt>直接私訊文字<span class="command-scope">私訊</span></dt><dd>直接告訴我們想法，送出就會記錄為回饋；一般問候「早安」「午安」「晚安」不收。</dd></div>
+            <div data-command="回饋" data-scopes="user group"><dt><code>#回饋 內容</code><span class="command-scope">兩者</span></dt><dd>群組用 #回饋 加內容，或 @ 小幫手後傳「回饋 內容」才會收取。每天最多 20 則文字回饋；目前不收圖片、貼圖或語音。</dd></div>
+            <div data-command="取消" data-scopes="user"><dt><code>取消</code> / <code>#取消</code><span class="command-scope">私訊</span></dt><dd>不想繼續回饋時，整則傳「取消」。這則取消訊息不會記錄；不會刪除已送出的回饋。</dd></div>
+            <div data-command="收回" data-scopes="user group"><dt>收回原訊息<span class="command-scope">兩者</span></dt><dd>長按原本送出的回饋，選 LINE 的「收回」；收到收回通知後，就會刪除那則回饋。只在自己手機上「刪除」訊息不會撤回。</dd></div>
+          </dl>
+          <figure class="example">
+            <figcaption>私訊直接送意見；群組請用 #回饋 加內容</figcaption>
+            <ol class="chat">
+              <li class="player"><div class="bubble"><span class="speaker">小美 · 私訊</span>希望有更多益智遊戲！</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>已收到你的回饋，謝謝！送錯了可以長按訊息「收回」，這則回饋會一起刪除。</div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小明 · 群組</span>#回饋 希望有更多益智遊戲！</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>✅ 已記錄</div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小美 · 私訊</span>取消</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>好的，已取消。想回饋時再傳訊息就好。</div></li>
+            </ol>
+            <p class="guide-note">取消之後，前面已送出的意見仍在；要刪掉請長按那則原訊息「收回」。</p>
+          </figure>
+        </article>
+
+        <article class="command-card" aria-labelledby="scores-title">
+          <h3 id="scores-title">🏆 成績與排行</h3>
+          <dl class="command-list">
+            <div data-command="綁定" data-scopes="user"><dt><code>#綁定</code><span class="command-scope">私訊</span></dt><dd>點綁定按鈕 → 用平常玩遊戲的 Google 或 GitHub 帳號登入 → 網站按「確認綁定」。連結 10 分鐘內有效、只能用一次；不要分享。群組輸入只會提醒改用私訊。</dd></div>
+            <div data-command="成績" data-scopes="user group"><dt><code>#成績</code><span class="command-scope">兩者</span></dt><dd>綁定後看自己的等級、XP、總局數與最佳分數。群組查詢會讓該群成員看到你的成績卡。</dd></div>
+            <div data-command="解除綁定" data-scopes="user"><dt><code>#解除綁定</code><span class="command-scope">私訊</span></dt><dd>解除帳號連結並退出所有群組排行；也可到<a href="../me/">我的紀錄</a>解除 LINE 綁定。</dd></div>
+            <div data-command="加入排行" data-scopes="group"><dt><code>#加入排行</code><span class="command-scope">群組</span></dt><dd>先私訊綁定，再在已核准群組自行加入；每個群組都要各自加入。</dd></div>
+            <div data-command="排行" data-scopes="group"><dt><code>#排行</code><span class="command-scope">群組</span></dt><dd>看本群近 7 天 XP 前 10 名，依每人最近 50 局計算，可能不涵蓋七天全部遊玩。</dd></div>
+            <div data-command="排行 2048" data-scopes="group"><dt><code>#排行 2048</code><span class="command-scope">群組</span></dt><dd>看指定遊戲的最佳分數前 10 名；可換成其他遊戲名稱。沒加入本群排行的人不會列出。</dd></div>
+            <div data-command="退出排行" data-scopes="group"><dt><code>#退出排行</code><span class="command-scope">群組</span></dt><dd>只退出目前群組，保留綁定與其他群組的排行資格。</dd></div>
+          </dl>
+          <figure class="example">
+            <figcaption>先私訊綁定，再回群組加入排行</figcaption>
+            <ol class="chat">
+              <li class="player"><div class="bubble"><span class="speaker">小明 · 私訊</span>#綁定</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>綁定遊戲帳號</strong><p>請在 10 分鐘內登入網站，再按確認綁定。</p><span class="sample-action">綁定我的遊戲帳號</span></div></div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小明 · 完成網站確認後</span>#成績</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>我的遊戲成績</strong><p>等級 3 · XP 240<br>總局數 12<br>2048：4096</p><span class="sample-action">看完整紀錄</span></div></div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小明 · 已核准群組</span>#加入排行</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>✅ 小明已加入本群排行</div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小明 · 群組</span>#排行</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>本群近 7 天 XP 排行</strong><ol><li>小明 · 120 XP</li><li>小美 · 90 XP</li></ol><p>依最近紀錄計算（每人最近 50 局）</p></div></div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小美 · 群組</span>#排行 2048</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>2048 本群最佳分數排行</strong><ol><li>小明 · 4096</li><li>小美 · 2048</li></ol></div></div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小明 · 群組</span>#退出排行</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>已退出本群排行</div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小明 · 私訊</span>#解除綁定</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>已解除綁定，並退出所有群組排行</div></li>
+            </ol>
+          </figure>
+        </article>
+
+        <article class="command-card" aria-labelledby="life-title">
+          <h3 id="life-title">☀️ 生活小幫手</h3>
+          <dl class="command-list">
+            <div data-command="天氣" data-scopes="user group"><dt><code>#天氣 [縣市]</code><span class="command-scope">兩者</span></dt><dd>查今明 36 小時預報，例如 #天氣 高雄。私訊省略縣市沿用上次查詢，首次預設高雄市；群組預設高雄市。新竹、嘉義請寫市或縣。</dd></div>
+            <div data-command="早安" data-scopes="user group"><dt><code>#早安</code><span class="command-scope">兩者</span></dt><dd>早安問候、台灣時間與天氣提醒。</dd></div>
+            <div data-command="午安" data-scopes="user group"><dt><code>#午安</code><span class="command-scope">兩者</span></dt><dd>午安問候、台灣時間與天氣提醒。</dd></div>
+            <div data-command="晚安" data-scopes="user group"><dt><code>#晚安</code><span class="command-scope">兩者</span></dt><dd>晚安問候、台灣時間與天氣提醒。問候要加 # 或在群組 @ 小幫手才會回應；群組問候使用高雄市天氣。</dd></div>
+            <div data-command="笑話" data-scopes="user group"><dt><code>#笑話</code><span class="command-scope">兩者</span></dt><dd>來一則闔家適宜的短笑話，按快速選項「再來一則」再抽。</dd></div>
+            <div data-command="新聞" data-scopes="user group"><dt><code>#新聞</code><span class="command-scope">兩者</span> <span class="availability">準備中</span></dt><dd>目前只回「新聞功能準備中」，暫時沒有新聞標題或連結。</dd></div>
+          </dl>
+          <p class="guide-note">生活指令每人每天共 30 次，私訊與群組合計，台灣午夜重算；失敗也計次，新聞準備中不計次。不主動推播。</p>
+          <p class="guide-note">快速選項最後都有「👋 先這樣」，按下送出「先這樣」後 LINE 會收起選項；私訊或已核准群組直接傳「先這樣」（或 @ 小幫手後傳）也可以，不會回覆、不記錄、不計次。</p>
+          <figure class="example">
+            <figcaption>查天氣、打招呼，或來一則笑話</figcaption>
+            <ol class="chat">
+              <li class="player"><div class="bubble"><span class="speaker">小美</span>#天氣 高雄</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>高雄市 · 今明 36 小時</strong><p>今天白天：多雲 · 26～30°C · 雨 20% · 舒適<br>今晚：多雲 · 24～27°C · 雨 30% · 舒適<br>明天白天：短暫雨 · 25～29°C · 雨 60% · 舒適</p><p>資料來源：中央氣象署（範例）</p></div><div class="quick-options" aria-label="快速選項示意"><span>高雄</span><span>台北</span><span>台中</span><span>台南</span><span>笑話</span><span>說明</span><span>👋 先這樣</span></div></div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小美</span>#早安</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>早安！台灣時間 08:00，高雄市多雲。記得吃早餐！（時間、天氣示意）</div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小美</span>#午安</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>午安！台灣時間 12:00，高雄市多雲。記得喝水！（時間、天氣示意）</div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小美</span>#晚安</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>晚安！台灣時間 20:00，高雄市多雲。給自己一點休息時間。（時間、天氣示意）</div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小美</span>#笑話</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>為什麼電腦不怕冷？因為它有視窗，卻不會漏風。<div class="quick-options" aria-label="快速選項示意"><span>再來一則</span><span>天氣</span><span>新聞</span><span>遊戲</span><span>說明</span><span>👋 先這樣</span></div></div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小美</span>#新聞</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>新聞功能準備中</div></li>
+            </ol>
+          </figure>
+        </article>
+
+        <article class="command-card" aria-labelledby="help-title">
+          <h3 id="help-title">❓ 說明</h3>
+          <dl class="command-list">
+            <div data-command="功能" data-scopes="user group"><dt><code>#功能</code> / <code>#介紹</code><span class="command-scope">兩者</span></dt><dd>用四類卡片認識小幫手；按「試試看」送出指令，按「看用法」查看 #說明。依場合顯示可用功能，不計生活次數、不記錄為回饋。</dd></div>
+            <div data-command="說明" data-scopes="user group"><dt><code>#說明 [指令]</code><span class="command-scope">兩者</span></dt><dd>不帶指令看清單，帶指令看用法，例如 #說明 天氣、#說明 #排行；也可用 #指令 或 #help。方括號表示可省略，不必真的輸入。</dd></div>
+            <div data-command="提及" data-scopes="group"><dt><code>@遊戲集錦回饋</code><span class="command-scope">群組</span></dt><dd>在已核准群組用 LINE 的 @ 選到小幫手，後面可接不帶 # 的指令，例如「天氣 台北」。只 @、接「介紹」或無法辨識時回功能介紹；@ 其他人不回應。</dd></div>
+          </dl>
+          <figure class="example">
+            <figcaption>目前可用的說明指令</figcaption>
+            <ol class="chat">
+              <li class="player"><div class="bubble"><span class="speaker">小明</span>#說明</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>私訊可用指令</strong><p>#遊戲 · 開啟遊戲與大廳<br>#天氣 · 查詢今明天氣<br>#綁定 · 連結網站帳號</p><span class="sample-action">點一列查看用法</span></div></div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小明</span>#說明 天氣</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>天氣：查中央氣象署今明 36 小時預報。範例：#天氣 高雄<div class="quick-options" aria-label="快速選項示意"><span>天氣</span><span>笑話</span><span>遊戲</span><span>說明</span><span>👋 先這樣</span></div></div></li>
+            </ol>
+          </figure>
+          <figure class="example">
+            <figcaption>功能介紹與群組提及（回覆示意）</figcaption>
+            <ol class="chat">
+              <li class="player"><div class="bubble"><span class="speaker">小明 · 私訊或群組</span>#功能</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>🎮 遊戲 · 💬 意見回饋 · 🏆 成績與排行 · ☀️ 生活小幫手<div class="sample-card"><strong>🎮 遊戲</strong><p>挑選喜歡的遊戲，或到大廳探索更多玩法。</p><span class="sample-action">試試看 遊戲</span> <span class="sample-action">看用法</span></div></div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小明 · 群組</span>@遊戲集錦回饋</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>開遊戲、傳回饋、查成績與群組排行、生活小幫手；按「試試看」或「看用法」挑一個試試。</div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小明 · 已核准群組</span>@遊戲集錦回饋 天氣 台北</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>臺北市天氣<div class="sample-card"><p>今明 36 小時的三個時段預報</p></div></div></li>
+            </ol>
+          </figure>
+        </article>
+      </div>
+    </section>
+
+    <section class="guide-panel" id="groups" aria-labelledby="groups-title">
+      <h2 id="groups-title">群組使用須知</h2>
+      <ul>
+        <li>邀請小幫手後，要由遊戲集錦管理者核准群組才會回應；尚未核准時，傳指令也不會收到回覆。</li>
+        <li>一般聊天不會被記錄，只有 #回饋 加內容或 @ 小幫手後傳「回饋 內容」才會成為回饋。</li>
+        <li>一個群組只能有一個官方帳號；若已有其他官方帳號，請先確認是否能加入小幫手。</li>
+        <li>#成績 只顯示發出指令者自己的成績；#排行 只列出自行 #加入排行 的人。綁定後不會自動加入。</li>
+        <li>群組的成績卡與排行會公開給該群成員。只想自己看成績，請私訊 #成績。</li>
+      </ul>
+    </section>
+
+    <section class="guide-panel guide-faq" id="faq" aria-labelledby="faq-title">
+      <h2 id="faq-title">常見問題</h2>
+      <details><summary>小幫手怎麼沒回應？</summary><p>先確認好友已加入、訊息有送出。群組需要遊戲集錦管理者核准；遊戲與生活指令前要有 #，或在群組用 LINE 的 @ 選到小幫手再接指令。綁定、解除綁定和取消請改用私訊。一般聊天、@ 其他人與貼圖不會當作指令回覆；可傳 #功能 認識小幫手。生活指令達每日上限或服務暫時失敗時，請依提示稍後再試。</p></details>
+      <details><summary>綁定時要登入哪個帳號？</summary><p>用平常在遊戲集錦保存紀錄的 Google 或 GitHub 帳號。登入後核對 LINE 與網站名稱，再按「確認綁定」。未登入遊玩只存在裝置上的紀錄，需先在網站登入並完成紀錄合併，才有雲端成績可查。綁定連結過期就回私訊重傳 #綁定。</p></details>
+      <details><summary>怎麼刪除我的回饋？傳「取消」可以嗎？</summary><p>請在 LINE 長按原訊息選「收回」，收到收回事件後會刪除那則回饋。取消只表示這次不繼續回饋，不會刪掉先前送出的意見。無法收回時可請管理者協助；LINE 回饋不顯示在網站「我的紀錄」。</p></details>
+      <details><summary>會不會讀取或記錄我的聊天？</summary><p>小幫手會接收所在對話的訊息事件，但一般群組聊天不保存、不記錄內容。私訊的一般文字會當作回饋保存，請不要傳個人資料；遊戲、說明等指令不當回饋，天氣會記住私訊選的縣市。詳細資料用途請看<a href="../privacy/">隱私權政策</a>。</p></details>
+      <details><summary>使用小幫手要不要錢？</summary><p>目前免費，玩遊戲也不需要付費；使用 LINE 與開啟網站會用到自己的網路流量。回饋與生活指令各有每日次數上限。</p></details>
+      <details><summary>已綁定，為什麼排行看不到我？</summary><p>還要在想參加的已核准群組傳 #加入排行，各群分開加入。指定遊戲排行需有該遊戲的雲端最佳分數，且卡片只顯示前 10 名。#退出排行 只退出目前群組；#解除綁定 會退出所有群組。</p></details>
+      <details><summary>天氣怎麼一直是高雄？新聞怎麼沒有內容？</summary><p>第一次查天氣或在群組省略縣市時預設高雄市。可傳 #天氣 台北 指定縣市，私訊下次會沿用；群組不改私人偏好。新聞功能仍在準備中，目前不提供新聞內容。</p></details>
+    </section>
+
+    <footer class="guide-footer"><a href="../privacy/">隱私權政策</a><a href="../">回大廳</a></footer>
+  </main>
+  <script type="module" src="ui.js?v=4a02c9a"></script>
+</body>
+</html>
