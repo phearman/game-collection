@@ -290,3 +290,8 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
   .page-fit .topbar, .actions { margin-bottom: 6px; }
   .page-fit .hint { font-size: 11px; margin-top: 4px; }
 }
+
+/* IR21/RS19:345px 頂列預算再縮 2px(導覽列間距 2→1px),不改按鈕大小 */
+@media (max-width: 360px) {
+  .page .topbar .navigation { gap: 1px; }
+}

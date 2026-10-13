@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>遊戲集錦</title>
-  <link rel="stylesheet" href="shared/style.css?v=4a02c9a">
+  <link rel="stylesheet" href="shared/style.css?v=53ac788">
 </head>
 <body>
   <main class="page">
@@ -13,31 +13,36 @@
       <div class="topbar-actions">
         <a class="btn account-icon" id="account-link" href="me/" aria-label="帳號登入狀態" hidden></a>
         <a class="btn" id="me" href="me/">👤 我的</a>
-        <button class="btn" id="theme" type="button"></button>
+        <button class="btn" id="theme" type="button" data-skin-toggle="on"></button>
       </div>
     </header>
     <p id="local-record-note" class="me-sub">未登入:紀錄只存在這台裝置</p>
     <section class="cards" id="cards" aria-label="遊戲清單"></section>
+    <section class="skin-compare" id="skin-compare" aria-labelledby="skin-compare-title" hidden>
+      <h2 id="skin-compare-title">🎨 主題樣板比較</h2>
+      <p>目前有 3 款美術風格可以試玩比較,套用在大廳、我的紀錄、2048、下樓梯。點一下就能切換(頂列的 🎨 也可以),深淺色鈕可再各試一次,挑到喜歡的請告訴我們。</p>
+      <div class="skin-compare-list" id="skin-compare-list"></div>
+    </section>
     <footer class="lobby-footer"><a href="changelog/">更新紀錄</a><span aria-hidden="true"> · </span><a href="privacy/">隱私權政策</a><span aria-hidden="true"> · </span><a id="feedback-link" href="me/">意見回饋</a><span aria-hidden="true"> · </span><a href="line/">LINE 小幫手使用說明</a></footer>
   </main>
   <script type="module">
-    import { GAMES } from './shared/games.js?v=4a02c9a';
-    import { createProfile } from './shared/profile.js?v=4a02c9a';
-    import { LocalStore } from './shared/stores/local.js?v=4a02c9a';
-    import { bindThemeToggle } from './shared/theme.js?v=4a02c9a';
-    import { cloudEnabled } from './shared/supabase-config.js?v=4a02c9a';
-    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=4a02c9a';
+    import { GAMES } from './shared/games.js?v=53ac788';
+    import { createProfile } from './shared/profile.js?v=53ac788';
+    import { LocalStore } from './shared/stores/local.js?v=53ac788';
+    import { bindThemeToggle } from './shared/theme.js?v=53ac788';
+    import { cloudEnabled } from './shared/supabase-config.js?v=53ac788';
+    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=53ac788';
 
     bindThemeToggle(document.getElementById('theme'));
     document.getElementById('feedback-link').addEventListener('click', async (event) => {
       event.preventDefault();
-      const { openFeedback } = await import('./shared/feedback.js?v=4a02c9a');
+      const { openFeedback } = await import('./shared/feedback.js?v=53ac788');
       await openFeedback();
     });
 
     const sum = await (await createProfile({ store: new LocalStore() })).summary();
     if (cloudEnabled) {
-      const { auth, notice } = await (await import('./shared/auth.js?v=4a02c9a')).getCloudRuntime();
+      const { auth, notice } = await (await import('./shared/auth.js?v=53ac788')).getCloudRuntime();
       const icon = document.getElementById('account-link');
       icon.hidden = false;
       const renderAccount = () => {
@@ -89,5 +94,6 @@
     }
     setupWhatsNew({ hasHistory: hasPlayHistory(sum) });
   </script>
+  <script type="module" src="shared/skin-compare.js?v=53ac788"></script>
 </body>
 </html>

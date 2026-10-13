@@ -1,8 +1,8 @@
-import { getCloudRuntime } from '../shared/auth.js?v=4a02c9a';
-import { exportData, exportFileName } from '../shared/progress.js?v=4a02c9a';
-import { createFeedbackClient, KINDS, playerFeedbackStatus, element, displayName } from '../shared/feedback.js?v=4a02c9a';
-import { GAMES } from '../shared/games.js?v=4a02c9a';
-import { initLineLinkStatus } from '../shared/line-link.js?v=4a02c9a';
+import { getCloudRuntime } from '../shared/auth.js?v=53ac788';
+import { exportData, exportFileName } from '../shared/progress.js?v=53ac788';
+import { createFeedbackClient, KINDS, playerFeedbackStatus, element, displayName } from '../shared/feedback.js?v=53ac788';
+import { GAMES } from '../shared/games.js?v=53ac788';
+import { initLineLinkStatus } from '../shared/line-link.js?v=53ac788';
 
 export function renderMyFeedback(doc, rows) {
   const items = doc.getElementById('feedback-items');

@@ -1,5 +1,6 @@
-import { load, save } from './storage.js?v=4a02c9a';
-import { mountSoundToggle } from './sound.js?v=4a02c9a';
+import { load, save } from './storage.js?v=53ac788';
+import { mountSoundToggle } from './sound.js?v=53ac788';
+import { mountSkinToggle } from './skin.js?v=53ac788';
 
 const root = document.documentElement;
 
@@ -21,6 +22,7 @@ if (saved === 'light' || saved === 'dark') root.dataset.theme = saved;
 
 export function bindThemeToggle(btn) {
   mountSoundToggle(btn);
+  if (btn.dataset?.skinToggle === 'on') mountSkinToggle(btn); // 只有大廳、我的紀錄有 🎨(遊戲頁頂列已滿)
   label(btn);
   btn.addEventListener('click', () => {
     const next = current() === 'dark' ? 'light' : 'dark';

@@ -1,5 +1,5 @@
-import { CHANGELOG } from './changelog.js?v=4a02c9a';
-import { GAMES } from './games.js?v=4a02c9a';
+import { CHANGELOG } from './changelog.js?v=53ac788';
+import { GAMES } from './games.js?v=53ac788';
 
 export const SEEN_UPDATE_KEY = 'gc:seen-update';
 
