@@ -49,7 +49,7 @@ select.btn { appearance: auto; }
 .stage { position: relative; aspect-ratio: 9 / 16; width: min(100cqw, 100cqh * 9 / 16); }
 .stage canvas { display: block; width: 100%; height: 100%; border: 1px solid var(--border); border-radius: 12px; background: var(--mt-road); }
 .controls { display: grid; grid-template-columns: 1fr 1fr 1.25fr 1.25fr; gap: 6px; margin-top: 8px; }
-.controls .btn { min-width: 56px; min-height: 56px; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; white-space: nowrap; font-size: 18px; }
+.controls .btn { min-width: 56px; min-height: 72px; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; white-space: nowrap; font-size: 18px; }
 .controls .brake { border-color: var(--mt-danger); }
 .controls .throttle { border-color: var(--mt-ramp); }
 .controls .held { background: var(--mt-road-dark); color: var(--mt-white); }

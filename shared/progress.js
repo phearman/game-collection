@@ -110,6 +110,10 @@ export const ACHIEVEMENTS = [
     test: ({ play }) => play?.game_id === 'minesweeper' && play.difficulty === 'expert' && play.result === 'win',
   },
   {
+    id: 'reversi_expert', name: '黑白棋擊敗高手', icon: '⚫', cond: '黑白棋高手難度勝利', game: 'reversi',
+    test: ({ play }) => play?.game_id === 'reversi' && play.difficulty === 'expert' && play.result === 'win',
+  },
+  {
     id: 'wordle_2', name: 'Wordle 2 次猜中', icon: '🔤', cond: 'Wordle 2 次內猜中', game: 'wordle',
     test: ({ play }) => play?.game_id === 'wordle' && play.result === 'win' && (play.detail?.guesses ?? Infinity) <= 2,
   },

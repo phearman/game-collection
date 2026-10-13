@@ -1,0 +1,38 @@
+.page-narrow { max-width: 500px; }
+.navigation, .stats { display: flex; align-items: center; gap: 4px; }
+.stat { min-width: 48px; }
+.btn { white-space: nowrap; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.actions label { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 14px; }
+select { min-height: 40px; min-width: 40px; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px; }
+select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1 { margin: 16px 0 4px; font-size: 22px; }
+h1 span { color: var(--text-sub); font-size: 13px; font-weight: 400; }
+.readout { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px; margin-bottom: 10px; min-height: 28px; font-size: 14px; }
+#status { color: var(--text-sub); }
+.board-wrap { position: relative; }
+.board { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); border: 1px solid #163e2c; border-radius: 6px; overflow: hidden; background: #27784e; }
+.cell { display: grid; place-items: center; position: relative; aspect-ratio: 1; min-width: 0; padding: 0; border: 1px solid #16492f; background: transparent; cursor: pointer; touch-action: manipulation; }
+.cell:focus-visible { outline: 3px solid #ffd573; outline-offset: -4px; z-index: 1; }
+.cell[aria-disabled="true"] { cursor: default; }
+.disc { width: 78%; height: 78%; border-radius: 50%; box-shadow: 1px 2px 3px #0007; }
+.black { background: radial-gradient(circle at 32% 25%, #555, #171717 55%, #020202); border: 1px solid #080808; }
+.white { background: radial-gradient(circle at 32% 25%, #fff, #eee 55%, #bcbcbc); border: 1px solid #777; }
+.legal::after { content: ''; width: 20%; height: 20%; background: #e2f3d5aa; border-radius: 50%; }
+.last::before { content: ''; position: absolute; width: 13%; height: 13%; border-radius: 50%; background: #e6a940; border: 1px solid #5b3900; z-index: 1; }
+.flip .disc { animation: flip 180ms ease-out both; animation-delay: var(--flip-delay, 0ms); }
+@keyframes flip { from { transform: rotateY(180deg); } to { transform: rotateY(0); } }
+.shake { animation: shake 160ms ease-in-out; }
+@keyframes shake { 25%, 75% { transform: translateX(-2px); } 50% { transform: translateX(2px); } }
+.overlay { position: absolute; inset: 0; background: #000d; color: #fff; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 12px; overflow-y: auto; }
+.overlay[hidden] { display: none; }
+.overlay-title { font-size: 24px; font-weight: 700; margin: 0; }
+.overlay-info p { margin: 4px 0; }
+.overlay-xp { font-size: 18px; font-weight: 700; }
+.hint { font-size: 12px; color: var(--text-sub); text-align: center; }
+.demo-board .cell { cursor: default; }
+@media (max-width: 1024px) { .page .topbar { flex-wrap: nowrap; gap: 4px; } }
+@media (prefers-reduced-motion: reduce) {
+  .flip .disc { animation: none; }
+  .shake { animation: none; outline: 2px solid var(--accent); }
+}
