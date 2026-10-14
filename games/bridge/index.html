@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>小人過橋 · 遊戲集錦</title>
+  <link rel="stylesheet" href="../../shared/style.css?v=5cadbe4">
+  <link rel="stylesheet" href="style.css?v=5cadbe4">
+</head>
+<body>
+  <main class="page page-narrow page-fit">
+    <header class="topbar">
+      <a class="btn" href="../../" aria-label="回到大廳" title="回到大廳"><span aria-hidden="true">←</span><span class="topbar-label">大廳</span></a>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">分數</div><div class="stat-value" id="score">0</div></div>
+        <div class="stat"><div class="stat-label">最佳</div><div class="stat-value" id="best">0</div></div>
+        <button class="btn" id="theme" type="button"></button>
+      </div>
+    </header>
+    <div class="actions">
+      <button class="btn" id="new" type="button">↻ 新遊戲</button>
+      <button class="btn" id="pause" type="button">⏸ 暫停</button>
+      <select class="btn" id="difficulty" aria-label="難度">
+        <option value="normal">普通</option>
+        <option value="hard">困難</option>
+        <option value="expert">專家</option>
+      </select>
+    </div>
+    <div class="stage-area">
+      <div class="board-wrap">
+        <canvas id="field" class="field" tabindex="0" role="img" aria-label="小人過橋場景；按住空白鍵搭橋，放開過橋" aria-describedby="status hint"></canvas>
+        <div class="overlay" id="overlay" hidden>
+          <p class="overlay-title" id="overlay-title"></p>
+          <div class="overlay-info" id="overlay-info"></div>
+          <button class="btn" id="again" type="button">再玩一次</button>
+        </div>
+      </div>
+    </div>
+    <p class="status" id="status" aria-live="polite"></p>
+    <p class="tally" id="tally"></p>
+    <p class="hint" id="hint">按住場景、滑鼠左鍵或空白鍵搭橋 · 放開過橋<br>P 暫停 · 中央紅線是完美區</p>
+  </main>
+  <script type="module" src="ui.js?v=5cadbe4"></script>
+</body>
+</html>

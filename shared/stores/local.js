@@ -1,7 +1,7 @@
 // LocalStore:store 介面的 localStorage 實作(第一期)。介面說明見 supabase.js。
 // localStorage 可能不可用(隱私模式、封鎖網站資料、配額滿):讀失敗回空值、寫失敗略過並回傳 false,遊戲照常可玩。
 // 例外:importAll 要整份覆蓋或完全不動,寫入失敗會還原原資料並丟錯。
-import { PLAYS_LIMIT, pushPlay } from '../progress.js?v=fea2bda';
+import { PLAYS_LIMIT, pushPlay } from '../progress.js?v=5cadbe4';
 
 const PREFIX = 'game-collection:';
 const V1 = `${PREFIX}v1:`;
@@ -137,9 +137,9 @@ export class LocalStore {
 
   // 結算一次提交(IR6):刪存檔 → profile → stats → 局紀錄,任一步失敗就把動過的 key 還原成原值並丟錯。
   // 先刪存檔:之後失敗會還原,所以不會出現「紀錄寫了、存檔還在,重載又結算一次」。
-  async commitFinish({ gameId, profile, stats, play }) {
+  async commitFinish({ gameId, saveId = gameId, profile, stats, play }) {
     const ls = this.ls(); // 不可用就直接丟錯,什麼都還沒動
-    const keys = [KEY.save(gameId), KEY.profile, KEY.stats, KEY.plays];
+    const keys = [KEY.save(saveId), KEY.profile, KEY.stats, KEY.plays];
     const backup = new Map(keys.map((k) => [k, ls.getItem(k)]));
     const parse = (raw, fallback) => {
       try { return raw === null ? fallback : JSON.parse(raw); } catch { return fallback; }
@@ -147,7 +147,7 @@ export class LocalStore {
     const allStats = parse(backup.get(KEY.stats), {});
     const plays = parse(backup.get(KEY.plays), []);
     const writes = [
-      [KEY.save(gameId), null],
+      [KEY.save(saveId), null],
       [KEY.profile, JSON.stringify(profile)],
       [KEY.stats, JSON.stringify({ ...(allStats && typeof allStats === 'object' && !Array.isArray(allStats) ? allStats : {}), [stats.game_id]: stats })],
       [KEY.plays, JSON.stringify(pushPlay(Array.isArray(plays) ? plays : [], play))],

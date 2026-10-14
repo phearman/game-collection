@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>我的紀錄 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=fea2bda">
+  <link rel="stylesheet" href="../shared/style.css?v=5cadbe4">
   <style>
     .me-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; }
     .me-level { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -44,6 +44,16 @@
     .import-dlg h2 { font-size: 18px; margin: 0 0 8px; }
     .import-dlg .warn { color: #d85a30; font-weight: 600; }
     .import-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; margin-top: 12px; }
+    .avatar-box { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .avatar-title { font-weight: 600; margin: 0 0 8px; }
+    .avatar-current { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; font-size: 28px; border-radius: 50%; background: var(--surface-sub); overflow: hidden; }
+    .avatar-current img { width: 44px; height: 44px; object-fit: cover; }
+    .avatar-grid { display: grid; grid-template-columns: repeat(6, 44px); gap: 6px; margin: 10px 0; }
+    .avatar-choice { width: 44px; height: 44px; font-size: 24px; line-height: 1; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); cursor: pointer; padding: 0; }
+    .avatar-choice[aria-checked="true"] { outline: 3px solid var(--accent); outline-offset: 1px; }
+    .avatar-choice:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    .avatar-login { display: flex; align-items: center; gap: 8px; margin-top: 10px; min-height: 44px; }
+    .avatar-login input { width: 22px; height: 22px; }
     /* 手機(IR4):成就名不斷行(縮字)、條件最多 2 行;表格縮欄距讓 375px 放得下,放不下仍可水平捲動 */
     @media (max-width: 480px) {
       .ach { grid-template-columns: repeat(3, 1fr); }
@@ -76,6 +86,18 @@
         <a class="btn" id="feedback-admin" href="../admin/" hidden>🛠 意見回饋後台</a>
       </div>
       <p id="account-msg" role="status" aria-live="polite"></p>
+      <div id="avatar-box" class="avatar-box" hidden>
+        <p class="avatar-title">排行頭像</p>
+        <div class="account-row">
+          <span id="avatar-current" class="avatar-current" aria-label="目前的排行頭像"></span>
+          <button class="btn" id="avatar-change" type="button" aria-expanded="false" aria-controls="avatar-grid">更換</button>
+        </div>
+        <div id="avatar-grid" class="avatar-grid" role="radiogroup" aria-label="選擇排行頭像" hidden></div>
+        <label class="avatar-login"><input type="checkbox" id="avatar-login"> 使用登入頭像</label>
+        <p class="me-sub">打開後,你在 LINE 群組排行與網站排行會顯示 Google/GitHub 的大頭貼,其他玩家看得到。預設關閉。</p>
+        <p id="avatar-msg" class="me-sub" role="status" aria-live="polite"></p>
+      </div>
+      <p id="avatar-signed-out" class="me-sub" hidden>登入後可以設定排行頭像</p>
       <p id="line-link-status" role="status" aria-live="polite"></p>
       <p class="me-sub"><a href="../line/">LINE 小幫手使用說明</a></p>
       <button class="btn" id="unlink-line" type="button" hidden>解除 LINE 綁定</button>
@@ -131,6 +153,6 @@
       <button class="btn" type="button" data-act="confirm">確認覆蓋</button>
     </div>
   </dialog>
-  <script type="module" src="ui.js?v=fea2bda"></script>
+  <script type="module" src="ui.js?v=5cadbe4"></script>
 </body>
 </html>

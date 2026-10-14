@@ -1,25 +1,31 @@
 // 個人紀錄 API(RS1):遊戲與畫面只用這裡。規則一律呼叫 progress.js,這裡只串接 store。
-import { GAMES } from './games.js?v=fea2bda';
-import { LocalStore } from './stores/local.js?v=fea2bda';
-import { cloudEnabled } from './supabase-config.js?v=fea2bda';
+import { GAMES } from './games.js?v=5cadbe4';
+import { LocalStore } from './stores/local.js?v=5cadbe4';
+import { cloudEnabled } from './supabase-config.js?v=5cadbe4';
 import {
   emptyProfile, migrateLegacyBest, applyFinish, applyUnlock, levelProgress, ACHIEVEMENTS, ACHIEVEMENT_XP, recentOrder,
   timerInit, timerEvent, timerSeconds, validateImport, isValidGameSave, pushPlay, exportData, exportFileName, iso, PLAYS_LIMIT,
-} from './progress.js?v=fea2bda';
-import { isValidState as valid2048 } from '../games/2048/logic.js?v=fea2bda';
-import { isValidState as validTictactoe } from '../games/tictactoe/logic.js?v=fea2bda';
-import { isValidState as validSnake } from '../games/snake/logic.js?v=fea2bda';
-import { isValidState as validMinesweeper } from '../games/minesweeper/logic.js?v=fea2bda';
-import { isValidState as validSudoku } from '../games/sudoku/logic.js?v=fea2bda';
-import { isValidState as validWordle } from '../games/wordle/logic.js?v=fea2bda';
-import { isValidState as validKeeper } from '../games/keeper/logic.js?v=fea2bda';
-import { isValidState as validStairs } from '../games/stairs/logic.js?v=fea2bda';
-import { isValidState as validMoto } from '../games/moto/logic.js?v=fea2bda';
-import { isValidState as validMoto2 } from '../games/moto2/logic.js?v=fea2bda';
-import { isValidState as validReversi } from '../games/reversi/logic.js?v=fea2bda';
+} from './progress.js?v=5cadbe4';
+import { isValidState as valid2048 } from '../games/2048/logic.js?v=5cadbe4';
+import { isValidState as validTictactoe } from '../games/tictactoe/logic.js?v=5cadbe4';
+import { isValidState as validSnake } from '../games/snake/logic.js?v=5cadbe4';
+import { isValidState as validMinesweeper } from '../games/minesweeper/logic.js?v=5cadbe4';
+import { isValidState as validSudoku } from '../games/sudoku/logic.js?v=5cadbe4';
+import { isValidState as validWordle } from '../games/wordle/logic.js?v=5cadbe4';
+import { isValidState as validKeeper } from '../games/keeper/logic.js?v=5cadbe4';
+import { isValidState as validStairs } from '../games/stairs/logic.js?v=5cadbe4';
+import { isValidState as validMoto } from '../games/moto/logic.js?v=5cadbe4';
+import { isValidState as validMoto2 } from '../games/moto2/logic.js?v=5cadbe4';
+import { isValidState as validMemory } from '../games/memory/logic.js?v=5cadbe4';
+import { isValidState as validReversi } from '../games/reversi/logic.js?v=5cadbe4';
+import { isValidState as validBridge } from '../games/bridge/logic.js?v=5cadbe4';
+import { isValidState as validArchery } from '../games/archery/logic.js?v=5cadbe4';
 
 // 各遊戲存檔 state 的格式檢查(匯入驗證用)。
-export const STATE_VALIDATORS = { 2048: valid2048, tictactoe: validTictactoe, snake: validSnake, minesweeper: validMinesweeper, sudoku: validSudoku, wordle: validWordle, keeper: validKeeper, stairs: validStairs, moto: validMoto, moto2: validMoto2, reversi: validReversi };
+export const STATE_VALIDATORS = { 2048: valid2048, tictactoe: validTictactoe, snake: validSnake, minesweeper: validMinesweeper, sudoku: validSudoku, wordle: validWordle, keeper: validKeeper, stairs: validStairs, moto: validMoto, moto2: validMoto2, reversi: validReversi, memory: validMemory, archery: validArchery };
+STATE_VALIDATORS['wordle-daily'] = validWordle;
+STATE_VALIDATORS['sudoku-daily'] = validSudoku;
+STATE_VALIDATORS.bridge = validBridge;
 
 // randomUUID 只在安全來源(https / localhost)可用;其他情況退回 getRandomValues 組 v4 UUID。
 function uuid() {
@@ -38,6 +44,7 @@ const noLive = () => ({ xp: 0, achievements: [] });
 export async function createProfile({
   store, now = Date.now, gameList = GAMES, doc = globalThis.document, win = globalThis.window,
   stateValidators = STATE_VALIDATORS,
+  saveSlots = {},
 } = {}) {
   // RS2 只替換瀏覽器的預設本機 store；測試注入的 store 與遊戲註冊維持原樣。
   store ??= new LocalStore();
@@ -49,10 +56,11 @@ export async function createProfile({
     } catch { /* 儲存不可用仍可免登入遊玩 */ }
   }
   if (cloudEnabled && win && store instanceof LocalStore && !store.storage) {
-    const { selectCloudStore, createCloudProfile } = await import('./auth.js?v=fea2bda');
+    const { selectCloudStore, createCloudProfile } = await import('./auth.js?v=5cadbe4');
     store = await selectCloudStore(store);
-    if (store.cloud) return createCloudProfile({ store, now, gameList, doc, win, stateValidators }, createProfile);
+    if (store.cloud) return createCloudProfile({ store, now, gameList, doc, win, stateValidators, saveSlots }, createProfile);
   }
+  const saveKey = (gameId) => saveSlots[gameId] ?? gameId;
   // 首次載入(尚無 profile)才做舊資料遷移;之後的匯入覆蓋不會被舊 key 再蓋回去。
   let mem = await store.getProfile();
   let memDirty = false; // profile 最近一次寫入失敗 ⇒ 以記憶體為準(避免讀回舊資料重複發成就/XP)
@@ -95,7 +103,7 @@ export async function createProfile({
   // 只疊入未成功寫入的存檔;已寫入的以 store 為準(其他分頁可能已覆蓋或刪除,IR3)。
   const listSaves = async () => {
     const all = new Map((await store.listSaves()).map((sv) => [sv.game_id, sv]));
-    for (const id of savesDirty) if (loaded.has(id)) all.set(id, loaded.get(id));
+    for (const id of savesDirty) if (loaded.has(id)) all.set(saveKey(id), loaded.get(id));
     return [...all.values()];
   };
 
@@ -135,7 +143,7 @@ export async function createProfile({
     const t = now();
     const running = timer?.gameId === gameId;
     const save = {
-      game_id: gameId,
+      game_id: saveKey(gameId),
       state,
       active_sec: running ? elapsed() : (prev?.active_sec ?? 0),
       started_at: running ? iso(timer.startedAt) : (prev?.started_at ?? iso(t)),
@@ -158,7 +166,7 @@ export async function createProfile({
     const id = timer?.gameId;
     const save = id && loaded.get(id);
     if (!save) return;
-    const cur = await store.getSave(id);
+    const cur = await store.getSave(saveKey(id));
     if (loaded.get(id) !== save) return; // 等待期間已被另一次 flush/結算處理(隱藏與離頁常連發)
     const removedElsewhere = !cur && stored.has(id);
     if (removedElsewhere || (cur && (cur.started_at !== save.started_at || cur.version > save.version))) {
@@ -183,9 +191,9 @@ export async function createProfile({
 
   const api = {
     async loadSave(gameId) {
-      const save = await store.getSave(gameId);
+      const save = await store.getSave(saveKey(gameId));
       // 沒有、壞掉、或 game_id 與請求不符的存檔 ⇒ 開新局,且不建立 loaded/live 快取(IR3)
-      if (save?.game_id !== gameId || !isValidGameSave(save, stateValidators)) return null;
+      if (save?.game_id !== saveKey(gameId) || !isValidGameSave(save, stateValidators)) return null;
       loaded.set(gameId, save);
       live.set(gameId, save.live ?? noLive());
       stored.add(gameId);
@@ -203,7 +211,7 @@ export async function createProfile({
       stored.delete(gameId);
       live.delete(gameId);
       if (timer?.gameId === gameId) timer = null;
-      await store.deleteSave(gameId);
+      await store.deleteSave(saveKey(gameId));
     },
 
     // 開始計時:有載入的存檔就接著它的秒數與開局時間,否則從 0 起算。分頁目前隱藏就先暫停。
@@ -256,10 +264,10 @@ export async function createProfile({
         startedAt: running ? timer.startedAt : (save ? Date.parse(save.started_at) : t),
         endedAt: t,
         durationSec: running ? elapsed() : (save?.active_sec ?? 0),
-        id: uuid(),
+        id: detail.daily_play_id ?? uuid(),
         live: lv,
       });
-      await store.commitFinish({ gameId, profile: out.profile, stats: out.stats[gameId], play: out.play });
+      await store.commitFinish({ gameId, saveId: saveKey(gameId), profile: out.profile, stats: out.stats[gameId], play: out.play });
       mem = out.profile;
       memDirty = false;
       delete statsMem[gameId];

@@ -1,5 +1,6 @@
 // 數獨規則與狀態轉移：純函式；亂數、時間均由呼叫端注入。
-import { timerInit, timerEvent } from '../../shared/progress.js?v=fea2bda';
+import { timerInit, timerEvent } from '../../shared/progress.js?v=5cadbe4';
+import { seedRng } from '../../shared/seed-rng.js?v=5cadbe4';
 
 export const SIZE = 9;
 export const DIFFICULTIES = { easy: 46, normal: 40, hard: 32, expert: 26 };
@@ -128,10 +129,12 @@ export function nextHint(state) {
 }
 
 export function assistState(state) {
+  if (state.daily) return state;
   return state.result || state.assist ? state : { ...state, assist: true };
 }
 
 export function autoCandState(state, on) {
+  if (state.daily && on) return state;
   if (state.result || typeof on !== 'boolean') return state;
   const next = on ? assistState(state) : state;
   return next.autoCand === on ? next : { ...next, autoCand: on };
@@ -193,6 +196,7 @@ export function stateWithPuzzle(puzzle, difficulty = 'normal') {
     moves: 0, clock: null, result, score: scoreFor(result, 0) };
 }
 export const initState = (difficulty = 'normal', rng = Math.random) => stateWithPuzzle(generatePuzzle(difficulty, rng), difficulty);
+export const initDailyState = ({ day, seed }) => ({ ...initState('normal', seedRng(seed)), daily: day, daily_seed: seed });
 
 // 沿用共用活動計時規則；null 代表尚未收到第一次輸入，lastInput:null 可安全存成 JSON。
 export function clockState(state, type, now, visible = true) {
@@ -262,6 +266,8 @@ export function inClueRange(clues, difficulty) {
 }
 
 export function isValidState(s) {
+  if (s?.daily !== undefined && (typeof s.daily !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s.daily)
+    || !/^[0-9a-f]{16}$/.test(s.daily_seed) || s.difficulty !== 'normal' || s.assist || s.autoCand)) return false;
   if (!s || !Object.hasOwn(DIFFICULTIES, s.difficulty) || !isBoard(s.puzzle)
     || clueCount(s.puzzle) < DIFFICULTIES[s.difficulty] || !validSnapshot(s, s.puzzle) || !count(s.moves)) return false;
   if ((s.assist !== undefined && typeof s.assist !== 'boolean')

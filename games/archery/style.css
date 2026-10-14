@@ -1,0 +1,85 @@
+.topbar { gap: 8px; }
+.topbar .btn { white-space: nowrap; padding-left: 10px; padding-right: 10px; }
+.stats { display: flex; gap: 6px; align-items: stretch; }
+.stats .stat { min-width: 52px; padding: 2px 8px; }
+.actions { display: flex; gap: 8px; margin-bottom: 8px; }
+.actions > * { min-width: 0; }
+.actions .btn { flex: 1; white-space: nowrap; padding-left: 8px; padding-right: 8px; }
+select.btn { appearance: auto; }
+select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* 場地色票(畫布讀這些變數繪圖;淺色=白天、深色=黃昏) */
+:root {
+  --ar-sky-a: #8ccbf0; --ar-sky-b: #e6f5ff; --ar-hill: #a8cf9c; --ar-ground: #6bb35a; --ar-ground-dark: #4c8a3e;
+  --ar-wood: #b9743a; --ar-wood-dark: #6e3f17; --ar-skin: #ffd8b4; --ar-coat: #2f6fd6; --ar-hat: #e2343f; --ar-pants: #3b3552;
+  --ar-bow: #7a4720; --ar-string: #f4efe4; --ar-arrow: #5a3a20; --ar-fletch: #e9475c;
+  --ar-ring-1: #f4f1ea; --ar-ring-2: #2c2c2a; --ar-ring-3: #3d8bff; --ar-ring-4: #e2343f; --ar-ring-5: #ffcc33; --ar-stand: #7a4a24;
+  --ar-ink: rgba(34, 26, 20, 0.9); --ar-text: #2c2c2a; --ar-preview: rgba(44, 44, 42, 0.75); --ar-trail: rgba(255, 255, 255, 0.7);
+  --ar-flag: #e9475c; --ar-pole: #5b4a3a; --ar-halo: rgba(255, 255, 255, 0.85); --ar-star: #fff083; --ar-bg: #e6f5ff;
+}
+:root[data-theme="dark"] {
+  --ar-sky-a: #1b2246; --ar-sky-b: #5a4a78; --ar-hill: #34405e; --ar-ground: #2f5a35; --ar-ground-dark: #1f3e24;
+  --ar-wood: #b06e37; --ar-wood-dark: #5a3110; --ar-skin: #ffd8b4; --ar-coat: #4a8dff; --ar-hat: #e2343f; --ar-pants: #c8cfe0;
+  --ar-bow: #d89a5a; --ar-string: #f4efe4; --ar-arrow: #e8d2b4; --ar-fletch: #ff6a7c;
+  --ar-ring-1: #f4f1ea; --ar-ring-2: #2c2c2a; --ar-ring-3: #3d8bff; --ar-ring-4: #e2343f; --ar-ring-5: #ffcc33; --ar-stand: #b07a4a;
+  --ar-ink: rgba(10, 8, 16, 0.9); --ar-text: #f1efe8; --ar-preview: rgba(241, 239, 232, 0.8); --ar-trail: rgba(255, 240, 200, 0.55);
+  --ar-flag: #ff6a7c; --ar-pole: #c8b8a0; --ar-halo: rgba(16, 15, 28, 0.85); --ar-star: #fff6a0; --ar-bg: #1b2246;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ar-sky-a: #1b2246; --ar-sky-b: #5a4a78; --ar-hill: #34405e; --ar-ground: #2f5a35; --ar-ground-dark: #1f3e24;
+    --ar-wood: #b06e37; --ar-wood-dark: #5a3110; --ar-skin: #ffd8b4; --ar-coat: #4a8dff; --ar-hat: #e2343f; --ar-pants: #c8cfe0;
+    --ar-bow: #d89a5a; --ar-string: #f4efe4; --ar-arrow: #e8d2b4; --ar-fletch: #ff6a7c;
+    --ar-ring-1: #f4f1ea; --ar-ring-2: #2c2c2a; --ar-ring-3: #3d8bff; --ar-ring-4: #e2343f; --ar-ring-5: #ffcc33; --ar-stand: #b07a4a;
+    --ar-ink: rgba(10, 8, 16, 0.9); --ar-text: #f1efe8; --ar-preview: rgba(241, 239, 232, 0.8); --ar-trail: rgba(255, 240, 200, 0.55);
+    --ar-flag: #ff6a7c; --ar-pole: #c8b8a0; --ar-halo: rgba(16, 15, 28, 0.85); --ar-star: #fff6a0; --ar-bg: #1b2246;
+  }
+}
+
+/* 整頁剛好一個視窗高:頂列、操作列、狀態列、提示之外的高度全給場地。 */
+.page-fit { display: flex; flex-direction: column; height: 100vh; height: 100dvh; padding-top: 16px; padding-bottom: 12px; }
+.page-fit .topbar { margin-bottom: 12px; }
+.page-fit .hint { flex: none; margin-top: 8px; }
+.hud { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; font-size: 13px; line-height: 1.5; padding: 4px 8px; margin-bottom: 8px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); }
+#last-shot { font-weight: 700; }
+
+/* 5:3 橫式場地:依剩餘空間的寬、高取小者縮放。 */
+.stage-area { flex: 1 1 auto; min-height: 0; container-type: size; display: flex; justify-content: center; align-items: flex-start; }
+.stage {
+  position: relative;
+  aspect-ratio: 5 / 3;
+  width: min(100cqw, 100cqh * 5 / 3);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  border-radius: 12px;
+}
+.stage:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.stage canvas { display: block; width: 100%; height: 100%; border: 1px solid var(--border); border-radius: 12px; background: var(--ar-bg); }
+
+.overlay { position: absolute; inset: 0; border-radius: 12px; background: rgba(0, 0, 0, 0.55); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #fff; overflow: auto; }
+.overlay[hidden] { display: none; }
+/* 結算內容較長:橫式場地在手機上只有約 200px 高,遮罩改為從場地頂端往下長,伸進下方空白區,⛔ 裁掉標題 */
+.overlay.is-result { bottom: auto; min-height: 100%; justify-content: flex-start; padding: 12px 0; overflow: visible; z-index: 2; }
+.overlay-title { margin: 0; text-align: center; padding: 0 8px; font-size: clamp(18px, 5vw, 24px); font-weight: 700; }
+.overlay-actions { display: flex; gap: 8px; }
+.overlay-actions .btn { min-height: 48px; min-width: 120px; }
+.overlay-info { text-align: center; font-size: 13px; padding: 0 12px; }
+.overlay-info p { margin: 2px 0; }
+.overlay-info .overlay-xp { font-size: 17px; font-weight: 700; }
+
+.hint { font-size: 13px; color: var(--text-sub); text-align: center; margin: 12px 0 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.demo-field { display: block; width: 100%; max-width: 260px; margin: 0 auto; border: 1px solid var(--border); border-radius: 8px; background: var(--ar-bg); }
+
+@media (max-height: 700px) {
+  .page-fit { padding-top: 8px; padding-bottom: 6px; }
+  .page-fit .topbar, .actions, .hud { margin-bottom: 6px; }
+  .page-fit .hint { font-size: 11px; margin-top: 4px; }
+}
+/* 345px 頂列預算(比照下樓梯 IR21);編號「G14」比「G7」多一個字,編號左右內距收為 0 */
+@media (max-width: 360px) {
+  .page .topbar .navigation { gap: 1px; }
+  .page .topbar .navigation .game-code { padding-inline: 0; }
+}

@@ -1,24 +1,38 @@
-import { initState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave } from './logic.js?v=fea2bda';
-import { createProfile } from '../../shared/profile.js?v=fea2bda';
-import { LocalStore } from '../../shared/stores/local.js?v=fea2bda';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=fea2bda';
-import { bindThemeToggle } from '../../shared/theme.js?v=fea2bda';
-import { play as playSound } from '../../shared/sound.js?v=fea2bda';
-import { setupHelp } from '../../shared/help.js?v=fea2bda';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=fea2bda';
-import { settlePlay } from '../../shared/settle.js?v=fea2bda';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=fea2bda';
+import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave } from './logic.js?v=5cadbe4';
+import { createProfile } from '../../shared/profile.js?v=5cadbe4';
+import { LocalStore } from '../../shared/stores/local.js?v=5cadbe4';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=5cadbe4';
+import { bindThemeToggle } from '../../shared/theme.js?v=5cadbe4';
+import { play as playSound } from '../../shared/sound.js?v=5cadbe4';
+import { setupHelp } from '../../shared/help.js?v=5cadbe4';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=5cadbe4';
+import { settlePlay } from '../../shared/settle.js?v=5cadbe4';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=5cadbe4';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=5cadbe4';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=5cadbe4';
 
 const GAME_ID = 'sudoku';
 const $ = (id) => document.getElementById(id);
 const visible = () => document.visibilityState !== 'hidden';
-const profile = await createProfile({ store: new LocalStore() });
+const isDaily = dailyRequested(location.search);
+const profile = await createProfile({ store: new LocalStore(), saveSlots: isDaily ? { [GAME_ID]: dailySlot(GAME_ID) } : {} });
+let daily = null;
+let dailyClient = null;
+let dailyError = '';
+if (isDaily) {
+  try { dailyClient = await browserDailyClient(); daily = await prepareDaily(dailyClient, GAME_ID); }
+  catch (error) { dailyError = error.message; }
+}
 const saved = await profile.loadSave(GAME_ID);
-let state = saved ? resumeState(fromSave(saved), Date.now(), visible()) : initState();
+let state = isDaily
+  ? !daily || daily.row?.cleared ? null : matchesDailySave(saved, daily, isValidState) ? resumeState(fromSave(saved), Date.now(), visible())
+    : daily.completed ? null : initDailyState(daily)
+  : saved && !saved.daily ? resumeState(fromSave(saved), Date.now(), visible()) : initState();
+if (daily?.completed && state && !state.result) state = null;
 let best = await profile.best(GAME_ID);
-let cursor = Math.max(0, state.puzzle.indexOf(0));
+let cursor = Math.max(0, state?.puzzle.indexOf(0) ?? 0);
 let noteMode = false;
-let ended = null;
+let ended = state ? null : { closed: true };
 let restarting = false;
 let profileStarted = false;
 let activeHint = null;
@@ -53,10 +67,12 @@ function persist() {
   return run(() => profile.saveState(GAME_ID, snap));
 }
 function renderTime() {
+  if (!state) return;
   const seconds = secondsFor(state);
   $('time').textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 function render() {
+  if (!state) return;
   const bad = new Set(conflicts(state.board));
   const locked = !!ended || restarting || !!state.result;
   cells.forEach((cell, i) => {
@@ -80,15 +96,15 @@ function render() {
   $('best').textContent = state.assist ? best : Math.max(best, state.score);
   $('clues').textContent = clueCount(state.puzzle);
   $('difficulty').value = state.difficulty;
-  $('difficulty').disabled = restarting || !!ended;
+  $('difficulty').disabled = isDaily || restarting || !!ended;
   $('new').disabled = restarting || !!ended;
   $('undo').disabled = locked || !state.history.length;
   $('notes').disabled = locked;
   $('notes').setAttribute('aria-pressed', String(noteMode));
   $('notes').textContent = `✎ 筆記：${noteMode ? '開' : '關'}`;
   $('clear').disabled = locked || !!state.puzzle[cursor];
-  $('hint-button').disabled = locked;
-  $('auto-cand').disabled = locked;
+  $('hint-button').disabled = isDaily || locked;
+  $('auto-cand').disabled = isDaily || locked;
   $('auto-cand').checked = state.autoCand;
   $('assist-label').hidden = !state.assist;
   $('hint-message').hidden = !activeHint;
@@ -98,13 +114,16 @@ function render() {
   numbers.forEach((btn) => { btn.disabled = locked || !!state.puzzle[cursor]; });
   $('status').textContent = restarting ? '正在產生唯一解題目…' : state.result ? '本局已完成' : bad.size ? `${bad.size} 格有衝突，紅色 ! 格可修改` : state.puzzle[cursor] ? '這是題目給定格，請選空格' : noteMode ? '筆記模式：再按同一數字可移除' : '選一格，再填入數字';
   renderTime();
+  if (isDaily) showDailyBanner(document, daily);
   $('overlay').hidden = !state.result;
   $('again').disabled = !ended || ended.pending || restarting;
+  $('again').textContent = isDaily ? ended?.dailyRetry ? '重試送出成績' : '玩一般模式' : '確定 · 再玩一次';
   if (!state.result) return;
   const info = $('overlay-info'); info.replaceChildren();
   const add = (text, className = '') => {
     const p = document.createElement('p'); p.textContent = text; p.className = className; info.append(p);
   };
+  if (ended?.dailyRetry) { add('成績尚未送出，請重試'); return; }
   if (!ended?.play) { add('結算中…'); return; }
   add(`本局 +${ended.xpGained} XP`, 'overlay-xp');
   appendXpBreakdown(info, ended.xpBreakdown, document);
@@ -116,6 +135,7 @@ function render() {
   }).join('、')}`);
   const bestText = bestLine({ isBest: ended.play.is_best, bestBefore: ended.bestBefore, score: state.score, assist: ended.assist });
   if (bestText) add(bestText);
+  if (isDaily) appendDailySummary(document, info, daily);
 }
 
 function finish(result) {
@@ -124,10 +144,22 @@ function finish(result) {
   ended = { pending: true }; render();
   return run(async () => {
     const bestBefore = best;
+    if (isDaily) {
+      await profile.saveState(GAME_ID, snap);
+      try {
+        daily.row = await dailyClient.finish(GAME_ID, daily.day, result, null);
+        daily.completed = true;
+      } catch (error) {
+        ended = { dailyRetry: true }; showDailyBanner(document, daily, error.message); render();
+        $('daily-banner').textContent = error.message; return;
+      }
+    }
     const out = await settlePlay(profile, GAME_ID, { result, score: snap.score,
-      difficulty: snap.difficulty, detail: detailFor(snap), assist: snap.assist });
+      difficulty: snap.difficulty, detail: { ...detailFor(snap),
+        ...(isDaily ? { daily: daily.day, daily_play_id: daily.row.detail.play_id } : {}) }, assist: snap.assist });
     if (!out) { // 結算失敗且選「不存了」:不記錄、開新局(IR6);開新局流程中則交給它
       ended = { abandoned: true };
+      if (isDaily) { location.href = './'; return; }
       if (!restarting) newGame();
       return;
     }
@@ -171,14 +203,15 @@ function useAssist(kind) {
   persist(); render();
 }
 function requestAssist(kind) {
-  if (ended || restarting || state.result) return;
+  if (isDaily || ended || restarting || state.result) return;
   if (kind === 'hint' && activeHint) { activeHint = null; render(); return; }
   if (state.assist) { useAssist(kind); return; }
   pendingAssist = kind;
   $('assist-dlg').showModal();
 }
 let confirmingQuit = false;
-async function newGame(difficulty = state.difficulty) {
+async function newGame(difficulty = state?.difficulty ?? 'normal') {
+  if (isDaily) { if (!ended?.pending) { await queue; location.href = './'; } return; }
   if (confirmingQuit) return;
   if (restarting || ended?.pending) return;
   if (state.result && !ended) { finish('win'); return; }
@@ -229,7 +262,9 @@ $('number-pad').addEventListener('click', (event) => {
   if (btn) play(Number(btn.dataset.value));
 });
 $('new').addEventListener('click', () => newGame());
-$('again').addEventListener('click', () => newGame());
+$('again').addEventListener('click', () => {
+  if (ended?.dailyRetry) { ended = null; finish('win'); } else newGame();
+});
 $('undo').addEventListener('click', undo);
 $('notes').addEventListener('click', toggleNotes);
 $('clear').addEventListener('click', () => play(0));
@@ -261,11 +296,13 @@ $('hint-apply').addEventListener('click', () => {
   if (!state.result) cells[cursor].focus();
 });
 document.addEventListener('visibilitychange', () => {
+  if (!state) return;
   state = clockState(state, visible() ? 'visible' : 'hidden', Date.now());
   if (!visible()) persist();
   renderTime();
 });
 window.addEventListener('pagehide', () => {
+  if (!state) return;
   state = clockState(state, 'hidden', Date.now()); persist();
 });
 setInterval(() => {
@@ -275,9 +312,15 @@ setInterval(() => {
   if (secondsFor(state) !== before && secondsFor(state) % 5 === 0) persist();
 }, 1000);
 bindThemeToggle($('theme'));
-if (state.clock) startProfile();
+if (state?.clock) startProfile();
+if (isDaily && state) { startProfile(); await persist(); }
+if (isDaily && !state) {
+  $('difficulty').disabled = true; $('hint-button').disabled = true; $('auto-cand').disabled = true;
+  $('number-pad').hidden = true; $('tools')?.setAttribute('hidden', '');
+  showDailyClosed(document, daily, dailyError);
+}
 render();
-if (state.result) finish('win');
+if (state?.result) finish('win');
 setupHelp({
   gameId: GAME_ID, title: '數獨玩法', mountAfter: document.querySelector('.navigation .btn'),
   rules: `<ol>

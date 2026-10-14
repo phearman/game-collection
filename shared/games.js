@@ -2,13 +2,16 @@
 export const GAMES = [
   { id: '2048', code: 'G1', version: '1.5', title: '2048', icon: '🔢', desc: '滑動合併數字方塊', status: 'active' },
   { id: 'minesweeper', code: 'G2', version: '1.1', title: '踩地雷', icon: '💣', desc: '連鎖展開找出地雷', status: 'active' },
-  { id: 'wordle', code: 'G3', version: '1.2', title: 'Wordle', icon: '🔤', desc: '六次內猜中單字', status: 'active' },
+  { id: 'wordle', code: 'G3', version: '1.4', title: 'Wordle', icon: '🔤', desc: '六次內猜中單字', status: 'active' },
   { id: 'tictactoe', code: 'G4', version: '1.1', title: '井字棋', icon: '⭕', desc: '挑戰無敵 AI', status: 'active' },
-  { id: 'sudoku', code: 'G5', version: '1.2', title: '數獨', icon: '🧩', desc: '三種難度隨機出題', status: 'active' },
+  { id: 'sudoku', code: 'G5', version: '1.3', title: '數獨', icon: '🧩', desc: '三種難度隨機出題', status: 'active' },
   { id: 'snake', code: 'G6', version: '1.2', title: '貪食蛇', icon: '🐍', desc: '越吃越長別撞牆', status: 'active' },
   { id: 'stairs', code: 'G7', version: '1.5', title: '下樓梯', icon: '🪜', desc: '一路往下別碰頂刺', status: 'active' },
   { id: 'keeper', code: 'G8', version: '1.3', title: '足球守門員', icon: '🧤', desc: '撲出小朋友的射門', status: 'active' },
   { id: 'moto', code: 'G9', version: '1.1', title: '越野機車', icon: '🏍️', desc: '加速閃障礙,衝過終點', status: 'active' },
   { id: 'moto2', code: 'G10', version: '1.0', title: '越野機車 橫向版', icon: '🏁', desc: '飛越跳台,小心引擎過熱', status: 'active' },
+  { id: 'memory', code: 'G11', version: '1.0', title: '翻翻樂', icon: '🃏', desc: '翻牌配對考記憶', status: 'active' },
   { id: 'reversi', code: 'G12', version: '1.0', title: '黑白棋', icon: '⚫', desc: '夾住翻轉,子多者勝', status: 'active' },
+  { id: 'bridge', code: 'G13', version: '1.0', title: '小人過橋', icon: '🌉', desc: '按住搭橋,剛好就過', status: 'active' },
+  { id: 'archery', code: 'G14', version: '1.0', title: '弓箭射擊', icon: '🏹', desc: '拉弓射靶,看風出手', status: 'active' },
 ];

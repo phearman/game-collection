@@ -1,6 +1,7 @@
 // Wordle 規則層:純函式,不碰 DOM。單字一律小寫。
 // 規則正典:workbook/plans/wordle.md「規則(驗收依據)」。
-import { ANSWERS, ALLOWED } from './words.js?v=fea2bda';
+import { ANSWERS, ALLOWED } from './words.js?v=5cadbe4';
+import { seedRng } from '../../shared/seed-rng.js?v=5cadbe4';
 
 export const WORD_LEN = 5;
 export const MAX_GUESSES = 6;
@@ -78,6 +79,11 @@ export function initState(rng = Math.random, difficulty = 'normal', recent = [],
   return assist ? { ...state, assist: true, revealed: [], candidates: null } : state;
 }
 
+export function initDailyState({ day, seed }) {
+  return { ...initState(seedRng(seed), 'normal', []), daily: day, daily_seed: seed };
+}
+export const shareMarks = (state) => state.guesses.map((guess) => evaluate(guess, state.answer));
+
 // 輸入字母 / 刪除:結束後或已滿 5 字 ⇒ 原 state。
 export function typeState(state, ch) {
   if (state.over || state.current.length >= WORD_LEN || !/^[a-z]$/.test(ch)) return state;
@@ -137,6 +143,7 @@ export function overlayFor({ over, won }) {
 
 // 轉為輔助局(不可逆;已是輔助局則原樣回傳)。困難模式的限制不變。
 export function assistState(state) {
+  if (state.daily) return state;
   if (state.assist) return state;
   return { ...state, assist: true, revealed: [], candidates: null };
 }
@@ -205,13 +212,16 @@ export function fillState(state, word) {
 
 // ---- 存檔(續玩)----
 
-export function toSave({ answer, guesses, difficulty, assist, revealed, candidates }) {
-  const saved = { answer, guesses, difficulty };
+export function toSave({ answer, guesses, difficulty, assist, revealed, candidates, daily, daily_seed }) {
+  const saved = { answer, guesses, difficulty, ...(daily ? { daily, daily_seed } : {}) };
   return assist ? { ...saved, assist: true, revealed: revealed ?? [], candidates: candidates ?? null } : saved;
 }
 
 export function fromSave(saved) {
-  const state = { answer: saved.answer, guesses: [...saved.guesses], current: '', difficulty: saved.difficulty, over: false, won: false };
+  const won = !!saved.daily && saved.guesses.at(-1) === saved.answer;
+  const state = { answer: saved.answer, guesses: [...saved.guesses], current: '', difficulty: saved.difficulty,
+    over: !!saved.daily && (won || saved.guesses.length === MAX_GUESSES), won,
+    ...(saved.daily ? { daily: saved.daily, daily_seed: saved.daily_seed } : {}) };
   // 輔助局標記與提示進度續玩後仍在
   return saved.assist ? { ...state, assist: true, revealed: [...(saved.revealed ?? [])], candidates: saved.candidates ? [...saved.candidates] : null } : state;
 }
@@ -236,8 +246,10 @@ export function isValidState(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return false;
   const { answer, guesses, difficulty } = s;
   if (!isWordShape(answer) || !ANSWER_SET.has(answer) || !DIFFICULTIES.includes(difficulty)) return false;
-  if (!Array.isArray(guesses) || guesses.length >= MAX_GUESSES) return false;
-  if (!guesses.every((g) => isWord(g) && g !== answer)) return false;
+  if (s.daily !== undefined && (typeof s.daily !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s.daily)
+    || !/^[0-9a-f]{16}$/.test(s.daily_seed) || difficulty !== 'normal' || s.assist)) return false;
+  if (!Array.isArray(guesses) || guesses.length > MAX_GUESSES || (!s.daily && guesses.length === MAX_GUESSES)) return false;
+  if (!guesses.every((g, i) => isWord(g) && (g !== answer || (s.daily && i === guesses.length - 1)))) return false;
   if (!validAssist(s)) return false;
   if (difficulty === 'hard') {
     return guesses.every((g, i) => hardModeError(guesses.slice(0, i), answer, g) === null);

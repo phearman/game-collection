@@ -3,24 +3,35 @@ import {
   WORD_LEN, MAX_GUESSES, DIFFICULTIES, evaluate, isWord, initState, typeState, eraseState, guessError, submitState,
   keyStates, scoreFor, overlayFor, toSave, fromSave, isValidState, routeKey,
   assistState, letterHint, canReveal, revealState, candidatesState, fillState, visibleCandidates,
-} from './logic.js?v=fea2bda';
-import { HINTS } from './hints.js?v=fea2bda';
-import { createProfile } from '../../shared/profile.js?v=fea2bda';
-import { LocalStore } from '../../shared/stores/local.js?v=fea2bda';
-import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js?v=fea2bda';
-import { bindThemeToggle } from '../../shared/theme.js?v=fea2bda';
-import { play } from '../../shared/sound.js?v=fea2bda';
-import { setupHelp } from '../../shared/help.js?v=fea2bda';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=fea2bda';
-import { settlePlay } from '../../shared/settle.js?v=fea2bda';
-import { quitBestNote } from '../../shared/quit.js?v=fea2bda';
-import { load, save } from '../../shared/storage.js?v=fea2bda';
+  initDailyState, shareMarks,
+} from './logic.js?v=5cadbe4';
+import { HINTS } from './hints.js?v=5cadbe4';
+import { createProfile } from '../../shared/profile.js?v=5cadbe4';
+import { LocalStore } from '../../shared/stores/local.js?v=5cadbe4';
+import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js?v=5cadbe4';
+import { bindThemeToggle } from '../../shared/theme.js?v=5cadbe4';
+import { play } from '../../shared/sound.js?v=5cadbe4';
+import { setupHelp } from '../../shared/help.js?v=5cadbe4';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=5cadbe4';
+import { settlePlay } from '../../shared/settle.js?v=5cadbe4';
+import { quitBestNote } from '../../shared/quit.js?v=5cadbe4';
+import { load, save } from '../../shared/storage.js?v=5cadbe4';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=5cadbe4';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=5cadbe4';
 
 const GAME_ID = 'wordle';
 const DIFF_KEY = 'difficulty:wordle'; // 上次選的難度(開新局用)
 const HC_KEY = 'wordle:contrast'; // 高對比配色
 const $ = (id) => document.getElementById(id);
-const profile = await createProfile({ store: new LocalStore() });
+const isDaily = dailyRequested(location.search);
+const profile = await createProfile({ store: new LocalStore(), saveSlots: isDaily ? { [GAME_ID]: dailySlot(GAME_ID) } : {} });
+let daily = null;
+let dailyClient = null;
+let dailyError = '';
+if (isDaily) {
+  try { dailyClient = await browserDailyClient(); daily = await prepareDaily(dailyClient, GAME_ID); }
+  catch (error) { dailyError = error.message; }
+}
 
 let state;
 let best = 0; // 本局開始前的最佳分數(profile 管)
@@ -78,10 +89,24 @@ function finish(result) {
   render();
   return run(async () => {
     const bestBefore = best;
+    if (isDaily) {
+      // Preserve terminal state before either network transaction; retries use the server's play_id.
+      await profile.saveState(GAME_ID, toSave(state));
+      try {
+        daily.row = await dailyClient.finish(GAME_ID, daily.day, result, snap.guesses, { marks: shareMarks(state) });
+        daily.completed = true;
+        snap.guesses = daily.row.guesses;
+        snap.score = scoreFor({ won: daily.row.result === 'win', guesses: Array(daily.row.guesses) });
+      } catch (error) {
+        ended = { dailyRetry: true }; toast(error.message); render(); return;
+      }
+    }
     const out = await settlePlay(profile, GAME_ID, {
-      result, score: snap.score, difficulty: snap.difficulty, detail: { guesses: snap.guesses, answer: snap.answer }, assist: snap.assist,
+      result: isDaily ? daily.row.result : result, score: snap.score, difficulty: snap.difficulty,
+      detail: { guesses: snap.guesses, answer: snap.answer,
+        ...(isDaily ? { daily: daily.day, daily_play_id: daily.row.detail.play_id } : {}) }, assist: snap.assist,
     });
-    if (!out) { if (no === gameNo) startNew(); return; } // 結算失敗且選「不存了」:不記錄、開新局(IR6)
+    if (!out) { if (no === gameNo) { if (isDaily) location.href = './'; else startNew(); } return; } // 結算失敗且選「不存了」
     if (out.play.is_best) best = Math.max(best, snap.score);
     if (no !== gameNo) return;
     ended = {
@@ -114,7 +139,7 @@ function useHint(kind) {
 
 function renderHints() {
   const on = !!state.assist && !ended;
-  $('hint').hidden = !!state.assist || !!ended;
+  $('hint').hidden = isDaily || !!state.assist || !!ended;
   $('hints').hidden = !on;
   document.querySelector('.page').classList.toggle('hinting', on);
   if (!on) return;
@@ -134,7 +159,8 @@ function renderHints() {
 }
 
 // 新遊戲(含切換難度):未送出過不記錄、送出過未結束 ⇒ 先確認再記 quit(RS4)。
-function newGame(difficulty) {
+async function newGame(difficulty) {
+  if (isDaily) { if (!ended?.pending) { await queue; location.href = './'; } return; }
   if (ended?.pending) return; // 結算中:忽略連點
   if (!ended && needsQuitConfirm(progressOf(state))) {
     pendingDifficulty = difficulty ?? null;
@@ -176,7 +202,7 @@ function errorText(e) {
 }
 
 function press(key) {
-  if (ended) return;
+  if (!state || ended) return;
   profile.input();
   if (key === 'enter') {
     const err = guessError(state);
@@ -237,6 +263,8 @@ function render() {
   $('score').textContent = score.toLocaleString();
   $('best').textContent = (state.assist ? best : Math.max(best, score)).toLocaleString(); // 輔助局不刷新最佳
   $('difficulty').value = state.assist && state.difficulty === 'normal' && difficultyPref() === 'assist' ? 'assist' : state.difficulty;
+  $('difficulty').disabled = isDaily;
+  if (isDaily) showDailyBanner(document, daily);
   renderHints();
   renderOverlay();
 }
@@ -250,6 +278,7 @@ const achName = (id) => {
 
 function infoHtml() {
   if (!ended) return '';
+  if (ended.dailyRetry) return '<p>成績尚未送出，請重試</p>';
   if (ended.pending) return '<p>結算中…</p>';
   const lines = [`<p class="overlay-xp">本局 +${ended.xp} XP</p>`, xpBreakdownHtml(ended.xpBreakdown)];
   if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
@@ -269,8 +298,15 @@ function renderOverlay() {
     overlay.hidden = true;
     return;
   }
+  if (isDaily) $('overlay-title').textContent = '今天已完成 ✓';
   $('overlay-info').innerHTML = infoHtml();
-  $('overlay-actions').innerHTML = '<button class="btn" data-act="new">再玩一次</button>';
+  if (isDaily) {
+    const button = document.createElement('button'); button.className = 'btn';
+    button.dataset.act = ended?.dailyRetry ? 'retry' : 'new';
+    button.textContent = ended?.dailyRetry ? '重試送出成績' : '玩一般模式';
+    $('overlay-actions').replaceChildren(button);
+  } else $('overlay-actions').innerHTML = '<button class="btn" data-act="new">再玩一次</button>';
+  if (isDaily) appendDailySummary(document, $('overlay-info'), daily, daily.row.detail?.marks ?? []);
   overlay.hidden = false;
 }
 
@@ -342,10 +378,11 @@ $('quit-dlg').addEventListener('cancel', () => {
 $('quit-dlg').addEventListener('close', focusGame);
 $('board').addEventListener('animationend', (e) => e.target.classList.remove('shake'));
 $('overlay-actions').addEventListener('click', (e) => {
+  if (e.target.dataset.act === 'retry' && ended?.dailyRetry) { ended = null; finish(resultOnGameOver({ everWon: state.won })); }
   if (e.target.dataset.act === 'new') newGame();
 });
 $('hint').addEventListener('click', () => {
-  if (ended || state.assist) return;
+  if (!state || isDaily || ended || state.assist) return;
   $('assist-dlg').showModal();
 });
 $('assist-dlg').addEventListener('click', (e) => {
@@ -382,7 +419,23 @@ buildKeyboard();
 
 // 載入:有存檔就自動還原(§4.1),否則開新局。
 const saved = await profile.loadSave(GAME_ID);
-if (saved && isValidState(saved)) {
+if (isDaily && (!daily || (daily.completed && !matchesDailySave(saved, daily, isValidState)))) {
+  ended = { closed: true };
+  $('difficulty').disabled = true;
+  $('hint').hidden = true;
+  $('keyboard').hidden = true;
+  showDailyClosed(document, daily, dailyError);
+} else if (isDaily) {
+  state = matchesDailySave(saved, daily, isValidState) ? fromSave(saved) : initDailyState(daily);
+  best = await profile.best(GAME_ID);
+  profile.startTimer(GAME_ID);
+  if (daily.completed && !state.over) {
+    state = undefined; ended = { closed: true }; $('keyboard').hidden = true; showDailyClosed(document, daily);
+  } else {
+    await profile.saveState(GAME_ID, toSave(state)); render();
+    if (state.over) finish(resultOnGameOver({ everWon: state.won }));
+  }
+} else if (saved && !saved.daily && isValidState(saved)) {
   state = fromSave(saved);
   if (state.assist) activeHint = state.candidates ? 'candidates' : state.revealed?.length ? 'letters' : null;
   best = await profile.best(GAME_ID);

@@ -1,5 +1,6 @@
 .stats { display: flex; gap: 8px; align-items: stretch; }
-.actions { display: flex; gap: 8px; margin-bottom: 8px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.actions .btn { min-width: 70px; }
 .actions .btn { flex: 1; padding-left: 8px; padding-right: 8px; }
 select.btn { appearance: auto; }
 select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -132,7 +133,11 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
 .hint-note { flex-basis: 100%; margin: 0; font-size: 11px; color: var(--text-sub); text-align: center; }
 #hint[hidden] { display: none; } /* .btn 的 display 會蓋過 hidden 屬性 */
 /* 提示開著時縮小格子、鍵盤略矮,讓 375×667 也看得到整個鍵盤 */
-.page.hinting .board-wrap { max-width: min(300px, calc((100vh - 450px) * 0.8)); max-width: min(300px, calc((100dvh - 450px) * 0.8)); }
-.page.hinting .board-wrap .cell { font-size: clamp(14px, 6vw, 26px); }
+.page.hinting .board-wrap { max-width: min(300px, calc((100vh - 450px) * 0.8)); max-width: min(300px, calc((100dvh - 450px) * 0.8)); container-type: inline-size; }
+/* IR29:扣除四個 5px 間距與五格雙側 2px 邊框,再除以五格 × 行高 1.6;空間足夠時維持原字級。 */
+.page.hinting .board-wrap .cell {
+  font-size: min(clamp(14px, 6vw, 26px), calc((100cqw - 40px) / 8));
+  line-height: 1.6;
+}
 .page.hinting .keyboard { margin-top: 10px; }
 .page.hinting .key { min-height: 40px; }

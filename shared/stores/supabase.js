@@ -177,7 +177,7 @@ export class SupabaseStore {
     let result;
     for (let retry = 0; ; retry += 1) {
       try {
-        result = await this.request('rpc/commit_finish', { method: 'POST', body: pending.body });
+        result = await this.request(pending.daily ? 'rpc/commit_daily_play' : 'rpc/commit_finish', { method: 'POST', body: pending.body });
         break;
       } catch (err) {
         if (!err.stale || !pending.recompute || retry >= 3) throw err;
@@ -198,18 +198,18 @@ export class SupabaseStore {
     pending.done = true;
     this.updateCache('profiles', pending.body.profile);
     this.updateCache('stats', pending.body.stats);
-    this.updateCache('saves', null, pending.body.game_id);
+    this.updateCache('saves', null, pending.saveId ?? pending.body.game_id);
     this.dirty.delete('profiles:');
     this.dirty.delete(`stats:${pending.body.game_id}`);
-    this.dirty.delete(`saves:${pending.body.game_id}`);
+    this.dirty.delete(`saves:${pending.saveId ?? pending.body.game_id}`);
     this.emit();
   }
-  async commitFinish({ gameId, profile, stats, play, recompute }) {
+  async commitFinish({ gameId, saveId = gameId, profile, stats, play, recompute }) {
     let pending = this.pending.get(gameId);
     if (!pending) {
       const profileRows = this.cache.get('profiles?select=*&limit=1');
       const statsRows = this.cache.get('stats?select=*');
-      pending = { body: { game_id: gameId, profile: pick('profiles', profile), stats: pick('stats', stats), play: pick('plays', play) },
+      pending = { daily: saveId !== gameId, saveId, body: { game_id: gameId, profile: pick('profiles', profile), stats: pick('stats', stats), play: pick('plays', play) },
         baseline: { profile: profileRows?.[0] ?? null, stats: Object.fromEntries((statsRows ?? []).map((s) => [s.game_id, s])) },
         recompute: recompute ?? ((base, stats, play) => recalculateFinish(base, stats, play, this.finishRewards?.(gameId))), done: false };
       this.pending.set(gameId, pending);
@@ -236,8 +236,8 @@ export class SupabaseStore {
   async legacyBest() { return 0; }
 }
 
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=fea2bda';
-import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=fea2bda';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=5cadbe4';
+import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=5cadbe4';
 
 function recalculateFinish(base, stats, play, live) {
   const missing = (live?.achievements ?? []).filter((id) => !base.achievements?.[id]);

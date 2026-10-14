@@ -1,0 +1,28 @@
+.page-narrow { max-width: 500px; }
+/* 比照 stairs：頂列、操作列與文字之外的剩餘高度全給場地。 */
+.page-fit { display: flex; flex-direction: column; height: 100vh; height: 100dvh; padding-top: 16px; padding-bottom: 12px; }
+.page-fit .topbar { margin-bottom: 12px; }
+.page-fit > :not(.stage-area) { flex: none; }
+.stage-area { flex: 1 1 auto; min-height: 0; container-type: size; display: flex; justify-content: center; align-items: flex-start; }
+.topbar { gap: 4px; }
+.navigation, .stats { display: flex; align-items: center; gap: 4px; }
+.stat { min-width: 48px; }
+.btn { white-space: nowrap; }
+.actions { display: flex; gap: 6px; margin-bottom: 12px; }
+.actions .btn, :root[data-skin] .actions .btn { flex: 1; min-width: 48px; min-height: 48px; padding-inline: 4px; }
+select.btn { appearance: auto; font: inherit; }
+.board-wrap { position: relative; aspect-ratio: 400 / 440; width: min(100cqw, 100cqh * 400 / 440); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.field { display: block; width: 100%; height: 100%; border: 1px solid var(--border); border-radius: 12px; touch-action: none; }
+.field:focus-visible, select:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.overlay { position: absolute; inset: 0; border-radius: 12px; background: #000d; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 12px; overflow-y: auto; }
+.overlay[hidden] { display: none; }
+.overlay-title { font-size: 24px; font-weight: 700; margin: 0; }
+.overlay-info p { margin: 4px 0; }
+.overlay-xp { font-size: 18px; font-weight: 700; }
+.overlay .btn { min-height: 48px; }
+.status, .tally { text-align: center; font-variant-numeric: tabular-nums; margin: 8px 0; }
+.status { min-height: 24px; font-weight: 600; }
+.tally, .hint { font-size: 13px; color: var(--text-sub); }
+.hint { text-align: center; margin: 8px 0 0; }
+.demo-field { width: 100%; max-width: 320px; border-radius: 12px; }
+@media (max-width: 1024px) { .page .topbar { flex-wrap: nowrap; gap: 4px; } }

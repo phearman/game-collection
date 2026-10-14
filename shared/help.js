@@ -1,7 +1,7 @@
 // 共用「? 玩法」說明與示範(RS3)。每款遊戲提供規則文字與示範步驟,
 // 第一次進入該遊戲自動開啟一次;之後由頂列的「? 玩法」按鈕開啟。
-import { load, save } from './storage.js?v=fea2bda';
-import { GAMES } from './games.js?v=fea2bda';
+import { load, save } from './storage.js?v=5cadbe4';
+import { GAMES } from './games.js?v=5cadbe4';
 
 // 依遊戲 id 取編號(DV11;code 依 games.js 順序固定 G1 起、新遊戲往後編、不重排)。沒有 code 或查無此遊戲回 null。
 export function gameCode(id) {
@@ -25,7 +25,8 @@ export function kindLabel(kind) {
 //   rules      規則 HTML(條列)
 //   demo       選用:{ steps: [{ before, after, caption }], render(state) → HTML }
 //   mountAfter 「? 玩法」按鈕插在哪個元素後面
-export function setupHelp({ gameId, title, rules, demo, mountAfter }) {
+//   onClose    選用:說明關閉(包含 Esc)時通知呼叫端
+export function setupHelp({ gameId, title, rules, demo, mountAfter, onClose }) {
   const btn = document.createElement('button');
   btn.className = 'btn';
   btn.type = 'button';
@@ -98,13 +99,14 @@ export function setupHelp({ gameId, title, rules, demo, mountAfter }) {
   dlg.addEventListener('click', async (e) => {
     if (e.target.closest('[data-feedback]')) {
       close();
-      const { openFeedback } = await import('./feedback.js?v=fea2bda');
+      const { openFeedback } = await import('./feedback.js?v=5cadbe4');
       await openFeedback({ gameId, meHref: '../../me/' });
       return;
     }
     if (e.target.closest('[data-close]') || e.target === dlg) close();
   });
   dlg.addEventListener('cancel', () => runner?.stop());
+  dlg.addEventListener('close', () => onClose?.());
 
   const seenKey = `help-seen:${gameId}`;
   if (!load(seenKey, false)) {

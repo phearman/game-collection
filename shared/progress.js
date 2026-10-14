@@ -110,8 +110,16 @@ export const ACHIEVEMENTS = [
     test: ({ play }) => play?.game_id === 'minesweeper' && play.difficulty === 'expert' && play.result === 'win',
   },
   {
+    id: 'memory_expert', name: '翻翻樂專家通關', icon: '🃏', cond: '翻翻樂專家難度勝利', game: 'memory',
+    test: ({ play }) => play?.game_id === 'memory' && play.difficulty === 'expert' && play.result === 'win',
+  },
+  {
     id: 'reversi_expert', name: '黑白棋擊敗高手', icon: '⚫', cond: '黑白棋高手難度勝利', game: 'reversi',
     test: ({ play }) => play?.game_id === 'reversi' && play.difficulty === 'expert' && play.result === 'win',
+  },
+  {
+    id: 'archery_bullseye_3', name: '弓箭三箭靶心', icon: '🏹', cond: '弓箭射擊一局射中 3 箭靶心', game: 'archery',
+    test: ({ play }) => play?.game_id === 'archery' && (play.detail?.bullseyes ?? 0) >= 3,
   },
   {
     id: 'wordle_2', name: 'Wordle 2 次猜中', icon: '🔤', cond: 'Wordle 2 次內猜中', game: 'wordle',
@@ -123,8 +131,14 @@ export const ACHIEVEMENTS = [
   },
   { id: 'streak_3', name: '連玩 3 天', icon: '🔥', cond: '連續 3 天完成遊戲', test: ({ profile }) => (profile.streak?.current ?? 0) >= 3 },
   { id: 'streak_7', name: '連玩 7 天', icon: '📅', cond: '連續 7 天完成遊戲', test: ({ profile }) => (profile.streak?.current ?? 0) >= 7 },
+  { id: 'daily_7', name: '連續 7 天完成每日挑戰', icon: '🗓️', cond: '連續 7 個台灣日完成任一每日挑戰',
+    test: ({ stats, play }) => dailyStreak(stats, play?.detail?.daily) >= 7 },
   { id: 'hours_5', name: '累計 5 小時', icon: '⏳', cond: '遊戲時間累計 5 小時', test: ({ stats }) => sum(stats, 'total_sec') >= 18000 },
   { id: 'plays_100', name: '累計 100 局', icon: '💯', cond: '完成 100 局', test: ({ stats }) => sum(stats, 'plays_count') >= 100 },
+  {
+    id: 'bridge_perfect_5', name: '連續 5 次完美', icon: '🌉', cond: '小人過橋連續 5 次完美', game: 'bridge',
+    test: ({ play }) => play?.game_id === 'bridge' && play.result === 'lose' && (play.detail?.best_combo ?? 0) >= 5,
+  },
 ];
 
 // 回傳 ctx 下成立、但 profile 尚未解開的成就 id。
@@ -166,7 +180,19 @@ export const WORDLE_RECENT = 10;
 // 各遊戲累計在 stats.detail 的欄位。play = 本局 detail。
 //   tictactoe:unbeaten 連續不敗(只算完成局)
 //   wordle:recent 最近 WORDLE_RECENT 局的答案(新到舊,含 quit;出題時避開)
+export function dailyStreak(stats, day) {
+  if (typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return 0;
+  const days = new Set(['wordle', 'sudoku'].flatMap((id) => stats[id]?.detail?.daily_days ?? []));
+  let stamp = Date.parse(`${day}T00:00:00Z`), count = 0;
+  while (Number.isFinite(stamp) && days.has(new Date(stamp).toISOString().slice(0, 10))) { count++; stamp -= 86400000; }
+  return count;
+}
+
 function nextDetail(gameId, detail, result, play = {}) {
+  if (['wordle', 'sudoku'].includes(gameId) && ['win', 'lose'].includes(result)
+    && typeof play.daily === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(play.daily)) {
+    detail = { ...detail, daily_days: [...new Set([...(detail.daily_days ?? []), play.daily])].sort().slice(-35) };
+  }
   if (gameId === 'tictactoe' && ['win', 'draw', 'lose'].includes(result)) {
     return { ...detail, unbeaten: result === 'lose' ? 0 : (detail.unbeaten ?? 0) + 1 };
   }

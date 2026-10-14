@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>弓箭射擊 · 遊戲集錦</title>
+  <link rel="stylesheet" href="../../shared/style.css?v=5cadbe4">
+  <link rel="stylesheet" href="style.css?v=5cadbe4">
+</head>
+<body>
+  <main class="page page-narrow page-fit">
+    <header class="topbar">
+      <a class="btn" href="../../" aria-label="回到大廳" title="回到大廳"><span aria-hidden="true">←</span><span class="topbar-label">大廳</span></a>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">分數</div><div class="stat-value" id="score">0</div></div>
+        <div class="stat"><div class="stat-label">最佳</div><div class="stat-value" id="best">0</div></div>
+        <button class="btn" id="pause" type="button" aria-label="暫停" title="暫停(P)">⏸</button>
+        <button class="btn" id="theme" type="button"></button>
+      </div>
+    </header>
+    <div class="actions">
+      <button class="btn" id="new" type="button">↻ 新遊戲</button>
+      <select class="btn" id="difficulty" aria-label="難度">
+        <option value="normal">一般</option>
+        <option value="hard">困難</option>
+        <option value="expert">高手</option>
+      </select>
+    </div>
+    <div class="hud" aria-live="polite">
+      <span id="arrows">第 1 / 10 箭</span>
+      <span id="aim-readout">角度 35° · 力度 60%</span>
+      <span id="last-shot"></span>
+    </div>
+    <div class="stage-area">
+      <div class="stage" id="stage" tabindex="0" aria-describedby="hint">
+        <canvas id="field" role="img" aria-label="射箭場:左邊是弓手,右邊是靶"></canvas>
+        <p class="sr-only" id="status" aria-live="polite"></p>
+        <div class="overlay" id="overlay" hidden>
+          <p class="overlay-title" id="overlay-title"></p>
+          <div class="overlay-info" id="overlay-info"></div>
+          <div class="overlay-actions" id="overlay-actions"></div>
+        </div>
+      </div>
+    </div>
+    <p class="hint" id="hint">在弓手附近按住往後拖曳拉弓、放開射出 · ↑↓ 角度 ←→ 力度 空白鍵射出 · P 暫停</p>
+  </main>
+  <script type="module" src="ui.js?v=5cadbe4"></script>
+</body>
+</html>

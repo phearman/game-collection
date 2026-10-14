@@ -1,4 +1,4 @@
-@import url("skins.css");
+@import url("skins.css?v=5cadbe4");
 :root {
   --bg: #f6f5f1;
   --surface: #ffffff;
@@ -256,3 +256,10 @@ a.card:hover { border-color: var(--accent); }
 .cloud-choice { width: min(440px, calc(100vw - 32px)); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
 .cloud-choice::backdrop { background: rgba(0, 0, 0, 0.45); }
 .cloud-choice .btn { display: block; width: 100%; margin-top: 12px; white-space: normal; }
+/* 每日挑戰入口與狀態；窄螢幕可換行。 */
+.daily-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 16px; }
+.daily-card h2 { font-size: 18px; margin: 0; }
+.daily-games { display: flex; flex-wrap: wrap; gap: 8px; }
+.daily-games .btn { flex: 1 1 140px; white-space: normal; overflow-wrap: anywhere; }
+.daily-banner { font-size: 14px; margin: 8px 0; overflow-wrap: anywhere; }
+.daily-summary { padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); }

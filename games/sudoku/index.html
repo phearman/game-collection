@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>數獨 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../../shared/style.css?v=fea2bda">
-  <link rel="stylesheet" href="style.css?v=fea2bda">
+  <link rel="stylesheet" href="../../shared/style.css?v=5cadbe4">
+  <link rel="stylesheet" href="style.css?v=5cadbe4">
 </head>
 <body>
   <main class="page page-narrow">
@@ -18,12 +18,14 @@
       </div>
     </header>
     <div class="actions">
+      <a class="btn" id="daily" href="?daily=1">今日挑戰</a>
       <button class="btn" id="new" type="button">↻ 新遊戲</button>
       <button class="btn" id="undo" type="button">↶ 復原</button>
       <label class="difficulty">難度
         <select id="difficulty"><option value="easy">入門 · 46</option><option value="normal">一般 · 40</option><option value="hard">困難 · 32</option><option value="expert">專家 · 26</option></select>
       </label>
     </div>
+    <p class="daily-banner" id="daily-banner" role="status" hidden></p>
     <div class="assist-tools">
       <button class="btn" id="hint-button" type="button">💡 提示</button>
       <label><input id="auto-cand" type="checkbox"> 自動候選</label>
@@ -61,6 +63,6 @@
       <button class="btn" type="button" data-act="cancel" autofocus>取消</button>
     </div>
   </dialog>
-  <script type="module" src="ui.js?v=fea2bda"></script>
+  <script type="module" src="ui.js?v=5cadbe4"></script>
 </body>
 </html>

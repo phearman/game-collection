@@ -1,5 +1,5 @@
 // MemoryStore:store 介面的記憶體實作(測試用)。介面說明見 supabase.js。
-import { PLAYS_LIMIT, pushPlay } from '../progress.js?v=fea2bda';
+import { PLAYS_LIMIT, pushPlay } from '../progress.js?v=5cadbe4';
 
 const copy = (v) => (v === undefined ? v : structuredClone(v));
 
@@ -42,8 +42,8 @@ export class MemoryStore {
   }
 
   // 結算一次提交(IR6):記憶體寫入不會失敗。
-  async commitFinish({ gameId, profile, stats, play }) {
-    this.saves.delete(gameId);
+  async commitFinish({ gameId, saveId = gameId, profile, stats, play }) {
+    this.saves.delete(saveId);
     this.profile = copy(profile);
     this.stats[stats.game_id] = copy(stats);
     this.plays = pushPlay(this.plays, copy(play));

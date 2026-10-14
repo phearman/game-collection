@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>遊戲集錦</title>
-  <link rel="stylesheet" href="shared/style.css?v=fea2bda">
+  <link rel="stylesheet" href="shared/style.css?v=5cadbe4">
 </head>
 <body>
   <main class="page">
@@ -17,6 +17,11 @@
       </div>
     </header>
     <p id="local-record-note" class="me-sub">未登入:紀錄只存在這台裝置</p>
+    <section class="daily-card" aria-label="今日挑戰">
+      <h2>📅 今日挑戰</h2>
+      <p id="daily-message" role="status">登入後才能參加每日挑戰</p>
+      <div id="daily-games" class="daily-games"></div>
+    </section>
     <section class="cards" id="cards" aria-label="遊戲清單"></section>
     <section class="skin-compare" id="skin-compare" aria-labelledby="skin-compare-title" hidden>
       <h2 id="skin-compare-title">🎨 主題樣板比較</h2>
@@ -26,40 +31,22 @@
     <footer class="lobby-footer"><a href="changelog/">更新紀錄</a><span aria-hidden="true"> · </span><a href="privacy/">隱私權政策</a><span aria-hidden="true"> · </span><a id="feedback-link" href="me/">意見回饋</a><span aria-hidden="true"> · </span><a href="line/">LINE 小幫手使用說明</a></footer>
   </main>
   <script type="module">
-    import { GAMES } from './shared/games.js?v=fea2bda';
-    import { createProfile } from './shared/profile.js?v=fea2bda';
-    import { LocalStore } from './shared/stores/local.js?v=fea2bda';
-    import { bindThemeToggle } from './shared/theme.js?v=fea2bda';
-    import { cloudEnabled } from './shared/supabase-config.js?v=fea2bda';
-    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=fea2bda';
+    import { GAMES } from './shared/games.js?v=5cadbe4';
+    import { createProfile } from './shared/profile.js?v=5cadbe4';
+    import { LocalStore } from './shared/stores/local.js?v=5cadbe4';
+    import { bindThemeToggle } from './shared/theme.js?v=5cadbe4';
+    import { cloudEnabled } from './shared/supabase-config.js?v=5cadbe4';
+    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=5cadbe4';
+    import { mountDailyLobby } from './shared/daily.js?v=5cadbe4';
 
     bindThemeToggle(document.getElementById('theme'));
     document.getElementById('feedback-link').addEventListener('click', async (event) => {
       event.preventDefault();
-      const { openFeedback } = await import('./shared/feedback.js?v=fea2bda');
+      const { openFeedback } = await import('./shared/feedback.js?v=5cadbe4');
       await openFeedback();
     });
 
     const sum = await (await createProfile({ store: new LocalStore() })).summary();
-    if (cloudEnabled) {
-      const { auth, notice } = await (await import('./shared/auth.js?v=fea2bda')).getCloudRuntime();
-      const icon = document.getElementById('account-link');
-      icon.hidden = false;
-      const renderAccount = () => {
-        document.getElementById('local-record-note').hidden = Boolean(auth.session);
-        icon.textContent = auth.session ? '🟢' : '🔑';
-        icon.setAttribute('aria-label', auth.session ? '已登入，前往帳號' : '未登入，前往帳號');
-        icon.title = notice || (auth.session ? '已登入' : '用 Google 或 GitHub 登入');
-      };
-      renderAccount();
-      auth.subscribe(renderAccount);
-      if (notice) {
-        const status = document.createElement('p');
-        status.setAttribute('role', 'status');
-        status.textContent = notice;
-        document.querySelector('.topbar').after(status);
-      }
-    }
     document.getElementById('me').textContent = `👤 我的 · Lv ${sum.level}`;
 
     // 最近活動在前(最後結算與存檔時間較新者,新到舊),其餘照 games.js 原順序。
@@ -93,7 +80,27 @@
       document.getElementById('cards').append(card);
     }
     setupWhatsNew({ hasHistory: hasPlayHistory(sum) });
+    void mountDailyLobby(document).catch(() => {});
+    if (cloudEnabled) {
+      const { auth, notice } = await (await import('./shared/auth.js?v=5cadbe4')).getCloudRuntime();
+      const icon = document.getElementById('account-link');
+      icon.hidden = false;
+      const renderAccount = () => {
+        document.getElementById('local-record-note').hidden = Boolean(auth.session);
+        icon.textContent = auth.session ? '🟢' : '🔑';
+        icon.setAttribute('aria-label', auth.session ? '已登入，前往帳號' : '未登入，前往帳號');
+        icon.title = notice || (auth.session ? '已登入' : '用 Google 或 GitHub 登入');
+      };
+      renderAccount();
+      auth.subscribe(renderAccount);
+      if (notice) {
+        const status = document.createElement('p');
+        status.setAttribute('role', 'status');
+        status.textContent = notice;
+        document.querySelector('.topbar').after(status);
+      }
+    }
   </script>
-  <script type="module" src="shared/skin-compare.js?v=fea2bda"></script>
+  <script type="module" src="shared/skin-compare.js?v=5cadbe4"></script>
 </body>
 </html>

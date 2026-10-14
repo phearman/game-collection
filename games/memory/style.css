@@ -1,0 +1,123 @@
+.topbar { gap: 6px; }
+.topbar .btn { white-space: nowrap; padding: 6px 10px; }
+.stats { display: flex; gap: 6px; align-items: stretch; }
+.stats .stat { min-width: 52px; padding: 2px 8px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.actions .btn { flex: 1 1 auto; white-space: nowrap; padding: 6px 8px; min-width: 0; }
+.actions select.btn { appearance: none; text-align: center; text-align-last: center; }
+.status { font-size: 13px; color: var(--text-sub); text-align: center; margin: 0 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.board-wrap { position: relative; }
+.board {
+  --gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+  gap: var(--gap);
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.board[data-size="expert"] { --gap: 4px; padding: 6px; }
+
+.card {
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  perspective: 600px;
+  cursor: pointer;
+  font: inherit;
+}
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; position: relative; z-index: 1; }
+.card-inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.18s ease;
+}
+.card.is-open .card-inner, .card.is-matched .card-inner { transform: rotateY(180deg); }
+.card-back, .card-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.card-back {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.18) 0 4px, transparent 4px 8px),
+    linear-gradient(135deg, var(--accent), var(--accent-bg));
+  border: 2px solid var(--accent);
+}
+.card-face {
+  transform: rotateY(180deg);
+  background: #fff;
+  border: 2px solid var(--border);
+  font-size: clamp(22px, 9vw, 40px);
+  line-height: 1;
+}
+.board[data-size="expert"] .card-face { font-size: clamp(20px, 7.4vw, 34px); }
+.card.is-matched { cursor: default; }
+.card.is-matched .card-face { border-color: var(--accent); background: var(--accent-bg); animation: pop 0.2s ease; }
+.card.is-miss .card-inner { animation: shake 0.3s ease; }
+.card.is-nope { animation: shake 0.25s ease; }
+
+@keyframes pop { 50% { transform: rotateY(180deg) scale(1.1); } }
+@keyframes shake { 25% { translate: -3px 0; } 75% { translate: 3px 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .card-inner { transform: none !important; transition: none; }
+  .card-back, .card-face { transition: opacity 0.15s; backface-visibility: visible; -webkit-backface-visibility: visible; }
+  .card-face { transform: none; opacity: 0; }
+  .card.is-open .card-face, .card.is-matched .card-face { opacity: 1; }
+  .card.is-open .card-back, .card.is-matched .card-back { opacity: 0; }
+  .card.is-matched .card-face, .card.is-miss .card-inner, .card.is-nope { animation: none; }
+}
+
+/* 示範盤(說明對話框內) */
+.board.demo { --gap: 4px; padding: 4px; max-width: 220px; margin: 0 auto; }
+.board.demo .card { cursor: default; }
+.board.demo .card-inner { transition: none; }
+.board.demo .card-face { font-size: 22px; }
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px 12px;
+}
+.overlay[hidden] { display: none; }
+.overlay-card {
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+}
+.overlay-title { font-size: 22px; font-weight: 700; margin: 0; }
+.overlay-info { text-align: center; font-size: 14px; }
+.overlay-info p { margin: 2px 0; }
+.overlay-info .overlay-xp { font-size: 18px; font-weight: 700; }
+.overlay-actions { display: flex; gap: 8px; }
+.overlay-actions .btn { white-space: nowrap; }
+
+.hint { font-size: 13px; color: var(--text-sub); text-align: center; margin: 12px 0 0; }

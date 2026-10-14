@@ -1,11 +1,12 @@
-import { cloudEnabled } from '../shared/supabase-config.js?v=fea2bda';
-import { GAMES } from '../shared/games.js?v=fea2bda';
-import { createPendingGroupsClient } from './line.js?v=fea2bda';
-import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=fea2bda';
+import { cloudEnabled } from '../shared/supabase-config.js?v=5cadbe4';
+import { GAMES } from '../shared/games.js?v=5cadbe4';
+import { createPendingGroupsClient } from './line.js?v=5cadbe4';
+import { createJokesClient, initJokesPanel } from './jokes.js?v=5cadbe4';
+import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=5cadbe4';
 
 // 注入 runtime/client 供測試；未通過管理者檢查不讀取回饋。
 export async function initAdmin({ doc = globalThis.document, view = doc.defaultView ?? globalThis.window,
-  runtime, client, pendingClient, confirm = (text) => globalThis.confirm(text) } = {}) {
+  runtime, client, pendingClient, jokesClient, confirm = (text) => globalThis.confirm(text) } = {}) {
   const $ = (id) => doc.getElementById(id);
   const node = (tag, text, cls) => element(doc, tag, text, cls);
   let rows = [];
@@ -14,7 +15,8 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
   let groupEpoch = 0;
   let groupsLoading = false;
   let authorized = false;
-  const tabs = ['feedback', 'line-groups'];
+  let jokesPanel;
+  const tabs = ['feedback', 'line-groups', 'jokes'];
   const selectTab = (tab, focus = false) => {
     if (!authorized) return;
     if (!tabs.includes(tab)) tab = 'feedback';
@@ -22,16 +24,18 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
       const button = $(`tab-${name}`);
       const selected = name === tab;
       button.setAttribute('aria-selected', String(selected)); button.tabIndex = selected ? 0 : -1;
-      $(name === 'feedback' ? 'admin-content' : 'line-groups-panel').hidden = !selected;
+      $(name === 'feedback' ? 'admin-content' : name === 'jokes' ? 'jokes-panel' : 'line-groups-panel').hidden = !selected;
     }
     if (view?.location && view.location.hash !== `#${tab}`) view.location.hash = tab;
     if (focus) $(`tab-${tab}`).focus();
+    if (tab === 'jokes') return jokesPanel?.open();
   };
-  for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel']) $(id).hidden = true;
+  for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel']) $(id).hidden = true;
   const hideData = () => {
     authorized = false;
+    jokesPanel?.clear();
     rows = [];
-    for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel']) $(id).hidden = true;
+    for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel']) $(id).hidden = true;
     $('feedback-rows').replaceChildren();
     for (const id of ['pending-groups', 'allowed-groups', 'group-actions']) $(id).replaceChildren();
     $('count').textContent = '';
@@ -43,7 +47,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
       const option = node('option', label); option.value = value; select.append(option);
     }
   };
-  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=fea2bda')).getCloudRuntime() : null);
+  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=5cadbe4')).getCloudRuntime() : null);
   if (!rt?.auth.session) {
     hideData();
     $('access').textContent = '登入後才能查看回饋後台'; $('login').hidden = false;
@@ -52,6 +56,9 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
   client ??= createFeedbackClient({ auth: rt.auth });
   pendingClient ??= createPendingGroupsClient({ auth: rt.auth, client });
   const userId = rt.auth.session.user.id;
+  jokesClient ??= createJokesClient({ auth: rt.auth, client });
+  jokesPanel = initJokesPanel({ doc, auth: rt.auth, client: jokesClient, confirm,
+    onDenied: () => { ++epoch; ++groupEpoch; hideData(); $('access').textContent = '沒有權限'; } });
   const filters = () => ({ game: $('filter-game').value, kind: $('filter-kind').value,
     status: $('filter-status').value, keyword: $('keyword').value, channel: $('filter-channel').value });
   const visible = () => filterFeedback(rows, filters());
@@ -308,10 +315,10 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
 }
 
 if (typeof document !== 'undefined') {
-  const { bindThemeToggle } = await import('../shared/theme.js?v=fea2bda');
+  const { bindThemeToggle } = await import('../shared/theme.js?v=5cadbe4');
   bindThemeToggle(document.getElementById('theme'));
   initAdmin().catch(() => {
-    for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel']) document.getElementById(id).hidden = true;
+    for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel']) document.getElementById(id).hidden = true;
     document.getElementById('access').textContent = '後台暫時無法使用，請重新載入';
   });
 }
