@@ -1,7 +1,19 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=5cadbe4';
-import { levelFor } from './progress.js?v=5cadbe4';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=795425d';
+import { levelFor } from './progress.js?v=795425d';
+import { markCloudOffline } from './cloud-status.js?v=795425d';
 
 const AUTH_KEY = 'gc:auth';
+const REFRESH_LOCK_KEY = 'gc:auth-refresh-lock';
+const REFRESH_LOCK_MS = 20000;
+const REFRESH_TIMEOUT_MS = 10000;
+const RETRY_BASE_MS = 15000;
+const RETRY_MAX_MS = 300000;
+const RETRY_AT_KEY = 'gc:auth-retry-at'; // 跨分頁共享的退避期限(ms)
+const CLOCK_SKEW_MS = 1000; // 共享退避期限比上限還晚超過這麼多 ⇒ 異常(時鐘回撥等),不採用
+const TRANSIENT_STATUS = (status) => status === 408 || status === 429 || (status >= 500 && status <= 599);
+// 錯誤分類(IR30,refresh 與雲端準備共用):網路錯誤(連不上、讀本文中斷,呼叫端標 transient)、逾時、408、429、5xx 是暫時故障;
+// 其他 4xx、解析失敗、資料格式錯誤(含處理資料時的 TypeError)都視為失效。
+export const isTransientError = (err) => Boolean(err?.transient) || TRANSIENT_STATUS(err?.status);
 const PKCE_KEY = 'gc:pkce';
 const base64url = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
@@ -75,9 +87,12 @@ export function createAuth({
   storage = globalThis.localStorage, sessionStorage = globalThis.sessionStorage,
   crypto = globalThis.crypto, location = globalThis.location, history = globalThis.history,
   now = Date.now, setTimer = globalThis.setTimeout, clearTimer = globalThis.clearTimeout,
-  win = globalThis.window,
+  win = globalThis.window, doc = globalThis.document, timeoutMs = REFRESH_TIMEOUT_MS,
 } = {}) {
   let session = null;
+  let disposed = false;
+  let nextRetryAt = 0; // 暫時故障後的退避期限(ms);期限前不再發 refresh
+  let deferred = false; // 隱藏頁到時間的 refresh 延到回到前景再做
   let timer;
   let refreshing;
   let message = '';
@@ -92,12 +107,21 @@ export function createAuth({
     } catch { return null; }
   };
   session = enabled ? read() : null;
+  // 計時到期:隱藏頁不打 API(回前景再做),避免背景分頁在服務故障時持續重試。
+  const fire = () => {
+    if (disposed) return;
+    if (doc?.hidden) { deferred = true; return; }
+    refresh().catch(() => {});
+  };
+  const arm = (ms) => {
+    clearTimer(timer);
+    if (disposed) return;
+    timer = setTimer(fire, ms);
+    timer?.unref?.();
+  };
   const schedule = () => {
     clearTimer(timer);
-    if (session) {
-      timer = setTimer(() => { refresh().catch(() => {}); }, Math.max(1000, session.expires_at * 1000 - now() - 60000));
-      timer?.unref?.();
-    }
+    if (session) arm(Math.max(1000, session.expires_at * 1000 - now() - 60000));
   };
   const clear = (text = '') => {
     epoch += 1;
@@ -107,19 +131,42 @@ export function createAuth({
     try { storage.removeItem(AUTH_KEY); } catch { /* 記憶體仍登出 */ }
     emit();
   };
+  // 換 token。逾時涵蓋整次請求(連線、讀本文、解析);分類見 isTransientError。
+  // 畸形回應(缺欄位、壞 JSON、到期時間不是有限正數)視為失效。
+  const positive = (v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
   const token = async (grant, body) => {
-    const res = await request(`${url.replace(/\/$/, '')}/auth/v1/token?grant_type=${grant}`, {
-      method: 'POST', headers: { apikey: key, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    let timeoutId;
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timeout = new Promise((_, reject) => {
+      timeoutId = setTimer(() => { controller?.abort(); reject(Object.assign(new Error('連線逾時'), { transient: true })); }, timeoutMs);
+      timeoutId?.unref?.();
     });
-    if (!res.ok) throw new Error('登入失效，請重新登入');
-    const s = await res.json();
-    if (!s.access_token || !s.refresh_token || !s.user?.id || !(s.expires_in > 0 || s.expires_at > 0)) throw new Error('登入回應不完整');
-    // 不保存 provider token 或 email；帳號 UI 只需要 GitHub 名稱與頭像。
-    const meta = s.user.user_metadata ?? {};
-    return { access_token: s.access_token, refresh_token: s.refresh_token,
-      expires_at: s.expires_at ?? Math.floor(now() / 1000) + s.expires_in,
-      user: { id: s.user.id, user_metadata: { user_name: meta.user_name, preferred_username: meta.preferred_username,
-        name: meta.name, avatar_url: meta.avatar_url } } };
+    const work = (async () => {
+      let res;
+      try {
+        res = await request(`${url.replace(/\/$/, '')}/auth/v1/token?grant_type=${grant}`, {
+          method: 'POST', headers: { apikey: key, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+          ...(controller ? { signal: controller.signal } : {}),
+        });
+      } catch { throw Object.assign(new Error('暫時連不上帳號服務'), { transient: true }); }
+      if (!res.ok) throw Object.assign(new Error('登入失效，請重新登入'), { status: res.status });
+      let s;
+      try { s = await res.json(); } catch (e) {
+        // 解析失敗(SyntaxError)=畸形回應;讀本文中斷(TypeError/AbortError 等)=網路錯誤
+        if (!(e instanceof SyntaxError)) throw Object.assign(new Error('暫時連不上帳號服務'), { transient: true, cause: e });
+        s = null;
+      }
+      const at = s?.expires_at === undefined ? (positive(s?.expires_in) ? Math.floor(now() / 1000) + s.expires_in : null)
+        : (positive(s.expires_at) ? s.expires_at : null);
+      if (!s?.access_token || !s.refresh_token || !s.user?.id || at === null) throw new Error('登入回應不完整');
+      // 不保存 provider token 或 email；帳號 UI 只需要 GitHub 名稱與頭像。
+      const meta = s.user.user_metadata ?? {};
+      return { access_token: s.access_token, refresh_token: s.refresh_token, expires_at: at,
+        user: { id: s.user.id, user_metadata: { user_name: meta.user_name, preferred_username: meta.preferred_username,
+          name: meta.name, avatar_url: meta.avatar_url } } };
+    })();
+    work.catch(() => {}); // 逾時後晚到的錯誤不成為未處理的 rejection
+    try { return await Promise.race([work, timeout]); } finally { clearTimer(timeoutId); }
   };
   const save = (s) => {
     storage.setItem(AUTH_KEY, JSON.stringify(s));
@@ -128,29 +175,85 @@ export function createAuth({
     schedule();
     emit();
   };
+  // IR30:暫時故障保留登入資料並退避重試(15 秒起倍增,上限 5 分鐘);只有確定失效才登出。
+  // 之前任何失敗都清除,Supabase 短暫異常時玩家就被登出。
+  let retries = 0;
+  // 跨分頁共享退避期限:任一分頁遇到暫時故障,其他分頁在期限前也不重打。時間戳異常(比現在晚太多)不採用。
+  const sharedRetryAt = () => {
+    try {
+      const at = Number(storage.getItem(RETRY_AT_KEY));
+      return Number.isFinite(at) && at > 0 && at - now() <= RETRY_MAX_MS + CLOCK_SKEW_MS ? at : 0;
+    } catch { return 0; }
+  };
+  const retryLater = () => {
+    const delay = Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** retries);
+    retries += 1;
+    nextRetryAt = now() + delay;
+    try { storage.setItem(RETRY_AT_KEY, String(nextRetryAt)); } catch { /* 只有本分頁退避 */ }
+    arm(delay);
+  };
+  const clearRetry = () => {
+    retries = 0; nextRetryAt = 0;
+    try { storage.removeItem(RETRY_AT_KEY); } catch { /* 期限會自然過去 */ }
+  };
+  // 多分頁協調:同一時間只讓一個分頁換 token(鎖存在 localStorage,20 秒逾時);其他分頁等 storage 事件。
+  // 鎖的時間戳在未來(鎖齡 < 0,時鐘回撥等)或已逾時都視為無效。
+  const lockHeldByOther = () => {
+    try {
+      const lock = JSON.parse(storage.getItem(REFRESH_LOCK_KEY));
+      if (!lock || lock.owner === instanceId || typeof lock.at !== 'number' || !Number.isFinite(lock.at)) return false;
+      const age = now() - lock.at;
+      return age >= 0 && age < REFRESH_LOCK_MS;
+    } catch { return false; }
+  };
+  const instanceId = Math.random().toString(36).slice(2);
   async function refresh() {
-    if (!session) return null;
+    if (!session || disposed) return session;
     if (refreshing) return refreshing;
+    // 所有 refresh 入口(計時、accessToken、init)都套用:隱藏頁延到回前景、退避期限(含其他分頁的)、鎖。
+    if (doc?.hidden) { deferred = true; return session; }
+    // 退避期間:計時器重排到退避期限,否則本分頁的計時器已用掉、期限過後再也不會自動檢查登入。
+    const retryAt = Math.max(nextRetryAt, sharedRetryAt());
+    if (now() < retryAt) { arm(retryAt - now()); return session; }
+    if (lockHeldByOther()) { arm(REFRESH_LOCK_MS); return session; }
     const oldEpoch = epoch;
     const oldSession = session;
     const run = async () => {
+      try { storage.setItem(REFRESH_LOCK_KEY, JSON.stringify({ owner: instanceId, at: now() })); } catch { /* 無法協調仍可自行 refresh */ }
       try {
         const s = await token('refresh_token', { refresh_token: oldSession.refresh_token });
-        if (epoch === oldEpoch) save(s);
-      } catch {
-        if (epoch === oldEpoch) clear('登入失效，請重新登入');
+        if (disposed || epoch !== oldEpoch) return session;
+        clearRetry();
+        save(s);
+      } catch (err) {
+        if (disposed || epoch !== oldEpoch) return session;
+        if (!isTransientError(err)) clear('登入失效，請重新登入');
+        else {
+          message = '暫時連不上帳號服務，稍後會自動重試';
+          retryLater();
+          emit();
+        }
+      } finally {
+        try { if (JSON.parse(storage.getItem(REFRESH_LOCK_KEY))?.owner === instanceId) storage.removeItem(REFRESH_LOCK_KEY); } catch { /* 鎖會逾時失效 */ }
       }
       return session;
     };
     refreshing = run();
     try { return await refreshing; } finally { refreshing = null; }
   }
+  const onVisible = () => {
+    if (disposed || doc?.hidden || !deferred) return;
+    deferred = false;
+    refresh().catch(() => {});
+  };
+  doc?.addEventListener?.('visibilitychange', onVisible);
   schedule();
   const onStorage = (e) => {
     if (e.key !== AUTH_KEY && e.key !== null) return;
     epoch += 1;
     session = read();
     message = session ? '' : '已登出';
+    retries = 0; nextRetryAt = 0; // 另一分頁已換到新 token 或登出:本分頁退避歸零(共享期限由換到 token 的分頁清除)
     schedule();
     emit();
   };
@@ -162,6 +265,8 @@ export function createAuth({
     subscribe(cb) { listeners.add(cb); return () => listeners.delete(cb); },
     async accessToken() {
       if (session && session.expires_at * 1000 - now() <= 60000) await refresh();
+      // 暫時故障而未換到新 token:已過期的 token 不送出(避免被當成 401 而登出),回 null 讓呼叫端當作離線。
+      if (session && session.expires_at * 1000 <= now()) return null;
       return session?.access_token ?? null;
     },
     refresh,
@@ -201,12 +306,19 @@ export function createAuth({
         const provider = sessionStorage.getItem('gc:pkce-provider');
         sessionStorage.removeItem(PKCE_KEY);
         sessionStorage.removeItem('gc:pkce-provider');
+        const startEpoch = epoch;
         try {
           if (provider === 'google' && /provider.*(?:not enabled|disabled|unsupported)|unsupported provider/i.test(oauthError ?? '')) throw new Error('Google 登入尚未開放');
           if (oauthError || !verifier) throw new Error('登入未完成，請重新登入');
-          save(await token('pkce', { auth_code: code, code_verifier: verifier }));
-        } catch (err) { clear(err.message); }
+          const s = await token('pkce', { auth_code: code, code_verifier: verifier });
+          if (disposed || epoch !== startEpoch) return session; // dispose 或已登出後晚到的回應作廢
+          save(s);
+        } catch (err) {
+          if (disposed || epoch !== startEpoch) return session;
+          clear(err.message);
+        }
       }
+      if (disposed) return session;
       await this.accessToken();
       return session;
     },
@@ -218,7 +330,14 @@ export function createAuth({
         try { await request(`${url.replace(/\/$/, '')}/auth/v1/logout?scope=local`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${access}` } }); } catch { /* 本機登出已完成 */ }
       }
     },
-    dispose() { clearTimer(timer); win?.removeEventListener?.('storage', onStorage); listeners.clear(); },
+    // dispose 後在途的 refresh 回應一律作廢(不存檔、不排重試、不通知)。
+    dispose() {
+      disposed = true; epoch += 1;
+      clearTimer(timer);
+      win?.removeEventListener?.('storage', onStorage);
+      doc?.removeEventListener?.('visibilitychange', onVisible);
+      listeners.clear();
+    },
   };
 }
 
@@ -326,6 +445,13 @@ export async function createCloudProfile(options, factory) {
   return api;
 }
 
+// 準備雲端紀錄失敗時,只有「登入已失效或伺服器拒絕」才登出(IR30);分類與 refresh 相同(isTransientError):
+// 網路錯誤、逾時、408、429、5xx、暫時換不到 token 保留登入;其他 4xx、畸形回應(JSON 壞掉、欄位或型別不對)等視為失效。
+export function cloudRejected(err, auth) {
+  if (!auth?.session) return true;
+  return !isTransientError(err);
+}
+
 export async function selectCloudStore(local) {
   const rt = await getCloudRuntime();
   rt.identity ??= watchProfileIdentity(rt.auth, (message) => {
@@ -359,7 +485,7 @@ export async function selectCloudStore(local) {
   };
   if (!rt.auth.session) { showNotice(); return guarded(local); }
   if (!rt.store) {
-    const { SupabaseStore } = await import('./stores/supabase.js?v=5cadbe4');
+    const { SupabaseStore } = await import('./stores/supabase.js?v=795425d');
     rt.store = new SupabaseStore({ auth: rt.auth });
     try {
       rt.notice = await prepareCloudStore({ auth: rt.auth, local, cloud: rt.store });
@@ -367,8 +493,16 @@ export async function selectCloudStore(local) {
       console.error('[cloud] 登入後準備雲端紀錄失敗', err);
       rt.store.dispose();
       rt.store = null;
-      await rt.auth.signOut();
-      rt.notice = `登入後讀取帳號紀錄失敗:${err.message}`;
+      if (cloudRejected(err, rt.auth)) {
+        await rt.auth.signOut();
+        rt.notice = `登入後讀取帳號紀錄失敗:${err.message}`;
+        showNotice();
+        return guarded(local);
+      }
+      // IR30:網路中斷或服務暫時異常 ⇒ 保留登入,本頁只存這台裝置;結算時提示「這局沒有上傳到雲端」。
+      // ⛔ 不自動補送:現行結算 RPC 會刪該款雲端存檔,不改後端無法安全補送(PM 裁)。
+      rt.notice = '暫時連不上帳號服務,這一頁的紀錄只存在這台裝置';
+      markCloudOffline();
       showNotice();
       return guarded(local);
     }

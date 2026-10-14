@@ -1,9 +1,10 @@
-import { getCloudRuntime } from '../shared/auth.js?v=5cadbe4';
-import { exportData, exportFileName } from '../shared/progress.js?v=5cadbe4';
-import { createFeedbackClient, KINDS, playerFeedbackStatus, element, displayName } from '../shared/feedback.js?v=5cadbe4';
-import { GAMES } from '../shared/games.js?v=5cadbe4';
-import { initLineLinkStatus } from '../shared/line-link.js?v=5cadbe4';
-import { initAvatarPicker } from '../shared/avatars.js?v=5cadbe4';
+import { getCloudRuntime } from '../shared/auth.js?v=795425d';
+import { isCloudOffline } from '../shared/cloud-status.js?v=795425d';
+import { exportData, exportFileName } from '../shared/progress.js?v=795425d';
+import { createFeedbackClient, KINDS, playerFeedbackStatus, element, displayName } from '../shared/feedback.js?v=795425d';
+import { GAMES } from '../shared/games.js?v=795425d';
+import { initLineLinkStatus } from '../shared/line-link.js?v=795425d';
+import { initAvatarPicker } from '../shared/avatars.js?v=795425d';
 
 export function renderMyFeedback(doc, rows) {
   const items = doc.getElementById('feedback-items');
@@ -17,6 +18,9 @@ export function renderMyFeedback(doc, rows) {
     items.append(item);
   }
 }
+
+// 已登入時的同步狀態。雲端暫時連不上而降級本機(IR30)時沒有 store,⛔ 不顯示「同步中」。
+export const syncStatusText = (store, offline) => store?.status ?? (offline ? '暫時只存本機' : '同步中');
 
 // RPC 在單一交易清除帳號紀錄與自己的回饋，本機紀錄不動。
 export const CLEAR_ASK = [
@@ -76,7 +80,7 @@ export async function initAccount({ doc = globalThis.document, runtime, client, 
     $('sign-in-google').hidden = Boolean(rt.auth.session);
     $('sign-out').hidden = !rt.auth.session;
     $('clear-cloud').hidden = !rt.auth.session;
-    $('sync-status').textContent = rt.auth.session ? rt.store?.status ?? '同步中' : '';
+    $('sync-status').textContent = rt.auth.session ? syncStatusText(rt.store, isCloudOffline()) : '';
     $('account-avatar').hidden = true;
     $('account-avatar').removeAttribute('src');
     if (rt.auth.session && meta.avatar_url) {

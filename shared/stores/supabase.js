@@ -50,18 +50,31 @@ export class SupabaseStore {
     this.emit();
     try {
       const token = await this.auth.accessToken();
-      if (!token || !this.auth.session?.user.id || this.auth.session.user.id !== this.userId) throw new Error('請重新登入');
+      if (!token || !this.auth.session?.user.id || this.auth.session.user.id !== this.userId) {
+        // 仍有同一帳號的登入資料、只是暫時換不到 token(IR30)⇒ 標記暫時故障,⛔ 不讓呼叫端登出。
+        const offline = Boolean(this.auth.session?.user.id) && this.auth.session.user.id === this.userId;
+        throw Object.assign(new Error(offline ? '暫時連不上帳號服務' : '請重新登入'), { transient: offline });
+      }
       const headers = { apikey: this.key, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
       if (prefer) headers.Prefer = prefer;
-      const res = await this.fetch(`${this.url}/rest/v1/${path}`, { method, headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+      // 網路錯誤(連不上、讀本文中斷)標為暫時故障;解析失敗與資料格式錯誤不是(IR30)。
+      const networkError = (e) => Object.assign(e instanceof Error ? e : new Error('暫時連不上帳號服務'), { transient: true });
+      let res;
+      try {
+        res = await this.fetch(`${this.url}/rest/v1/${path}`, { method, headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+      } catch (e) { throw networkError(e); }
       if (!res.ok) {
         let error;
         try { error = JSON.parse(await res.text()); } catch { /* 非 JSON 錯誤 */ }
         const err = new Error(error?.message === 'STALE_PROFILE' ? '紀錄已過期' : `同步失敗 (${res.status})`);
         err.stale = error?.message === 'STALE_PROFILE';
+        err.status = res.status;
         throw err;
       }
-      const data = res.status === 204 ? null : await res.text();
+      let data = null;
+      if (res.status !== 204) {
+        try { data = await res.text(); } catch (e) { throw networkError(e); }
+      }
       this.failed = false;
       return data ? JSON.parse(data) : null;
     } catch (err) {
@@ -236,8 +249,8 @@ export class SupabaseStore {
   async legacyBest() { return 0; }
 }
 
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=5cadbe4';
-import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=5cadbe4';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=795425d';
+import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=795425d';
 
 function recalculateFinish(base, stats, play, live) {
   const missing = (live?.achievements ?? []).filter((id) => !base.achievements?.[id]);

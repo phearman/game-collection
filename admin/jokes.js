@@ -1,5 +1,5 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=5cadbe4';
-import { element } from '../shared/feedback.js?v=5cadbe4';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=795425d';
+import { element } from '../shared/feedback.js?v=795425d';
 
 export const JOKE_CATEGORIES = ['物品', '動物', '校園', '諧音', '生活'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

@@ -1,15 +1,15 @@
-import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave } from './logic.js?v=5cadbe4';
-import { createProfile } from '../../shared/profile.js?v=5cadbe4';
-import { LocalStore } from '../../shared/stores/local.js?v=5cadbe4';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=5cadbe4';
-import { bindThemeToggle } from '../../shared/theme.js?v=5cadbe4';
-import { play as playSound } from '../../shared/sound.js?v=5cadbe4';
-import { setupHelp } from '../../shared/help.js?v=5cadbe4';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=5cadbe4';
-import { settlePlay } from '../../shared/settle.js?v=5cadbe4';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=5cadbe4';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=5cadbe4';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=5cadbe4';
+import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave } from './logic.js?v=795425d';
+import { createProfile } from '../../shared/profile.js?v=795425d';
+import { LocalStore } from '../../shared/stores/local.js?v=795425d';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=795425d';
+import { bindThemeToggle } from '../../shared/theme.js?v=795425d';
+import { play as playSound } from '../../shared/sound.js?v=795425d';
+import { setupHelp } from '../../shared/help.js?v=795425d';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=795425d';
+import { settlePlay } from '../../shared/settle.js?v=795425d';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=795425d';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=795425d';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=795425d';
 
 const GAME_ID = 'sudoku';
 const $ = (id) => document.getElementById(id);
