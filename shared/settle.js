@@ -2,7 +2,7 @@
 // profile.finishPlay 是一次提交:失敗會把已寫的紀錄整批還原再丟錯。這裡接住錯誤,跳出共用對話框
 // 「重試 / 不存了,再玩一次」,不讓畫面停在「結算中」。重試 = 從目前的資料重新算一次;不存了 = 什麼都不記、開新局。
 
-import { isCloudOffline, OFFLINE_FINISH_TEXT } from './cloud-status.js?v=f55fdbd';
+import { isCloudOffline, OFFLINE_FINISH_TEXT } from './cloud-status.js?v=e80121c';
 
 // 結算後的離線提示:畫面底部置中的狀態列(每頁一個,重複結算只更新文字),點一下關閉。
 export function showOfflineFinish(doc = globalThis.document) {

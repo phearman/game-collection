@@ -1,9 +1,16 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=f55fdbd';
-import { element } from '../shared/feedback.js?v=f55fdbd';
-import { JOKE_CATEGORIES, jokeFieldsError, normalizeJokeBody, parseJokeImport } from './joke-import.js?v=f55fdbd';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=e80121c';
+import { element } from '../shared/feedback.js?v=e80121c';
+import { JOKE_CATEGORIES, jokeFieldsError, normalizeJokeBody, parseJokeImport } from './joke-import.js?v=e80121c';
 
-export { JOKE_CATEGORIES, parseJokeImport } from './joke-import.js?v=f55fdbd';
+export { JOKE_CATEGORIES, parseJokeImport } from './joke-import.js?v=e80121c';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+export function submitterLines(submitter) {
+  if (!submitter) return [];
+  const name = submitter.linked === true
+    ? `${submitter.avatar_emoji ? `${submitter.avatar_emoji} ` : ''}${submitter.nickname || '已綁定玩家'}`
+    : `未綁定玩家${submitter.line_suffix ? ` ·${submitter.line_suffix}` : ''}`;
+  return [`投稿者：${name}`, `累計投稿 ${submitter.total} 則(上架 ${submitter.approved} / 退回 ${submitter.rejected})`];
+}
 export function createJokesClient({ auth, client, url = SUPABASE_URL, key = SUPABASE_PUBLISHABLE_KEY,
   fetch: request = globalThis.fetch } = {}) {
   async function requireAdmin() {
@@ -40,7 +47,7 @@ export function createJokesClient({ auth, client, url = SUPABASE_URL, key = SUPA
       if (!Number.isInteger(page) || page < 1 || (category && !JOKE_CATEGORIES.includes(category)) ||
           (status && !['pending', 'approved', 'rejected'].includes(status))) throw new Error('篩選無效');
       const id = await requireAdmin();
-      const result = await call(id, 'rpc/list_line_jokes', { p_page: page, p_category: category || null, p_status: status || null });
+      const result = await call(id, 'rpc/list_line_jokes_admin', { p_page: page, p_category: category || null, p_status: status || null });
       if (!Array.isArray(result?.rows) || result.rows.length > 50 || !Number.isInteger(result.total) || result.total < 0 ||
           !Number.isInteger(result.page) || result.page < 1) throw new Error('笑話服務暫時無法使用');
       return result;
@@ -112,6 +119,9 @@ export function initJokesPanel({ doc, auth, client, onDenied = () => {}, confirm
         for (const row of selected) {
           const card = node('article', '', 'admin-card');
           card.append(node('p', row.body, 'joke-body'), node('p', `建立時間：${new Date(row.created_at).toLocaleString()}`));
+          if (status === 'pending' && row.source === 'submitted') {
+            for (const line of submitterLines(row.submitter)) card.append(node('p', line, 'joke-submitter'));
+          }
           if (status === 'rejected') {
             card.append(node('p', `分類：${row.category}`), node('p', `答案：${row.answer ?? '無'}`),
               node('p', `出處：${row.credit ?? '原創（無出處）'}`), node('p', `下架理由：${row.reject_reason ?? ''}`));

@@ -1,17 +1,17 @@
 import { FIELD_W, FIELD_H, DT, DIFFICULTIES, initState, stepState, pauseState, resumeState,
-  canPress, isAnimating, checkpointFor, toSave, fromSave, finishInfo, statusText, HELP_RULES, demoSteps } from './logic.js?v=f55fdbd';
-import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js?v=f55fdbd';
-import { createProfile } from '../../shared/profile.js?v=f55fdbd';
-import { LocalStore } from '../../shared/stores/local.js?v=f55fdbd';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=f55fdbd';
-import { bindThemeToggle } from '../../shared/theme.js?v=f55fdbd';
-import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=f55fdbd';
-import { setupHelp } from '../../shared/help.js?v=f55fdbd';
-import { play, music } from '../../shared/sound.js?v=f55fdbd';
-import { settlePlay } from '../../shared/settle.js?v=f55fdbd';
-import { confirmQuitBest } from '../../shared/quit.js?v=f55fdbd';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=f55fdbd';
-import { load, save } from '../../shared/storage.js?v=f55fdbd';
+  canPress, isAnimating, checkpointFor, toSave, fromSave, finishInfo, statusText, HELP_RULES, demoSteps } from './logic.js?v=e80121c';
+import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js?v=e80121c';
+import { createProfile } from '../../shared/profile.js?v=e80121c';
+import { LocalStore } from '../../shared/stores/local.js?v=e80121c';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=e80121c';
+import { bindThemeToggle } from '../../shared/theme.js?v=e80121c';
+import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=e80121c';
+import { setupHelp } from '../../shared/help.js?v=e80121c';
+import { play, music } from '../../shared/sound.js?v=e80121c';
+import { settlePlay } from '../../shared/settle.js?v=e80121c';
+import { confirmQuitBest } from '../../shared/quit.js?v=e80121c';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=e80121c';
+import { load, save } from '../../shared/storage.js?v=e80121c';
 
 const GAME_ID = 'bridge';
 const PREF_KEY = 'difficulty:bridge';

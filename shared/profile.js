@@ -1,25 +1,25 @@
 // 個人紀錄 API(RS1):遊戲與畫面只用這裡。規則一律呼叫 progress.js,這裡只串接 store。
-import { GAMES } from './games.js?v=f55fdbd';
-import { LocalStore } from './stores/local.js?v=f55fdbd';
-import { cloudEnabled } from './supabase-config.js?v=f55fdbd';
+import { GAMES } from './games.js?v=e80121c';
+import { LocalStore } from './stores/local.js?v=e80121c';
+import { cloudEnabled } from './supabase-config.js?v=e80121c';
 import {
   emptyProfile, migrateLegacyBest, applyFinish, applyUnlock, levelProgress, ACHIEVEMENTS, ACHIEVEMENT_XP, recentOrder,
   timerInit, timerEvent, timerSeconds, validateImport, isValidGameSave, pushPlay, exportData, exportFileName, iso, PLAYS_LIMIT,
-} from './progress.js?v=f55fdbd';
-import { isValidState as valid2048 } from '../games/2048/logic.js?v=f55fdbd';
-import { isValidState as validTictactoe } from '../games/tictactoe/logic.js?v=f55fdbd';
-import { isValidState as validSnake } from '../games/snake/logic.js?v=f55fdbd';
-import { isValidState as validMinesweeper } from '../games/minesweeper/logic.js?v=f55fdbd';
-import { isValidState as validSudoku } from '../games/sudoku/logic.js?v=f55fdbd';
-import { isValidState as validWordle } from '../games/wordle/logic.js?v=f55fdbd';
-import { isValidState as validKeeper } from '../games/keeper/logic.js?v=f55fdbd';
-import { isValidState as validStairs } from '../games/stairs/logic.js?v=f55fdbd';
-import { isValidState as validMoto } from '../games/moto/logic.js?v=f55fdbd';
-import { isValidState as validMoto2 } from '../games/moto2/logic.js?v=f55fdbd';
-import { isValidState as validMemory } from '../games/memory/logic.js?v=f55fdbd';
-import { isValidState as validReversi } from '../games/reversi/logic.js?v=f55fdbd';
-import { isValidState as validBridge } from '../games/bridge/logic.js?v=f55fdbd';
-import { isValidState as validArchery } from '../games/archery/logic.js?v=f55fdbd';
+} from './progress.js?v=e80121c';
+import { isValidState as valid2048 } from '../games/2048/logic.js?v=e80121c';
+import { isValidState as validTictactoe } from '../games/tictactoe/logic.js?v=e80121c';
+import { isValidState as validSnake } from '../games/snake/logic.js?v=e80121c';
+import { isValidState as validMinesweeper } from '../games/minesweeper/logic.js?v=e80121c';
+import { isValidState as validSudoku } from '../games/sudoku/logic.js?v=e80121c';
+import { isValidState as validWordle } from '../games/wordle/logic.js?v=e80121c';
+import { isValidState as validKeeper } from '../games/keeper/logic.js?v=e80121c';
+import { isValidState as validStairs } from '../games/stairs/logic.js?v=e80121c';
+import { isValidState as validMoto } from '../games/moto/logic.js?v=e80121c';
+import { isValidState as validMoto2 } from '../games/moto2/logic.js?v=e80121c';
+import { isValidState as validMemory } from '../games/memory/logic.js?v=e80121c';
+import { isValidState as validReversi } from '../games/reversi/logic.js?v=e80121c';
+import { isValidState as validBridge } from '../games/bridge/logic.js?v=e80121c';
+import { isValidState as validArchery } from '../games/archery/logic.js?v=e80121c';
 
 // 各遊戲存檔 state 的格式檢查(匯入驗證用)。
 export const STATE_VALIDATORS = { 2048: valid2048, tictactoe: validTictactoe, snake: validSnake, minesweeper: validMinesweeper, sudoku: validSudoku, wordle: validWordle, keeper: validKeeper, stairs: validStairs, moto: validMoto, moto2: validMoto2, reversi: validReversi, memory: validMemory, archery: validArchery };
@@ -56,7 +56,7 @@ export async function createProfile({
     } catch { /* 儲存不可用仍可免登入遊玩 */ }
   }
   if (cloudEnabled && win && store instanceof LocalStore && !store.storage) {
-    const { selectCloudStore, createCloudProfile } = await import('./auth.js?v=f55fdbd');
+    const { selectCloudStore, createCloudProfile } = await import('./auth.js?v=e80121c');
     store = await selectCloudStore(store);
     if (store.cloud) return createCloudProfile({ store, now, gameList, doc, win, stateValidators, saveSlots }, createProfile);
   }
