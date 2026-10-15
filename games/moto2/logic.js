@@ -390,6 +390,32 @@ export function ghostFor(s) {
 export function betterGhost(current, candidate) {
   return isValidGhost(candidate) && (!isValidGhost(current) || candidate.ms < current.ms) ? candidate : current;
 }
+// RS49:影子抵達位置 x 的時間(秒);只在已記錄的點之間插值,⛔ 外推。
+// 採樣沒被截斷時,最後一點到終點(不足一個採樣間隔)以終點時間補齊;紀錄超過 GHOST_LIMIT 筆被截斷時,
+// 超出已記錄範圍的位置回傳 null(不顯示秒差),不捏造。無影子或超出賽道也回傳 null。
+export function ghostArrival(g, x) {
+  if (!g || !Array.isArray(g.samples) || !g.samples.length || !Number.isFinite(x) || x < 0 || x > TRACK_LEN) return null;
+  const n = g.samples.length;
+  const truncated = n >= GHOST_LIMIT && g.ms / 1000 > n * GHOST_INTERVAL + 1e-9;
+  if (truncated && x > g.samples[n - 1].x) return null;
+  const count = truncated ? n : n + 1;
+  const at = (i) => i < n ? { x: g.samples[i].x, t: i * GHOST_INTERVAL } : { x: TRACK_LEN, t: g.ms / 1000 };
+  let lo = 0, hi = count; // 第一個 x >= 目標的點(未截斷時含補齊的終點)。
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (at(mid).x >= x) hi = mid; else lo = mid + 1;
+  }
+  if (lo === 0) return 0;
+  const a = at(lo - 1), b = at(lo);
+  return b.x === a.x ? b.t : a.t + (b.t - a.t) * (x - a.x) / (b.x - a.x);
+}
+// 正=玩家領先影子(較早到同一位置),負=落後;沒有影子時 null。
+export function ghostLead(g, x, seconds) {
+  const arrival = ghostArrival(g, x);
+  return arrival === null ? null : arrival - seconds;
+}
+export const leadLabel = (lead) => lead === null || !Number.isFinite(lead) ? null
+  : `${lead >= 0 ? '領先' : '落後'} ${Math.abs(lead).toFixed(1)} 秒`;
 export function ghostAt(g, seconds) {
   if (!g || seconds * 1000 > g.ms || seconds < 0) return null;
   const at = seconds / GHOST_INTERVAL;

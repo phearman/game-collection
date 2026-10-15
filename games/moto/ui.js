@@ -1,18 +1,18 @@
 // 畫面層:事件、固定步長迴圈與紀錄串接;規則只呼叫 logic.js。
 import {
-  W, H, DT, DIFFICULTIES, MODES, initState, stepState, pauseState, resumeState,
+  W, H, DT, DIFFICULTIES, MODES, SENSITIVITIES, initState, stepState, pauseState, resumeState,
   overlayFor, playerOf, resultFor, toSave, fromSave, isValidGhost, ghostFor, betterGhost, ghostAt,
-} from './logic.js?v=176975a';
-import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=176975a';
-import { createProfile } from '../../shared/profile.js?v=176975a';
-import { LocalStore } from '../../shared/stores/local.js?v=176975a';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=176975a';
-import { bindThemeToggle } from '../../shared/theme.js?v=176975a';
-import { play } from '../../shared/sound.js?v=176975a';
-import { setupHelp } from '../../shared/help.js?v=176975a';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=176975a';
-import { settlePlay } from '../../shared/settle.js?v=176975a';
-import { load, save } from '../../shared/storage.js?v=176975a';
+} from './logic.js?v=f55fdbd';
+import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=f55fdbd';
+import { createProfile } from '../../shared/profile.js?v=f55fdbd';
+import { LocalStore } from '../../shared/stores/local.js?v=f55fdbd';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=f55fdbd';
+import { bindThemeToggle } from '../../shared/theme.js?v=f55fdbd';
+import { play } from '../../shared/sound.js?v=f55fdbd';
+import { setupHelp } from '../../shared/help.js?v=f55fdbd';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=f55fdbd';
+import { settlePlay } from '../../shared/settle.js?v=f55fdbd';
+import { load, save } from '../../shared/storage.js?v=f55fdbd';
 
 const GAME_ID = 'moto';
 const SAVE_EVERY = 30;
@@ -21,6 +21,7 @@ const profile = await createProfile({ store: new LocalStore() });
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 let state, best = 0, ended = null, ghost = null, fx = createFx();
 let gameNo = 0, changing = false;
+let sensitivity = 'mid';
 let queue = Promise.resolve();
 const run = (fn) => { queue = queue.then(fn).catch((e) => console.error(e)); return queue; };
 const pref = (key, choices, fallback) => {
@@ -134,7 +135,7 @@ function frame(t) {
       acc -= DT;
       const prev = state;
       state = stepState(state, {
-        throttle: [...held.values()].includes('throttle'), brake: [...held.values()].includes('brake'), dir: pendingDir,
+        throttle: [...held.values()].includes('throttle'), brake: [...held.values()].includes('brake'), dir: pendingDir, sensitivity,
       }, DT);
       pendingDir = 0;
       if (Math.ceil(state.countdown) < Math.ceil(prev.countdown)) play(state.countdown > 0 ? 'countdown' : 'go');
@@ -263,11 +264,16 @@ window.addEventListener('pagehide', () => { pause(); persist(); });
 $('pause').addEventListener('click', togglePause);
 $('new').addEventListener('click', () => newGame());
 $('mode').addEventListener('change', (e) => newGame(state.difficulty, e.target.value));
+$('sensitivity').addEventListener('change', (e) => {
+  sensitivity = SENSITIVITIES.includes(e.target.value) ? e.target.value : 'mid';
+  save('sensitivity:moto', sensitivity);
+});
 $('difficulty').addEventListener('change', (e) => newGame(e.target.value, state.mode));
 $('overlay-actions').addEventListener('click', (e) => {
   const act = e.target.closest('[data-act]')?.dataset.act;
   if (act === 'resume') resume(); if (act === 'new') newGame();
 });
+sensitivity = pref('sensitivity', SENSITIVITIES, 'mid'); $('sensitivity').value = sensitivity;
 bindThemeToggle($('theme'));
 $('theme').addEventListener('click', () => { readColors(); draw(); });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readColors(); draw(); });
@@ -304,6 +310,7 @@ setupHelp({
     <li>↑ W／油門按住加速;↓ S／煞車按住減速。</li>
     <li>← → A D／◀ ▶按一下換道;放開油門會慢慢減速。</li>
     <li>泥坑限速一半;路障摔車停1.2秒;跳台騰空可飛越障礙,空中不能換道。</li>
+    <li>競速落後時極速最多+8%(車尾冒火、顯示「追趕中」);計時賽沒有。設定「操控靈敏度」低／中／高調整換道快慢。</li>
     <li>⏸／P暫停;開說明、離開分頁也暫停。</li>
     <li>競速與3台電腦車比;計時賽挑戰同難度最佳影子。</li>
     <li>競速第一名／計時賽完賽獲勝;分數=名次分／1000+剩餘150秒×10。</li>

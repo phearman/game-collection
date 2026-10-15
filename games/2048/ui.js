@@ -2,19 +2,19 @@
 import {
   move, initState, stepState, undoState, continueState, settleState, canUndo, isInvalidMove, shownBest,
   toSave, fromSave, maxTile, overlayFor, isValidState, suggestMove,
-} from './logic.js?v=176975a';
-import { createProfile } from '../../shared/profile.js?v=176975a';
-import { LocalStore } from '../../shared/stores/local.js?v=176975a';
-import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js?v=176975a';
-import { bindThemeToggle } from '../../shared/theme.js?v=176975a';
-import { play } from '../../shared/sound.js?v=176975a';
-import { setupHelp } from '../../shared/help.js?v=176975a';
-import { swipe } from '../../shared/touch.js?v=176975a';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=176975a';
-import { settlePlay } from '../../shared/settle.js?v=176975a';
-import { quitBestNote } from '../../shared/quit.js?v=176975a';
-import { DEMO_STUCK_LEFT, DEMO_FULL } from './demo.js?v=176975a';
-import { load, save } from '../../shared/storage.js?v=176975a';
+} from './logic.js?v=f55fdbd';
+import { createProfile } from '../../shared/profile.js?v=f55fdbd';
+import { LocalStore } from '../../shared/stores/local.js?v=f55fdbd';
+import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js?v=f55fdbd';
+import { bindThemeToggle } from '../../shared/theme.js?v=f55fdbd';
+import { play } from '../../shared/sound.js?v=f55fdbd';
+import { setupHelp } from '../../shared/help.js?v=f55fdbd';
+import { swipe } from '../../shared/touch.js?v=f55fdbd';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=f55fdbd';
+import { settlePlay } from '../../shared/settle.js?v=f55fdbd';
+import { quitBestNote } from '../../shared/quit.js?v=f55fdbd';
+import { DEMO_STUCK_LEFT, DEMO_FULL } from './demo.js?v=f55fdbd';
+import { load, save } from '../../shared/storage.js?v=f55fdbd';
 
 const GAME_ID = '2048';
 const MODE_KEY = 'mode:2048'; // 上次選的模式:normal / kids(RS6 小朋友模式 = 輔助局)

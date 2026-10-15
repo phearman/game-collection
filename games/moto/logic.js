@@ -10,6 +10,12 @@ export const ACCEL = 14;
 export const BRAKE = 36;
 export const COAST = 3;
 export const LANE_SEC = 0.2;
+// RS41:操控靈敏度(換道所需時間,秒);「中」=原有手感。
+export const SENSITIVITIES = ['low', 'mid', 'high'];
+export const LANE_SECS = { low: 0.26, mid: LANE_SEC, high: 0.15 };
+// RS41:追趕加成(只在競速,玩家落後第一名時依差距給極速加成;領先或計時賽為 0)。
+export const CATCHUP_MAX = 0.08;
+export const CATCHUP_FULL_GAP = 150; // 落後此距離以上給滿 +8%,以下與差距成比例。
 export const CRASH_SEC = 1.2;
 export const AIR_SEC = 0.8;
 export const AIR_SPEED_ADJUST = 0.12;
@@ -37,6 +43,16 @@ export const LEVELS = {
 export const AI_SPEED_OFFSETS = [-2, 0, 1];
 export const PLACE_POINTS = [3000, 2000, 1000, 500];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+export const laneSecFor = (sensitivity) => LANE_SECS[sensitivity] ?? LANE_SEC;
+// gap=第一名(電腦車)領先玩家的距離;<=0 即追上或領先,歸零。
+export function catchupBoost(gap, mode = 'race') {
+  if (mode !== 'race' || !(gap > 0)) return 0;
+  return CATCHUP_MAX * Math.min(1, gap / CATCHUP_FULL_GAP);
+}
+export function leaderGap(s) {
+  const others = s.vehicles.slice(1);
+  return others.length ? Math.max(...others.map((v) => v.y)) - s.vehicles[0].y : 0;
+}
 const near = (a, b) => Math.abs(a - b) < 1e-6;
 
 export function nextRandom(seed) {
@@ -70,7 +86,7 @@ export function generateTrack(seed, difficulty = 'normal', rng) {
 }
 
 const vehicle = (id, lane) => ({
-  id, lane, x: lane, from: lane, laneLeft: 0, y: 0, speed: 0,
+  id, lane, x: lane, from: lane, laneLeft: 0, laneSec: LANE_SEC, boost: 0, y: 0, speed: 0,
   crash: 0, air: 0, airDuration: 0, mud: false, lastObject: null, seen: null, finishAt: null,
 });
 
@@ -91,13 +107,14 @@ export const resumeState = (s) => s.over || !s.paused ? s : { ...s, paused: fals
 export const overlayFor = (s) => s.over ? 'over' : s.paused ? (s.ticks ? 'paused' : 'ready') : null;
 export const playerOf = (s) => s.vehicles[0];
 
-function changeLane(v, dir) {
+function changeLane(v, dir, laneSec = LANE_SEC) {
   if (!dir || v.air > 0 || v.crash > 0 || v.laneLeft > 0) return;
   const lane = clamp(v.lane + Math.sign(dir), 0, LANES - 1);
   if (lane === v.lane) return;
   v.from = v.x;
   v.lane = lane;
-  v.laneLeft = LANE_SEC;
+  v.laneSec = laneSec;
+  v.laneLeft = laneSec;
 }
 
 function aiInput(v, s, random) {
@@ -124,15 +141,18 @@ function advanceVehicle(v, old, input, track, dt) {
     v.speed = 0;
     return;
   }
-  changeLane(v, input.dir);
+  changeLane(v, input.dir, laneSecFor(input.sensitivity));
   v.laneLeft = Math.max(0, v.laneLeft - dt);
-  v.x = v.laneLeft > 0 ? v.lane + (v.from - v.lane) * v.laneLeft / LANE_SEC : v.lane;
+  v.x = v.laneLeft > 0 ? v.lane + (v.from - v.lane) * v.laneLeft / v.laneSec : v.lane;
   if (!v.laneLeft) v.from = v.lane;
   v.air = Math.max(0, v.air - dt);
   v.mud = v.air === 0 && track.some((o) => o.kind === 'mud' && Math.abs(v.x - o.lane) <= CAR_HALF_LANE
     && v.y >= o.y && v.y <= o.y + o.length);
-  const cap = MAX_SPEED * (v.mud ? MUD_CAP : 1);
-  v.speed = clamp(v.speed + (input.brake ? -BRAKE : input.throttle ? ACCEL : -COAST) * dt, 0, cap);
+  const cap = v.mud ? MAX_SPEED * MUD_CAP : MAX_SPEED * (1 + v.boost);
+  const acceleration = input.brake ? -BRAKE : input.throttle ? ACCEL : -COAST;
+  // 追趕加成消失時速度緩降,不瞬間掉速。
+  v.speed = v.speed > cap && !v.mud && acceleration >= -COAST
+    ? Math.max(cap, v.speed - COAST * dt) : clamp(v.speed + acceleration * dt, 0, cap);
   v.y += v.speed * dt;
   // 整步軌跡與物件矩形求交,包含從側面換入中段/末端與步內落地。
   for (const o of track) {
@@ -156,7 +176,7 @@ function advanceVehicle(v, old, input, track, dt) {
       v.mud = true;
       v.speed = Math.min(v.speed, MAX_SPEED * MUD_CAP);
     } else if (o.kind === 'ramp') {
-      v.airDuration = AIR_SEC + AIR_SPEED_ADJUST * (v.speed / MAX_SPEED - 0.5);
+      v.airDuration = AIR_SEC + AIR_SPEED_ADJUST * (Math.min(1, v.speed / MAX_SPEED) - 0.5);
       v.air = Math.max(0, v.airDuration - dt * (1 - t));
       v.mud = false;
       v.lastObject = o.id;
@@ -214,6 +234,7 @@ export function stepState(state, input = {}, dt = DT, rng) {
     return rng ? rng() : r;
   };
   if (input.throttle || input.brake || input.dir) s.moves++;
+  s.vehicles[0].boost = catchupBoost(leaderGap(state), s.mode);
   s.vehicles.forEach((v, i) => {
     const controls = i === 0 ? input : aiInput(v, s, random);
     advanceVehicle(v, state.vehicles[i], controls, s.track, dt);
@@ -301,7 +322,11 @@ export function ghostAt(g, seconds) {
 
 const SAVE_KEYS = ['difficulty', 'mode', 'seed', 'rngSeed', 'track', 'vehicles', 'countdown', 'time', 'ticks', 'moves', 'recording'];
 export const toSave = (s) => structuredClone(Object.fromEntries(SAVE_KEYS.map((k) => [k, s[k]])));
-export const fromSave = (s) => ({ ...structuredClone(s), paused: true, over: false });
+export const fromSave = (s) => {
+  const out = { ...structuredClone(s), paused: true, over: false };
+  out.vehicles = out.vehicles.map((v) => ({ ...v, laneSec: v.laneSec ?? LANE_SEC, boost: v.boost ?? 0 }));
+  return out;
+};
 
 export function isValidState(s) {
   if (!obj(s) || !DIFFICULTIES.includes(s.difficulty) || !MODES.includes(s.mode) || !uint(s.seed) || !uint(s.rngSeed)
@@ -313,12 +338,15 @@ export function isValidState(s) {
   if (!Array.isArray(s.track) || s.track.length !== expected.length
     || !s.track.every((o, i) => obj(o) && ['id', 'lane', 'y', 'kind', 'length'].every((k) => o[k] === expected[i][k]))) return false;
   if (!Array.isArray(s.vehicles) || s.vehicles.length !== (s.mode === 'time' ? 1 : 4)) return false;
+  const top = s.mode === 'race' ? MAX_SPEED * (1 + CATCHUP_MAX) : MAX_SPEED;
   if (!s.vehicles.every((v, i) => {
+    const laneSec = obj(v) ? v.laneSec ?? LANE_SEC : LANE_SEC, boost = obj(v) ? v.boost ?? 0 : 0;
     if (!obj(v) || v.id !== i || !Number.isInteger(v.lane) || !num(v.lane, 0, 3) || !num(v.x, 0, 3) || !num(v.from, 0, 3)
-      || !num(v.y, 0, TRACK_LEN) || !num(v.speed, 0, MAX_SPEED) || !num(v.laneLeft, 0, LANE_SEC)
+      || !num(v.y, 0, TRACK_LEN) || !num(v.speed, 0, top) || !num(v.laneLeft, 0, laneSec)
+      || !Object.values(LANE_SECS).includes(laneSec) || !num(boost, 0, i === 0 && s.mode === 'race' ? CATCHUP_MAX : 0)
       || !num(v.crash, 0, CRASH_SEC) || !num(v.airDuration, 0, AIR_SEC + AIR_SPEED_ADJUST / 2)
       || !num(v.air, 0, v.airDuration) || typeof v.mud !== 'boolean') return false;
-    if (!near(v.x, v.lane + (v.from - v.lane) * v.laneLeft / LANE_SEC) || Math.abs(v.from - v.lane) > 1
+    if (!near(v.x, v.lane + (v.from - v.lane) * v.laneLeft / laneSec) || Math.abs(v.from - v.lane) > 1
       || (v.laneLeft === 0 && v.from !== v.lane) || (v.air > 0 && (v.crash > 0 || v.mud))
       || (v.crash > 0 && (v.speed !== 0 || v.laneLeft > 0 || v.mud)) || (v.mud && v.speed > MAX_SPEED * MUD_CAP)) return false;
     for (const k of ['lastObject', 'seen']) {
@@ -330,15 +358,15 @@ export function isValidState(s) {
       || v.y > last.y + last.length + 1e-6)) return false;
     // 側向起跳可發生在跳台任一處;空中最多延續起跳前的一次換道。
     if (v.air > 0 && (!last || last.kind !== 'ramp' || v.airDuration < AIR_SEC - AIR_SPEED_ADJUST / 2
-      || v.y - last.y > last.length + MAX_SPEED * v.airDuration + 1e-6
+      || v.y - last.y > last.length + top * v.airDuration + 1e-6
       || Math.abs(v.x - last.lane) > CAR_HALF_LANE
-        + Math.min(1, (v.airDuration - v.air) / LANE_SEC) + 1e-6
+        + Math.min(1, (v.airDuration - v.air) / laneSec) + 1e-6
       || (v.laneLeft > 0 && (last.lane < Math.min(v.from, v.lane) - CAR_HALF_LANE - 1e-6
         || last.lane > Math.max(v.from, v.lane) + CAR_HALF_LANE + 1e-6)))) return false;
-    if (v.finishAt !== null && (!num(v.finishAt, TRACK_LEN / MAX_SPEED, s.time) || v.y !== TRACK_LEN || i === 0)) return false;
+    if (v.finishAt !== null && (!num(v.finishAt, TRACK_LEN / top, s.time) || v.y !== TRACK_LEN || i === 0)) return false;
     if (v.finishAt === null && v.y === TRACK_LEN) return false;
     if (s.time === 0 && (v.y !== 0 || v.speed !== 0 || v.lane !== i || v.x !== i || v.crash || v.air || v.laneLeft)) return false;
-    return v.y <= MAX_SPEED * s.time + 1e-6;
+    return v.y <= top * s.time + 1e-6;
   })) return false;
   if (s.mode === 'race') return Array.isArray(s.recording) && s.recording.length === 0;
   return validSamples(s.recording) && s.recording.length === Math.min(GHOST_LIMIT, Math.floor((s.time + 1e-8) / GHOST_INTERVAL) + 1)

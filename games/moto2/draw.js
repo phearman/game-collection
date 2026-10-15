@@ -1,12 +1,21 @@
 // 側面斜視角 Canvas 與畫面特效;所有物理判定由 logic.js 提供。
 import { W, H, DIST_SCALE, HEIGHT_SCALE, RIDER_X, LANE_Y, LANE_GAP, LANE_SKEW, ROAD_SKEW,
-  PARALLAX, TRACK_LEN, MAX_SPEED, CAR_HALF_LANE, CRASH_SEC, playerOf, terrainAt } from './logic.js?v=176975a';
+  PARALLAX, TRACK_LEN, MAX_SPEED, CAR_HALF_LANE, CRASH_SEC, playerOf, terrainAt } from './logic.js?v=f55fdbd';
 
 export const PALETTE_KEYS = ['night', 'sky', 'mountain', 'grass', 'grass-dark', 'road', 'road-hi', 'road-dark',
   'ink', 'shadow', 'mud', 'mud-hi', 'wood', 'danger', 'ramp', 'skin', 'player', 'blue', 'yellow', 'purple',
   'white', 'eye', 'cheek', 'metal', 'tire', 'hud', 'text', 'dust', 'lamp'];
 export const readPalette = (cs) => Object.fromEntries(PALETTE_KEYS.map((k) => [k, cs.getPropertyValue(`--m2-${k}`).trim()]));
 export const END_SEC = 0.6;
+// RS49:影子車「最佳紀錄」標籤與玩家「你」標籤的版面(畫面單位)。
+export const LABEL_H = 0.36, YOU_LABEL_W = 0.5, BEST_LABEL_W = 1.9;
+// you/ghost=標籤基線錨點 {x,y};兩者會疊到時,影子標籤往上錯開直到不重疊。
+export function ghostLabelY(you, ghost) {
+  let y = ghost.y;
+  for (let i = 0; i < 8 && Math.abs(you.x - ghost.x) < (YOU_LABEL_W + BEST_LABEL_W) / 2
+    && Math.abs(you.y - y) < LABEL_H + 0.04; i++) y -= LABEL_H + 0.08;
+  return y;
+}
 export const createFx = () => ({ t: 0, shake: 0, flash: 0, particles: [], landing: 0, message: '', messageLeft: 0, ending: null });
 export const endingDone = (fx) => fx.ending === null || fx.ending >= END_SEC;
 export const fxBusy = (fx) => !endingDone(fx) || fx.shake > 0 || fx.flash > 0 || fx.particles.length > 0 || fx.messageLeft > 0;
@@ -229,7 +238,7 @@ function rider(c, v, camera, p, color, fx, reduced, ghost = false) {
   if (!ghost) c.fillText(v.id === 0 ? '你' : `CPU ${v.id}`, x, y + 0.65);
 }
 
-export function drawScene(c, s, p, fx = null, { reduced = false, ghost = null,
+export function drawScene(c, s, p, fx = null, { reduced = false, ghost = null, lead = null,
   view = { width: W, height: H, offsetY: 0 } } = {}) {
   const player = playerOf(s), camera = player.x;
   c.save(); c.beginPath(); c.rect(0, 0, view.width, view.height); c.clip();
@@ -247,6 +256,13 @@ export function drawScene(c, s, p, fx = null, { reduced = false, ghost = null,
     if (ghost && Math.round(ghost.lane) === lane) rider(c, { ...player, x: ghost.x, lanePos: ghost.lane, h: ghost.h, angle: 0, crash: 0,
       sprinting: false, overheat: 0, air: 1 }, camera, p, p.white, null, true, true);
     for (const v of s.vehicles.filter((v) => Math.round(v.lanePos) === lane)) rider(c, v, camera, p, colors[v.id], fx, reduced);
+  }
+  if (ghost) { // 標籤最後畫,蓋在所有車上;與「你」標籤重疊時往上錯開。
+    const gx = screenX(ghost.x, ghost.lane, camera), gy = groundY(ghost.lane, gx);
+    const you = { x: screenX(player.x, player.lanePos, camera), y: groundY(player.lanePos, screenX(player.x, player.lanePos, camera)) + 0.65 };
+    const ly = ghostLabelY(you, { x: gx, y: gy - 2 - ghost.h * HEIGHT_SCALE });
+    c.fillStyle = p.text; c.font = 'bold 0.32px system-ui'; c.textAlign = 'center';
+    c.fillText('最佳紀錄', gx, ly);
   }
   background(c, p, camera, 2);
   if (player.speed >= MAX_SPEED * 0.85 && !reduced) {
@@ -268,6 +284,10 @@ export function drawScene(c, s, p, fx = null, { reduced = false, ghost = null,
   if (message) {
     box(c, view.width / 2 - 3.5, 0.4, 7, 0.7, p.hud);
     c.fillStyle = p.text; c.font = 'bold 0.4px system-ui'; c.textAlign = 'center'; c.fillText(message, view.width / 2, 0.88);
+  }
+  if (lead) {
+    box(c, 0.3, 0.4, 3.6, 0.7, p.hud);
+    c.fillStyle = p.text; c.font = 'bold 0.4px system-ui'; c.textAlign = 'center'; c.fillText(lead, 2.1, 0.88);
   }
   if (fx?.ending != null) { c.save(); c.globalAlpha = Math.min(0.3, fx.ending / END_SEC * 0.3); box(c, 0, -view.offsetY, view.width, view.height, p.ink); c.restore(); }
   c.restore();

@@ -2,17 +2,18 @@
 import {
   W, H, DT, TRACK_LEN, DIFFICULTIES, MODES, initState, stepState, pauseState, resumeState,
   overlayFor, playerOf, ranking, resultFor, toSave, fromSave, isValidGhost, ghostFor, betterGhost, ghostAt,
-} from './logic.js?v=176975a';
-import { drawScene, sceneView, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=176975a';
-import { createProfile } from '../../shared/profile.js?v=176975a';
-import { LocalStore } from '../../shared/stores/local.js?v=176975a';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=176975a';
-import { bindThemeToggle } from '../../shared/theme.js?v=176975a';
-import { play } from '../../shared/sound.js?v=176975a';
-import { setupHelp } from '../../shared/help.js?v=176975a';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=176975a';
-import { settlePlay } from '../../shared/settle.js?v=176975a';
-import { load, save } from '../../shared/storage.js?v=176975a';
+  ghostLead, leadLabel,
+} from './logic.js?v=f55fdbd';
+import { drawScene, sceneView, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=f55fdbd';
+import { createProfile } from '../../shared/profile.js?v=f55fdbd';
+import { LocalStore } from '../../shared/stores/local.js?v=f55fdbd';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=f55fdbd';
+import { bindThemeToggle } from '../../shared/theme.js?v=f55fdbd';
+import { play } from '../../shared/sound.js?v=f55fdbd';
+import { setupHelp } from '../../shared/help.js?v=f55fdbd';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=f55fdbd';
+import { settlePlay } from '../../shared/settle.js?v=f55fdbd';
+import { load, save } from '../../shared/storage.js?v=f55fdbd';
 
 const GAME_ID = 'moto2';
 const SAVE_EVERY = 30;
@@ -21,6 +22,7 @@ const profile = await createProfile({ store: new LocalStore() });
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 let state, best = 0, ended = null, ghost = null, fx = createFx();
 let gameNo = 0, changing = false;
+let showGhost = true;
 let queue = Promise.resolve();
 const run = (fn) => { queue = queue.then(fn).catch((e) => console.error(e)); return queue; };
 const pref = (key, choices, fallback) => {
@@ -163,7 +165,10 @@ function draw() {
   if (!state || !pal || !canvas.width) return;
   const view = sceneView(canvas.width, canvas.height);
   ctx.setTransform(view.scale, 0, 0, view.scale, 0, 0);
-  drawScene(ctx, state, pal, fx, { reduced: reduced.matches, ghost: ghostAt(ghost, state.time), view });
+  // RS49:影子車與秒差同一開關;沒有最佳紀錄時兩者都不出現。
+  const shown = showGhost && state.mode === 'time' && ghost && state.countdown === 0;
+  const lead = shown ? leadLabel(ghostLead(ghost, playerOf(state).x, state.time)) : null;
+  drawScene(ctx, state, pal, fx, { reduced: reduced.matches, ghost: showGhost ? ghostAt(ghost, state.time) : null, lead, view });
 }
 function resize() {
   const dpr = window.devicePixelRatio || 1;
@@ -280,11 +285,16 @@ window.addEventListener('pagehide', () => { pause(); persist(); });
 $('pause').addEventListener('click', togglePause);
 $('new').addEventListener('click', () => newGame());
 $('mode').addEventListener('change', (e) => newGame(state.difficulty, e.target.value));
+$('show-ghost').addEventListener('change', (e) => {
+  showGhost = e.target.value !== 'off';
+  save('ghost:moto2', showGhost ? 'on' : 'off'); draw();
+});
 $('difficulty').addEventListener('change', (e) => newGame(e.target.value, state.mode));
 $('overlay-actions').addEventListener('click', (e) => {
   const act = e.target.closest('[data-act]')?.dataset.act;
   if (act === 'resume') resume(); if (act === 'new') newGame();
 });
+showGhost = pref('ghost', ['on', 'off'], 'on') === 'on'; $('show-ghost').value = showGhost ? 'on' : 'off';
 bindThemeToggle($('theme'));
 $('theme').addEventListener('click', () => { readColors(); draw(); });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readColors(); draw(); });
@@ -322,6 +332,7 @@ setupHelp({
     <li>土坡車身隨坡面傾斜;跳台飛得多高多遠取決於速度。落地角差≤8°完美加速,≤25°安全,超過25°摔車停1.5秒。</li>
     <li>衝刺每秒升溫30;只按油門降10;放開降25。溫度100過熱停3秒,路邊藍色雪花冷卻點歸零。</li>
     <li>泥坑限速一半;地面撞路障摔車;騰空可飛越障礙。同車道追撞降至前車速度。</li>
+    <li>計時賽有最佳紀錄時畫面出現半透明影子車(標「最佳紀錄」)與上方「領先／落後 x.x 秒」;設定「影子車」可隱藏。</li>
     <li>⏸／P暫停;開說明、離開分頁也暫停。競速與3台電腦車比;計時賽挑戰同難度最佳影子。</li>
     <li>競速第一名／計時賽完賽獲勝。名次分3000/2000/1000/500或計時賽1000,加max(0,150−秒數)×10取整。放棄0分。</li>
   </ol>`,
