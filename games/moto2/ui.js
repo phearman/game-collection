@@ -2,17 +2,17 @@
 import {
   W, H, DT, TRACK_LEN, DIFFICULTIES, MODES, initState, stepState, pauseState, resumeState,
   overlayFor, playerOf, ranking, resultFor, toSave, fromSave, isValidGhost, ghostFor, betterGhost, ghostAt,
-} from './logic.js?v=795425d';
-import { drawScene, sceneView, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=795425d';
-import { createProfile } from '../../shared/profile.js?v=795425d';
-import { LocalStore } from '../../shared/stores/local.js?v=795425d';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=795425d';
-import { bindThemeToggle } from '../../shared/theme.js?v=795425d';
-import { play } from '../../shared/sound.js?v=795425d';
-import { setupHelp } from '../../shared/help.js?v=795425d';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=795425d';
-import { settlePlay } from '../../shared/settle.js?v=795425d';
-import { load, save } from '../../shared/storage.js?v=795425d';
+} from './logic.js?v=176975a';
+import { drawScene, sceneView, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=176975a';
+import { createProfile } from '../../shared/profile.js?v=176975a';
+import { LocalStore } from '../../shared/stores/local.js?v=176975a';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=176975a';
+import { bindThemeToggle } from '../../shared/theme.js?v=176975a';
+import { play } from '../../shared/sound.js?v=176975a';
+import { setupHelp } from '../../shared/help.js?v=176975a';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=176975a';
+import { settlePlay } from '../../shared/settle.js?v=176975a';
+import { load, save } from '../../shared/storage.js?v=176975a';
 
 const GAME_ID = 'moto2';
 const SAVE_EVERY = 30;

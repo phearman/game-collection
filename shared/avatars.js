@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=795425d';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=176975a';
 
 // 排行頭像(RS33):固定 24 個 emoji(動物/食物/運動;⛔ 人臉膚色、旗幟)。
 // 順序與資料庫 migration 202610130010 的 public.avatar_emojis() 必須一致(測試比對)。

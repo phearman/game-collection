@@ -249,8 +249,8 @@ export class SupabaseStore {
   async legacyBest() { return 0; }
 }
 
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=795425d';
-import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=795425d';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=176975a';
+import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=176975a';
 
 function recalculateFinish(base, stats, play, live) {
   const missing = (live?.achievements ?? []).filter((id) => !base.achievements?.[id]);

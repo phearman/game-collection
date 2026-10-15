@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>意見回饋後台 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=795425d">
+  <link rel="stylesheet" href="../shared/style.css?v=176975a">
   <style>
     .page.admin { max-width: 1280px; }
     .admin-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin: 20px 0; }
@@ -35,6 +35,8 @@
     .admin [role="status"] { overflow-wrap: anywhere; }
     #jokes-panel label { display: grid; gap: 4px; margin-block: 12px; }
     #jokes-panel textarea, #jokes-panel select { width: 100%; min-width: 0; box-sizing: border-box; }
+    #jokes-panel details { white-space: normal; }
+    #jokes-panel .direct-approve { display: flex; align-items: center; gap: 8px; }
     .joke-body { white-space: pre-wrap; overflow-wrap: anywhere; }
     .admin-count { color: var(--text-sub); }
     .admin-tabs { display: flex; flex-wrap: nowrap; gap: 8px; }
@@ -111,12 +113,32 @@
     <section class="admin-card" id="jokes-panel" role="tabpanel" aria-labelledby="tab-jokes" tabindex="0" hidden>
       <h2>笑話審核</h2>
       <p>核准前請確認闔家適宜，沒有政治、宗教、歧視、成人內容或個人資料。</p>
+      <details>
+        <summary>批次匯入（最多 200 則）</summary>
+        <p>貼上 CSV（可含標題列「分類,題目,答案,出處」），或每行「分類|題目|答案|出處」。四欄都須保留，答案僅急轉彎填，出處選填。CSV 含逗號或換行時用雙引號包住；欄內雙引號寫成兩個雙引號。</p>
+        <label for="jokes-import-text">匯入文字</label>
+        <textarea id="jokes-import-text" rows="8" spellcheck="false"></textarea>
+        <label class="direct-approve"><input id="jokes-direct-approve" type="checkbox">直接核准（預設匯入待審）</label>
+        <button class="btn" id="jokes-import-check" type="button">檢查與預覽</button>
+        <button class="btn" id="jokes-import-submit" type="button" disabled>確認預覽並匯入</button>
+        <p id="jokes-import-status" role="status"></p>
+        <div id="jokes-import-preview"></div>
+      </details>
+      <div class="admin-filters">
+        <label>分類<select id="jokes-category-filter"></select></label>
+        <label>狀態<select id="jokes-state-filter"></select></label>
+      </div>
+      <p>依待審、已上架、已下架排序，同狀態由新到舊。</p>
       <button class="btn" id="reload-jokes" type="button">重新載入</button>
+      <button class="btn" id="jokes-prev" type="button" disabled>上一頁</button>
+      <button class="btn" id="jokes-next" type="button" disabled>下一頁</button>
+      <p id="jokes-page" role="status"></p>
       <p id="jokes-status" role="status"></p>
       <h3>待審笑話</h3><div id="pending-jokes"></div>
       <h3>已上架笑話</h3><div id="approved-jokes"></div>
+      <h3>已下架笑話</h3><div id="rejected-jokes"></div>
     </section>
   </main>
-  <script type="module" src="ui.js?v=795425d"></script>
+  <script type="module" src="ui.js?v=176975a"></script>
 </body>
 </html>

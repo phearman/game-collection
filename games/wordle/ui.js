@@ -4,20 +4,20 @@ import {
   keyStates, scoreFor, overlayFor, toSave, fromSave, isValidState, routeKey,
   assistState, letterHint, canReveal, revealState, candidatesState, fillState, visibleCandidates,
   initDailyState, shareMarks,
-} from './logic.js?v=795425d';
-import { HINTS } from './hints.js?v=795425d';
-import { createProfile } from '../../shared/profile.js?v=795425d';
-import { LocalStore } from '../../shared/stores/local.js?v=795425d';
-import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js?v=795425d';
-import { bindThemeToggle } from '../../shared/theme.js?v=795425d';
-import { play } from '../../shared/sound.js?v=795425d';
-import { setupHelp } from '../../shared/help.js?v=795425d';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=795425d';
-import { settlePlay } from '../../shared/settle.js?v=795425d';
-import { quitBestNote } from '../../shared/quit.js?v=795425d';
-import { load, save } from '../../shared/storage.js?v=795425d';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=795425d';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=795425d';
+} from './logic.js?v=176975a';
+import { HINTS } from './hints.js?v=176975a';
+import { createProfile } from '../../shared/profile.js?v=176975a';
+import { LocalStore } from '../../shared/stores/local.js?v=176975a';
+import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js?v=176975a';
+import { bindThemeToggle } from '../../shared/theme.js?v=176975a';
+import { play } from '../../shared/sound.js?v=176975a';
+import { setupHelp } from '../../shared/help.js?v=176975a';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=176975a';
+import { settlePlay } from '../../shared/settle.js?v=176975a';
+import { quitBestNote } from '../../shared/quit.js?v=176975a';
+import { load, save } from '../../shared/storage.js?v=176975a';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=176975a';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=176975a';
 
 const GAME_ID = 'wordle';
 const DIFF_KEY = 'difficulty:wordle'; // 上次選的難度(開新局用)

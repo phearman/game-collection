@@ -5,20 +5,20 @@ import {
   shoot, stepState, nextArrow, simulate, scoreFor, resultFor, detailFor, toSave, fromSave, isValidState,
   completedResult, resultOnRestart, initialPause, isPaused, changePause,
   HELP_RULES, demoAims,
-} from './logic.js?v=795425d';
-import { drawScene, readPalette, flashOpacity } from './draw.js?v=795425d';
-import { createProfile } from '../../shared/profile.js?v=795425d';
-import { LocalStore } from '../../shared/stores/local.js?v=795425d';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=795425d';
-import { bindThemeToggle } from '../../shared/theme.js?v=795425d';
-import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=795425d';
-import { skinPalette } from './skins.js?v=795425d';
-import { play } from '../../shared/sound.js?v=795425d';
-import { setupHelp } from '../../shared/help.js?v=795425d';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=795425d';
-import { settlePlay } from '../../shared/settle.js?v=795425d';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=795425d';
-import { load, save } from '../../shared/storage.js?v=795425d';
+} from './logic.js?v=176975a';
+import { drawScene, readPalette, flashOpacity } from './draw.js?v=176975a';
+import { createProfile } from '../../shared/profile.js?v=176975a';
+import { LocalStore } from '../../shared/stores/local.js?v=176975a';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=176975a';
+import { bindThemeToggle } from '../../shared/theme.js?v=176975a';
+import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=176975a';
+import { skinPalette } from './skins.js?v=176975a';
+import { play } from '../../shared/sound.js?v=176975a';
+import { setupHelp } from '../../shared/help.js?v=176975a';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=176975a';
+import { settlePlay } from '../../shared/settle.js?v=176975a';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=176975a';
+import { load, save } from '../../shared/storage.js?v=176975a';
 
 const GAME_ID = 'archery';
 const DIFF_KEY = 'difficulty:archery';

@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="遊戲集錦 LINE 小幫手使用說明：開遊戲、傳回饋、綁定成績、加入群組排行與查天氣的指令及對話範例。">
   <title>LINE 小幫手使用說明 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=795425d">
-  <link rel="stylesheet" href="style.css?v=795425d">
+  <link rel="stylesheet" href="../shared/style.css?v=176975a">
+  <link rel="stylesheet" href="style.css?v=176975a">
 </head>
 <body>
   <main class="page line-guide">
@@ -115,7 +115,10 @@
             <div data-command="早安" data-scopes="user group"><dt><code>#早安</code><span class="command-scope">兩者</span></dt><dd>早安問候、台灣時間與天氣提醒。</dd></div>
             <div data-command="午安" data-scopes="user group"><dt><code>#午安</code><span class="command-scope">兩者</span></dt><dd>午安問候、台灣時間與天氣提醒。</dd></div>
             <div data-command="晚安" data-scopes="user group"><dt><code>#晚安</code><span class="command-scope">兩者</span></dt><dd>晚安問候、台灣時間與天氣提醒。問候要加 # 或在群組 @ 小幫手才會回應；群組問候使用高雄市天氣。</dd></div>
-            <div data-command="笑話" data-scopes="user group"><dt><code>#笑話</code><span class="command-scope">兩者</span></dt><dd>來一則闔家適宜的短笑話，按快速選項「再來一則」再抽。</dd></div>
+            <div data-command="笑話" data-scopes="user group"><dt><code>#笑話 [分類]</code><span class="command-scope">兩者</span></dt><dd>抽未看過的上架笑話，可指定物品、動物、校園、諧音、生活、益智、食物、自然、語文或急轉彎，例如 #笑話 自然。未指定分類不抽急轉彎。看完該分類會重新開始；有出處以小字標示。按三鍵給 1～3 分，重按覆蓋分數。</dd></div>
+            <div data-command="急轉彎" data-scopes="user group"><dt><code>#急轉彎</code><span class="command-scope">兩者</span></dt><dd>先抽機智問答題目，按「看答案」才揭曉答案並評分；也可用 #笑話 急轉彎。看答案只限自己抽到的題目。抽題計生活次數，看答案不另計次。資料庫失效時暫停新分類與急轉彎出題，原五類仍有備援但不能評分。</dd></div>
+            <div data-command="笑話排行" data-scopes="user group"><dt><code>#笑話排行</code><span class="command-scope">兩者</span></dt><dd>近 30 天至少 3 人評分的前五名，顯示平均分、評分人數與出處；急轉彎只顯示題目。</dd></div>
+            <div data-command="投稿" data-scopes="user group"><dt><code>#投稿 內容</code><span class="command-scope">兩者</span></dt><dd>投稿 10～200 字笑話，不含網址、電話或 email。每人每天最多 3 則，預設生活分類，管理者審核後才上架。</dd></div>
             <div data-command="新聞" data-scopes="user group"><dt><code>#新聞</code><span class="command-scope">兩者</span> <span class="availability">準備中</span></dt><dd>目前只回「新聞功能準備中」，暫時沒有新聞標題或連結。</dd></div>
           </dl>
           <p class="guide-note">生活指令每人每天共 30 次，私訊與群組合計，台灣午夜重算；失敗也計次，新聞準備中不計次。不主動推播。</p>
@@ -133,6 +136,12 @@
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>晚安！台灣時間 20:00，高雄市多雲。給自己一點休息時間。（時間、天氣示意）</div></li>
               <li class="player"><div class="bubble"><span class="speaker">小美</span>#笑話</div></li>
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>為什麼電腦不怕冷？因為它有視窗，卻不會漏風。<div class="quick-options" aria-label="快速選項示意"><span>再來一則</span><span>天氣</span><span>新聞</span><span>遊戲</span><span>說明</span><span>👋 先這樣</span></div></div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小美</span>#急轉彎</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>【急轉彎】題目示意</strong><p>先想想答案，再按下方按鈕。</p><span class="sample-action">看答案</span></div></div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小美</span>#笑話排行</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>近 30 天笑話排行：題目、平均分與評分人數（示意）；急轉彎答案不列出。</div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小美</span>#投稿 加上自己原創的笑話內容</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>謝謝投稿！審核通過後就會出現在 #笑話。</div></li>
               <li class="player"><div class="bubble"><span class="speaker">小美</span>#新聞</div></li>
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>新聞功能準備中</div></li>
             </ol>
@@ -142,7 +151,7 @@
         <article class="command-card" aria-labelledby="help-title">
           <h3 id="help-title">❓ 說明</h3>
           <dl class="command-list">
-            <div data-command="功能" data-scopes="user group"><dt><code>#功能</code> / <code>#介紹</code><span class="command-scope">兩者</span></dt><dd>用四類卡片認識小幫手；按「試試看」送出指令，按「看用法」查看 #說明。依場合顯示可用功能，不計生活次數、不記錄為回饋。</dd></div>
+            <div data-command="功能" data-scopes="user group"><dt><code>#功能</code> / <code>#介紹</code><span class="command-scope">兩者</span></dt><dd>用分類卡片認識小幫手，含笑話題庫與急轉彎；按「試試看」送出指令，按「看用法」查看 #說明。依場合顯示可用功能，不計生活次數、不記錄為回饋。</dd></div>
             <div data-command="說明" data-scopes="user group"><dt><code>#說明 [指令]</code><span class="command-scope">兩者</span></dt><dd>不帶指令看清單，帶指令看用法，例如 #說明 天氣、#說明 #排行；也可用 #指令 或 #help。方括號表示可省略，不必真的輸入。</dd></div>
             <div data-command="提及" data-scopes="group"><dt><code>@遊戲集錦回饋</code><span class="command-scope">群組</span></dt><dd>在已核准群組用 LINE 的 @ 選到小幫手，後面可接不帶 # 的指令，例如「天氣 台北」。只 @、接「介紹」或無法辨識時回功能介紹；@ 其他人不回應。</dd></div>
           </dl>
@@ -194,6 +203,6 @@
 
     <footer class="guide-footer"><a href="../privacy/">隱私權政策</a><a href="../">回大廳</a></footer>
   </main>
-  <script type="module" src="ui.js?v=795425d"></script>
+  <script type="module" src="ui.js?v=176975a"></script>
 </body>
 </html>
