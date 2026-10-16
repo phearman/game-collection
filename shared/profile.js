@@ -1,25 +1,27 @@
 // 個人紀錄 API(RS1):遊戲與畫面只用這裡。規則一律呼叫 progress.js,這裡只串接 store。
-import { GAMES } from './games.js?v=6d7df09';
-import { LocalStore } from './stores/local.js?v=6d7df09';
-import { cloudEnabled } from './supabase-config.js?v=6d7df09';
+import { GAMES } from './games.js?v=3f1141d';
+import { LocalStore, filterImportSaves } from './stores/local.js?v=3f1141d';
+import { failureReason } from './stores/errors.js?v=3f1141d';
+import { showStorageWarning } from './settle.js?v=3f1141d';
+import { cloudEnabled } from './supabase-config.js?v=3f1141d';
 import {
   emptyProfile, migrateLegacyBest, applyFinish, applyUnlock, levelProgress, ACHIEVEMENTS, ACHIEVEMENT_XP, recentOrder,
   timerInit, timerEvent, timerSeconds, validateImport, isValidGameSave, pushPlay, exportData, exportFileName, iso, PLAYS_LIMIT,
-} from './progress.js?v=6d7df09';
-import { isValidState as valid2048 } from '../games/2048/logic.js?v=6d7df09';
-import { isValidState as validTictactoe } from '../games/tictactoe/logic.js?v=6d7df09';
-import { isValidState as validSnake } from '../games/snake/logic.js?v=6d7df09';
-import { isValidState as validMinesweeper } from '../games/minesweeper/logic.js?v=6d7df09';
-import { isValidState as validSudoku } from '../games/sudoku/logic.js?v=6d7df09';
-import { isValidState as validWordle } from '../games/wordle/logic.js?v=6d7df09';
-import { isValidState as validKeeper } from '../games/keeper/logic.js?v=6d7df09';
-import { isValidState as validStairs } from '../games/stairs/logic.js?v=6d7df09';
-import { isValidState as validMoto } from '../games/moto/logic.js?v=6d7df09';
-import { isValidState as validMoto2 } from '../games/moto2/logic.js?v=6d7df09';
-import { isValidState as validMemory } from '../games/memory/logic.js?v=6d7df09';
-import { isValidState as validReversi } from '../games/reversi/logic.js?v=6d7df09';
-import { isValidState as validBridge } from '../games/bridge/logic.js?v=6d7df09';
-import { isValidState as validArchery } from '../games/archery/logic.js?v=6d7df09';
+} from './progress.js?v=3f1141d';
+import { isValidState as valid2048 } from '../games/2048/logic.js?v=3f1141d';
+import { isValidState as validTictactoe } from '../games/tictactoe/logic.js?v=3f1141d';
+import { isValidState as validSnake } from '../games/snake/logic.js?v=3f1141d';
+import { isValidState as validMinesweeper } from '../games/minesweeper/logic.js?v=3f1141d';
+import { isValidState as validSudoku } from '../games/sudoku/logic.js?v=3f1141d';
+import { isValidState as validWordle } from '../games/wordle/logic.js?v=3f1141d';
+import { isValidState as validKeeper } from '../games/keeper/logic.js?v=3f1141d';
+import { isValidState as validStairs } from '../games/stairs/logic.js?v=3f1141d';
+import { isValidState as validMoto } from '../games/moto/logic.js?v=3f1141d';
+import { isValidState as validMoto2 } from '../games/moto2/logic.js?v=3f1141d';
+import { isValidState as validMemory } from '../games/memory/logic.js?v=3f1141d';
+import { isValidState as validReversi } from '../games/reversi/logic.js?v=3f1141d';
+import { isValidState as validBridge } from '../games/bridge/logic.js?v=3f1141d';
+import { isValidState as validArchery } from '../games/archery/logic.js?v=3f1141d';
 
 // 各遊戲存檔 state 的格式檢查(匯入驗證用)。
 export const STATE_VALIDATORS = { 2048: valid2048, tictactoe: validTictactoe, snake: validSnake, minesweeper: validMinesweeper, sudoku: validSudoku, wordle: validWordle, keeper: validKeeper, stairs: validStairs, moto: validMoto, moto2: validMoto2, reversi: validReversi, memory: validMemory, archery: validArchery };
@@ -56,28 +58,46 @@ export async function createProfile({
     } catch { /* 儲存不可用仍可免登入遊玩 */ }
   }
   if (cloudEnabled && win && store instanceof LocalStore && !store.storage) {
-    const { selectCloudStore, createCloudProfile } = await import('./auth.js?v=6d7df09');
+    const { selectCloudStore, createCloudProfile } = await import('./auth.js?v=3f1141d');
     store = await selectCloudStore(store);
     if (store.cloud) return createCloudProfile({ store, now, gameList, doc, win, stateValidators, saveSlots }, createProfile);
   }
   const saveKey = (gameId) => saveSlots[gameId] ?? gameId;
+  // 只在本機超限/配額不足時提示空間問題;雲端沿用同步狀態與結算錯誤提示。
+  const warnStorage = (failure) => {
+    if (store instanceof LocalStore && !store.cloud && ['quota', 'limit'].includes(failureReason(failure))) showStorageWarning(doc);
+  };
+  const write = async (method, ...args) => {
+    try {
+      const result = await store[method](...args);
+      if (result?.ok === false) {
+        warnStorage(result);
+        return false; // profile API 與記憶體備援維持布林契約。
+      }
+      return result;
+    } catch (err) {
+      warnStorage(err);
+      throw err;
+    }
+  };
   // 首次載入(尚無 profile)才做舊資料遷移;之後的匯入覆蓋不會被舊 key 再蓋回去。
   let mem = await store.getProfile();
   let memDirty = false; // profile 最近一次寫入失敗 ⇒ 以記憶體為準(避免讀回舊資料重複發成就/XP)
   const statsMem = {}; // 寫入失敗的 stats,以記憶體為準
   const putProfile = async (profile) => {
     mem = profile;
-    memDirty = (await store.putProfile(profile)) === false;
+    memDirty = (await write('putProfile', profile)) === false;
+    return !memDirty;
   };
   const putStats = async (stats) => {
-    if ((await store.putStats(stats)) === false) statsMem[stats.game_id] = stats;
+    if ((await write('putStats', stats)) === false) statsMem[stats.game_id] = stats;
     else delete statsMem[stats.game_id];
   };
   const playsMem = []; // 寫入失敗的局紀錄(新到舊)
   const getProfile = async () => (memDirty ? mem : ((await store.getProfile()) ?? mem));
   const listStats = async () => ({ ...(await store.listStats()), ...statsMem });
   const addPlay = async (play) => {
-    if ((await store.addPlay(play)) === false) playsMem.unshift(play);
+    if ((await write('addPlay', play)) === false) playsMem.unshift(play);
   };
   const listPlays = async () => {
     const stored = await store.listPlays();
@@ -152,11 +172,13 @@ export async function createProfile({
     };
     if (live.get(gameId)?.achievements.length) save.live = live.get(gameId);
     loaded.set(gameId, save);
-    if ((await store.putSave(save)) === false) savesDirty.add(gameId);
+    const saved = (await write('putSave', save)) !== false;
+    if (!saved) savesDirty.add(gameId);
     else {
       savesDirty.delete(gameId);
       stored.add(gameId);
     }
+    return saved;
   };
 
   // 分頁隱藏或離頁時,把最新秒數寫進存檔(還沒有存檔 = 還沒有效操作,不寫)。
@@ -211,7 +233,7 @@ export async function createProfile({
       stored.delete(gameId);
       live.delete(gameId);
       if (timer?.gameId === gameId) timer = null;
-      await store.deleteSave(saveKey(gameId));
+      return write('deleteSave', saveKey(gameId));
     },
 
     // 開始計時:有載入的存檔就接著它的秒數與開局時間,否則從 0 起算。分頁目前隱藏就先暫停。
@@ -267,7 +289,7 @@ export async function createProfile({
         id: detail.daily_play_id ?? uuid(),
         live: lv,
       });
-      await store.commitFinish({ gameId, saveId: saveKey(gameId), profile: out.profile, stats: out.stats[gameId], play: out.play });
+      await write('commitFinish', { gameId, saveId: saveKey(gameId), profile: out.profile, stats: out.stats[gameId], play: out.play });
       mem = out.profile;
       memDirty = false;
       delete statsMem[gameId];
@@ -331,7 +353,18 @@ export async function createProfile({
       } catch {
         return { ok: false, error: '檔案不是有效的 JSON' };
       }
-      return validateImport(data, stateValidators);
+      let skippedSaves = [];
+      if (Array.isArray(data?.saves)) {
+        const filtered = filterImportSaves(data.saves);
+        skippedSaves = filtered.skippedSaves;
+        data = { ...data, saves: filtered.saves };
+      }
+      const check = validateImport(data, stateValidators);
+      if (check.ok && skippedSaves.length) {
+        check.skippedSaves = skippedSaves;
+        check.warning = `已略過 ${skippedSaves.length} 個超過大小上限的存檔`;
+      }
+      return check;
     },
 
     // 驗證通過才整份覆蓋;不合格或寫入失敗都不動現有資料。
@@ -340,11 +373,13 @@ export async function createProfile({
       if (!check.ok) return check;
       const { profile, stats, plays, saves } = check.data;
       try {
-        await store.importAll({ profile, stats, plays, saves });
+        await write('importAll', { profile, stats, plays, saves });
       } catch (err) {
         return {
           ok: false,
-          error: err?.rollbackFailed
+          error: store.cloud
+            ? '雲端匯入失敗,請確認連線後再試一次'
+            : err?.rollbackFailed
             ? '寫入失敗,且原紀錄無法完整還原(儲存空間不足或無法寫入)'
             : '寫入失敗(儲存空間不足或無法寫入),目前紀錄未變動',
         };
@@ -358,6 +393,7 @@ export async function createProfile({
       stored.clear();
       live.clear();
       timer = null;
+      if (check.skippedSaves?.length) showStorageWarning(doc, check.skippedSaves);
       return check;
     },
   };

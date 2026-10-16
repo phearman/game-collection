@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>數獨 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../../shared/style.css?v=6d7df09">
-  <link rel="stylesheet" href="style.css?v=6d7df09">
+  <link rel="stylesheet" href="../../shared/style.css?v=3f1141d">
+  <link rel="stylesheet" href="style.css?v=3f1141d">
 </head>
 <body>
   <main class="page page-narrow">
@@ -22,7 +22,7 @@
       <button class="btn" id="new" type="button">↻ 新遊戲</button>
       <button class="btn" id="undo" type="button">↶ 復原</button>
       <label class="difficulty">難度
-        <select id="difficulty"><option value="easy">入門 · 46</option><option value="normal">一般 · 40</option><option value="hard">困難 · 32</option><option value="expert">專家 · 26</option></select>
+        <select id="difficulty"><option value="easy">入門 · 給定 46</option><option value="normal">一般 · 給定 40</option><option value="hard">困難 · 給定 32</option><option value="expert">專家 · 給定 26</option></select>
       </label>
     </div>
     <p class="daily-banner" id="daily-banner" role="status" hidden></p>
@@ -31,7 +31,7 @@
       <label><input id="auto-cand" type="checkbox"> 自動候選</label>
       <span id="assist-label" hidden>🧩 輔助局</span>
     </div>
-    <div class="heading"><h1>數獨</h1><span>時間 <span id="time">0:00</span> · 提示 <span id="clues">40</span></span></div>
+    <div class="heading"><h1>數獨</h1><span>時間 <span id="time">0:00</span> · 給定 <span id="clues">40</span></span></div>
     <p class="status" id="status" role="status" aria-live="polite"></p>
     <div class="board-wrap">
       <div class="board" id="board" role="group" aria-label="數獨棋盤" aria-describedby="hint"></div>
@@ -63,6 +63,6 @@
       <button class="btn" type="button" data-act="cancel" autofocus>取消</button>
     </div>
   </dialog>
-  <script type="module" src="ui.js?v=6d7df09"></script>
+  <script type="module" src="ui.js?v=3f1141d"></script>
 </body>
 </html>

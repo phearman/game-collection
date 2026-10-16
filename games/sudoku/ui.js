@@ -1,15 +1,15 @@
-import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave } from './logic.js?v=6d7df09';
-import { createProfile } from '../../shared/profile.js?v=6d7df09';
-import { LocalStore } from '../../shared/stores/local.js?v=6d7df09';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=6d7df09';
-import { bindThemeToggle } from '../../shared/theme.js?v=6d7df09';
-import { play as playSound } from '../../shared/sound.js?v=6d7df09';
-import { setupHelp } from '../../shared/help.js?v=6d7df09';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=6d7df09';
-import { settlePlay } from '../../shared/settle.js?v=6d7df09';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=6d7df09';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=6d7df09';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=6d7df09';
+import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave } from './logic.js?v=3f1141d';
+import { createProfile } from '../../shared/profile.js?v=3f1141d';
+import { LocalStore } from '../../shared/stores/local.js?v=3f1141d';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=3f1141d';
+import { bindThemeToggle } from '../../shared/theme.js?v=3f1141d';
+import { play as playSound } from '../../shared/sound.js?v=3f1141d';
+import { setupHelp } from '../../shared/help.js?v=3f1141d';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=3f1141d';
+import { settlePlay } from '../../shared/settle.js?v=3f1141d';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=3f1141d';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=3f1141d';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=3f1141d';
 
 const GAME_ID = 'sudoku';
 const $ = (id) => document.getElementById(id);
@@ -155,7 +155,7 @@ function finish(result) {
       }
     }
     const out = await settlePlay(profile, GAME_ID, { result, score: snap.score,
-      difficulty: snap.difficulty, detail: { ...detailFor(snap),
+      difficulty: finishDifficultyFor(snap), detail: { ...detailFor(snap),
         ...(isDaily ? { daily: daily.day, daily_play_id: daily.row.detail.play_id } : {}) }, assist: snap.assist });
     if (!out) { // 結算失敗且選「不存了」:不記錄、開新局(IR6);開新局流程中則交給它
       ended = { abandoned: true };
@@ -324,12 +324,12 @@ if (state?.result) finish('win');
 setupHelp({
   gameId: GAME_ID, title: '數獨玩法', mountAfter: document.querySelector('.navigation .btn'),
   rules: `<ol>
-    <li>每列、欄、3×3 宮的 1–9 各一次，題目格不可改。入門有 46 提示。</li>
-    <li>點格／方向鍵選格，1–9 填入，0／退格／Delete 清空。</li>
-    <li>筆記可多選再按移除；正式填入清除同列、欄、宮同數筆記。衝突標紅，可復原，完成後鎖定。</li>
-    <li>💡 提示會說明理由；自動候選取代筆記顯示。入門預設開啟。</li>
-    <li>入門或用了提示就是輔助局：不刷新最佳、XP 打對折。</li>
-    <li>首次輸入計時；操作後重開記退出。填滿無衝突即勝，分數=max(1,10000−秒數)。</li>
+    <li>每列、欄、宮的 1–9 各一次，給定格不可改。入門給定 46 個數字。</li>
+    <li>點格／方向鍵選格，1–9 填入，0 清空；N 筆記，可復原。</li>
+    <li>填入清除相關筆記，衝突標紅；💡 提示會說明理由。</li>
+    <li>入門預設自動候選；入門或用提示為輔助局：不刷新最佳、XP 對折。</li>
+    <li>首次輸入計時；重開記退出。填滿無衝突勝，分數=max(1,10000−秒數)。</li>
+    <li>每日挑戰成績從開題起算，含離開時間；本局只計遊玩時間。</li>
   </ol>`,
   demo: { steps: demoSteps().map((s, i) => ({ ...s, kind: ['fail', 'fail', undefined, 'ok'][i] })), render: (frame) => {
     const board = frame.board ?? frame;

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>意見回饋後台 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=6d7df09">
+  <link rel="stylesheet" href="../shared/style.css?v=3f1141d">
   <style>
     .page.admin { max-width: 1280px; }
     .admin-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin: 20px 0; }
@@ -174,6 +174,12 @@
         <label>關鍵字<input id="reports-filter-keyword" type="search"></label>
         <button class="btn" id="reports-search" type="button">套用篩選</button>
         <button class="btn" id="reports-reload" type="button">重新載入</button>
+        <h3>事項補充附圖</h3>
+        <label>事項事件碼 <input id="item-images-code" maxlength="40" placeholder="約1017-1"></label>
+        <button class="btn" id="item-images-search" type="button">查看事項附圖</button>
+        <button class="btn" id="item-images-close" type="button">關閉事項圖片</button>
+        <div id="item-images-result" aria-live="polite"></div>
+        <button class="btn" id="reports-cleanup-images" type="button">立即清除到期附圖</button>
         <button class="btn" id="reports-export" type="button">匯出全部篩選結果 CSV</button>
       </div>
       <p id="reports-status" role="status"></p>
@@ -192,6 +198,6 @@
       <button class="btn" id="reports-purge" type="button">清空所有測試資料</button>
     </section>
   </main>
-  <script type="module" src="ui.js?v=6d7df09"></script>
+  <script type="module" src="ui.js?v=3f1141d"></script>
 </body>
 </html>

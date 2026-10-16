@@ -1,8 +1,8 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=6d7df09';
-import { element } from '../shared/feedback.js?v=6d7df09';
-import { JOKE_CATEGORIES, jokeFieldsError, normalizeJokeBody, parseJokeImport } from './joke-import.js?v=6d7df09';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=3f1141d';
+import { element } from '../shared/feedback.js?v=3f1141d';
+import { JOKE_CATEGORIES, jokeFieldsError, normalizeJokeBody, parseJokeImport } from './joke-import.js?v=3f1141d';
 
-export { JOKE_CATEGORIES, parseJokeImport } from './joke-import.js?v=6d7df09';
+export { JOKE_CATEGORIES, parseJokeImport } from './joke-import.js?v=3f1141d';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export const JOKE_SOURCES = ['editor', 'submitted', 'builtin'];
 

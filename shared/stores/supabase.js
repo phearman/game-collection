@@ -1,7 +1,7 @@
 // SupabaseStore:只用 fetch 呼叫 PostgREST，交易由 RPC 執行。
 //
 // store 介面(MemoryStore / LocalStore / SupabaseStore 共同遵守;所有方法回傳 Promise;
-// put* / addPlay / deleteSave resolve 為 false 表示未寫入,profile.js 會改以記憶體資料為準):
+// put* / addPlay / deleteSave resolve 為 { ok:false, reason } 表示未寫入,profile.js 會改以記憶體資料為準):
 //   getProfile() → profile | null          putProfile(profile)
 //   getSave(gameId) → save | null(save.live = 本局即時獎勵明細,選填)          putSave(save)   deleteSave(gameId)   listSaves() → save[]
 //   addPlay(play)                          只保留最近 50 筆,超過丟最舊
@@ -58,7 +58,7 @@ export class SupabaseStore {
       const headers = { apikey: this.key, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
       if (prefer) headers.Prefer = prefer;
       // 網路錯誤(連不上、讀本文中斷)標為暫時故障;解析失敗與資料格式錯誤不是(IR30)。
-      const networkError = (e) => Object.assign(e instanceof Error ? e : new Error('暫時連不上帳號服務'), { transient: true });
+      const networkError = (e) => Object.assign(e instanceof Error ? e : new Error('暫時連不上帳號服務'), { transient: true, reason: 'network' });
       let res;
       try {
         res = await this.fetch(`${this.url}/rest/v1/${path}`, { method, headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
@@ -79,6 +79,7 @@ export class SupabaseStore {
       return data ? JSON.parse(data) : null;
     } catch (err) {
       this.failed = true;
+      err.reason ??= err.transient ? 'network' : 'cloud';
       throw err;
     } finally { this.active -= 1; this.emit(); }
   }
@@ -130,7 +131,7 @@ export class SupabaseStore {
       this.dirty.delete(dirty);
       this.emit();
       return true;
-    } catch { this.dirty.add(dirty); this.emit(); return false; }
+    } catch (err) { this.dirty.add(dirty); this.emit(); return writeFailure(err); }
   }
   baseline(field) {
     // 不確定是否已提交的結算重試，必須從原基準重算，避免已成功的交易再加一次 XP。
@@ -151,7 +152,7 @@ export class SupabaseStore {
     try {
       await this.request(`saves?${this.filter(gameId)}`, { method: 'DELETE', prefer: 'return=minimal' });
       this.updateCache('saves', null, gameId); this.dirty.delete(dirty); this.emit(); return true;
-    } catch { this.dirty.add(dirty); this.emit(); return false; }
+    } catch (err) { this.dirty.add(dirty); this.emit(); return writeFailure(err); }
   }
   listSaves() { return this.read('saves?select=*'); }
   addPlay(play) { return this.write('plays', play, 'user_id,id'); }
@@ -249,8 +250,10 @@ export class SupabaseStore {
   async legacyBest() { return 0; }
 }
 
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=6d7df09';
-import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=6d7df09';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=3f1141d';
+import { writeFailure } from './errors.js?v=3f1141d';
+import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=3f1141d';
+import { normalizePlay } from './normalize.js?v=3f1141d';
 
 function recalculateFinish(base, stats, play, live) {
   const missing = (live?.achievements ?? []).filter((id) => !base.achievements?.[id]);
@@ -268,6 +271,7 @@ const FIELDS = {
   saves: ['game_id', 'state', 'active_sec', 'started_at', 'updated_at', 'version', 'live'],
 };
 function pick(table, value) {
+  if (table === 'plays') value = normalizePlay(value);
   return structuredClone(Object.fromEntries(FIELDS[table].filter((f) => value[f] !== undefined).map((f) => [f, value[f]])));
 }
 function cleanData(data) {

@@ -135,14 +135,15 @@ function positionValue(board, color) {
 export function evaluate(board, color) {
   return positionValue(board, color) + 10 * (legalMoves({ board, turn: color }).length - legalMoves({ board, turn: other(color) }).length);
 }
-function search(board, turn, color, depth, alpha, beta) {
+function search(board, turn, color, depth, alpha, beta, stats, pruning) {
+  if (stats) stats.nodes++;
   const legal = legalMoves({ board, turn });
   if (!legal.length) {
     if (!legalMoves({ board, turn: other(turn) }).length) {
       const diff = board.filter((v) => v === color).length - board.filter((v) => v === other(color)).length;
       return Math.sign(diff) * 100000 + diff;
     }
-    return search(board, other(turn), color, depth, alpha, beta);
+    return search(board, other(turn), color, depth, alpha, beta, stats, pruning);
   }
   if (depth === 0) {
     const oppositeMoves = legalMoves({ board, turn: other(turn) }).length;
@@ -151,14 +152,16 @@ function search(board, turn, color, depth, alpha, beta) {
   }
   let value = turn === color ? -Infinity : Infinity;
   for (const index of legal) {
-    const next = search(placed(board, index, turn), other(turn), color, depth - 1, alpha, beta);
+    const next = search(placed(board, index, turn), other(turn), color, depth - 1, alpha, beta, stats, pruning);
     if (turn === color) { value = Math.max(value, next); alpha = Math.max(alpha, value); }
     else { value = Math.min(value, next); beta = Math.min(beta, value); }
-    if (alpha >= beta) break;
+    if (pruning && alpha >= beta) break;
   }
   return value;
 }
-export function ai(state, level = state.difficulty, rng = Math.random) {
+// Optional per-move node count and pruning switch; pruning stays enabled by default.
+export function ai(state, level = state.difficulty, rng = Math.random, stats, { pruning = true } = {}) {
+  if (stats) stats.nodes = 0;
   if (!DIFFICULTIES.includes(level)) throw new Error('unknown difficulty');
   if (state.over) return null;
   const legal = legalMoves(state);
@@ -171,7 +174,7 @@ export function ai(state, level = state.difficulty, rng = Math.random) {
   }
   let best = legal[0], value = -Infinity;
   for (const index of legal) {
-    const candidate = search(placed(state.board, index, state.turn), other(state.turn), state.turn, 2, value, Infinity);
+    const candidate = search(placed(state.board, index, state.turn), other(state.turn), state.turn, 2, value, Infinity, stats, pruning);
     if (candidate > value) { value = candidate; best = index; }
   }
   return best;

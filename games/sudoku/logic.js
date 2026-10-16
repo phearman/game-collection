@@ -1,6 +1,6 @@
 // 數獨規則與狀態轉移：純函式；亂數、時間均由呼叫端注入。
-import { timerInit, timerEvent } from '../../shared/progress.js?v=6d7df09';
-import { seedRng } from '../../shared/seed-rng.js?v=6d7df09';
+import { timerInit, timerEvent } from '../../shared/progress.js?v=3f1141d';
+import { seedRng } from '../../shared/seed-rng.js?v=3f1141d';
 
 export const SIZE = 9;
 export const DIFFICULTIES = { easy: 46, normal: 40, hard: 32, expert: 26 };
@@ -32,7 +32,8 @@ function shuffle(values, rng) {
 }
 
 // 位元候選剪枝 + 最少候選格優先（MRV）；搜尋只改自己的工作副本。
-function search(board, limit, rng = null) {
+function search(board, limit, rng = null, stats) {
+  if (stats) Object.assign(stats, { nodes: 0, candidateChecks: 0 });
   if (!isBoard(board)) return { count: 0, solution: null };
   const work = board.slice();
   const rows = Array(9).fill(0), cols = Array(9).fill(0), boxes = Array(9).fill(0);
@@ -45,8 +46,10 @@ function search(board, limit, rng = null) {
   }
   let count = 0, solution = null;
   function visit() {
+    if (stats) stats.nodes++;
     let at = -1, mask = 0, fewest = 10;
     for (const i of indices) if (!work[i]) {
+      if (stats) stats.candidateChecks++;
       const candidate = ALL & ~(rows[rowOf(i)] | cols[colOf(i)] | boxes[boxOf(i)]);
       const size = bits(candidate);
       if (!size) return;
@@ -76,7 +79,8 @@ export function countSolutions(board, limit = 2) {
   if (!Number.isInteger(limit) || limit < 1) throw new Error('invalid solution limit');
   return search(board, limit).count;
 }
-export const solve = (board) => search(board, 1).solution;
+// Optional counters observe search work without changing candidates or traversal.
+export const solve = (board, stats) => search(board, 1, null, stats).solution;
 export const generateSolution = (rng = Math.random) => search(Array(81).fill(0), 1, rng).solution;
 export const clueCount = (board) => board.filter(Boolean).length;
 
@@ -141,7 +145,7 @@ export function autoCandState(state, on) {
 }
 
 // 舊存檔缺少輔助欄位時補 false，不改動棋盤、筆記與歷史。
-export const fromSave = (state) => ({ ...state, assist: state.assist ?? false, autoCand: state.autoCand ?? false });
+export const fromSave = (state) => ({ ...state, assist: state.difficulty === 'easy' || (state.assist ?? false), autoCand: state.autoCand ?? false });
 
 // 無法移除的格放回；走完全部格仍達不到目標時保留最接近的唯一解。
 export function carvePuzzle(solution, target, rng = Math.random) {
@@ -186,7 +190,11 @@ export function conflicts(board) {
 export const hasWon = (board) => isBoard(board) && board.every(Boolean) && conflicts(board).length === 0;
 export const secondsFor = (state) => Math.floor((state.clock?.ms ?? 0) / 1000);
 export const scoreFor = (result, seconds) => result === 'win' ? Math.max(1, 10000 - seconds) : 0;
-export const detailFor = (state) => ({ seconds: secondsFor(state), clues: clueCount(state.puzzle) });
+// 雲端 plays.difficulty 僅接受 normal / hard / expert。入門沿用 normal 的 XP 倍率,
+// 原始難度放在 detail,assist 仍由呼叫端傳入,不影響存檔或畫面的入門選項。
+export const finishDifficultyFor = (state) => state.difficulty === 'easy' ? 'normal' : state.difficulty;
+export const detailFor = (state) => ({ seconds: secondsFor(state), clues: clueCount(state.puzzle),
+  ...(state.difficulty === 'easy' ? { sudoku_difficulty: 'easy' } : {}) });
 
 export function stateWithPuzzle(puzzle, difficulty = 'normal') {
   if (!Object.hasOwn(DIFFICULTIES, difficulty) || countSolutions(puzzle) !== 1) throw new Error('invalid puzzle');
