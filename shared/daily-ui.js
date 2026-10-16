@@ -1,4 +1,4 @@
-import { dailyDateLabel, dailyScore, dailyShare, DAILY_LOGIN_NOTICE } from './daily.js?v=19c6738';
+import { dailyDateLabel, dailyScore, dailyShare, DAILY_LOGIN_NOTICE } from './daily.js?v=359432a';
 
 export function showDailyBanner(doc, daily, error) {
   const banner = doc.getElementById('daily-banner');

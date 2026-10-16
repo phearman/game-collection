@@ -2,16 +2,16 @@
 import {
   DIFFICULTIES, HIDE_MS, initState, flip, hideState, tickState, scoreFor, resultOf, isOver, isWaiting,
   hasActed, seededRng, demoPlan, remainingPairs, cardView, symbolOf, detailOf, pairsOf, toSave, fromSave, isValidState,
-} from './logic.js?v=19c6738';
-import { createProfile } from '../../shared/profile.js?v=19c6738';
-import { LocalStore } from '../../shared/stores/local.js?v=19c6738';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=19c6738';
-import { bindThemeToggle } from '../../shared/theme.js?v=19c6738';
-import { play } from '../../shared/sound.js?v=19c6738';
-import { setupHelp } from '../../shared/help.js?v=19c6738';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=19c6738';
-import { settlePlay } from '../../shared/settle.js?v=19c6738';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=19c6738';
+} from './logic.js?v=359432a';
+import { createProfile } from '../../shared/profile.js?v=359432a';
+import { LocalStore } from '../../shared/stores/local.js?v=359432a';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=359432a';
+import { bindThemeToggle } from '../../shared/theme.js?v=359432a';
+import { play } from '../../shared/sound.js?v=359432a';
+import { setupHelp } from '../../shared/help.js?v=359432a';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=359432a';
+import { settlePlay } from '../../shared/settle.js?v=359432a';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=359432a';
 
 const GAME_ID = 'memory';
 const LABELS = { normal: '一般', hard: '困難', expert: '專家' };

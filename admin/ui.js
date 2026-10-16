@@ -1,10 +1,10 @@
-import { createReportsClient, initReportsPanel } from './reports.js?v=19c6738';
-import { appendGroupProjectControl } from './line.js?v=19c6738';
-import { cloudEnabled } from '../shared/supabase-config.js?v=19c6738';
-import { GAMES } from '../shared/games.js?v=19c6738';
-import { createPendingGroupsClient } from './line.js?v=19c6738';
-import { createJokesClient, initJokesPanel } from './jokes.js?v=19c6738';
-import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=19c6738';
+import { createReportsClient, initReportsPanel } from './reports.js?v=359432a';
+import { appendGroupProjectControl } from './line.js?v=359432a';
+import { cloudEnabled } from '../shared/supabase-config.js?v=359432a';
+import { GAMES } from '../shared/games.js?v=359432a';
+import { createPendingGroupsClient } from './line.js?v=359432a';
+import { createJokesClient, initJokesPanel } from './jokes.js?v=359432a';
+import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=359432a';
 
 // 注入 runtime/client 供測試；未通過管理者檢查不讀取回饋。
 export async function initAdmin({ doc = globalThis.document, view = doc.defaultView ?? globalThis.window,
@@ -51,7 +51,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
       const option = node('option', label); option.value = value; select.append(option);
     }
   };
-  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=19c6738')).getCloudRuntime() : null);
+  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=359432a')).getCloudRuntime() : null);
   if (!rt?.auth.session) {
     hideData();
     $('access').textContent = '登入後才能查看回饋後台'; $('login').hidden = false;
@@ -61,7 +61,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
   pendingClient ??= createPendingGroupsClient({ auth: rt.auth, client });
   const userId = rt.auth.session.user.id;
   jokesClient ??= createJokesClient({ auth: rt.auth, client });
-  jokesPanel = initJokesPanel({ doc, auth: rt.auth, client: jokesClient, confirm,
+  jokesPanel = initJokesPanel({ doc, auth: rt.auth, client: jokesClient, confirm, timers: view?.setTimeout ? view : globalThis,
     onDenied: () => { ++epoch; ++groupEpoch; hideData(); $('access').textContent = '沒有權限'; } });
   reportsClient ??= createReportsClient({ auth: rt.auth, client });
   reportsPanel = initReportsPanel({ doc, auth: rt.auth, client: reportsClient, confirm,
@@ -327,7 +327,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
 }
 
 if (typeof document !== 'undefined') {
-  const { bindThemeToggle } = await import('../shared/theme.js?v=19c6738');
+  const { bindThemeToggle } = await import('../shared/theme.js?v=359432a');
   bindThemeToggle(document.getElementById('theme'));
   initAdmin().catch(() => {
     for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel', 'reports-panel']) document.getElementById(id).hidden = true;

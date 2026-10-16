@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=19c6738';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=359432a';
 
 // Loaded on explicit interaction; group identifiers stay in RPC inputs, never labels.
 export function appendGroupProjectControl({ doc, container, group, client, isCurrent }) {

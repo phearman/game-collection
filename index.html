@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>遊戲集錦</title>
-  <link rel="stylesheet" href="shared/style.css?v=19c6738">
+  <link rel="stylesheet" href="shared/style.css?v=359432a">
 </head>
 <body>
   <main class="page">
@@ -31,18 +31,18 @@
     <footer class="lobby-footer"><a href="changelog/">更新紀錄</a><span aria-hidden="true"> · </span><a href="privacy/">隱私權政策</a><span aria-hidden="true"> · </span><a id="feedback-link" href="me/">意見回饋</a><span aria-hidden="true"> · </span><a href="line/">LINE 小幫手使用說明</a></footer>
   </main>
   <script type="module">
-    import { GAMES } from './shared/games.js?v=19c6738';
-    import { createProfile } from './shared/profile.js?v=19c6738';
-    import { LocalStore } from './shared/stores/local.js?v=19c6738';
-    import { bindThemeToggle } from './shared/theme.js?v=19c6738';
-    import { cloudEnabled } from './shared/supabase-config.js?v=19c6738';
-    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=19c6738';
-    import { mountDailyLobby } from './shared/daily.js?v=19c6738';
+    import { GAMES } from './shared/games.js?v=359432a';
+    import { createProfile } from './shared/profile.js?v=359432a';
+    import { LocalStore } from './shared/stores/local.js?v=359432a';
+    import { bindThemeToggle } from './shared/theme.js?v=359432a';
+    import { cloudEnabled } from './shared/supabase-config.js?v=359432a';
+    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=359432a';
+    import { mountDailyLobby } from './shared/daily.js?v=359432a';
 
     bindThemeToggle(document.getElementById('theme'));
     document.getElementById('feedback-link').addEventListener('click', async (event) => {
       event.preventDefault();
-      const { openFeedback } = await import('./shared/feedback.js?v=19c6738');
+      const { openFeedback } = await import('./shared/feedback.js?v=359432a');
       await openFeedback();
     });
 
@@ -82,7 +82,7 @@
     setupWhatsNew({ hasHistory: hasPlayHistory(sum) });
     void mountDailyLobby(document).catch(() => {});
     if (cloudEnabled) {
-      const { auth, notice } = await (await import('./shared/auth.js?v=19c6738')).getCloudRuntime();
+      const { auth, notice } = await (await import('./shared/auth.js?v=359432a')).getCloudRuntime();
       const icon = document.getElementById('account-link');
       icon.hidden = false;
       const renderAccount = () => {
@@ -101,6 +101,6 @@
       }
     }
   </script>
-  <script type="module" src="shared/skin-compare.js?v=19c6738"></script>
+  <script type="module" src="shared/skin-compare.js?v=359432a"></script>
 </body>
 </html>
