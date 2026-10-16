@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>意見回饋後台 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=e80121c">
+  <link rel="stylesheet" href="../shared/style.css?v=19c6738">
   <style>
     .page.admin { max-width: 1280px; }
     .admin-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin: 20px 0; }
@@ -39,6 +39,10 @@
     #jokes-panel .direct-approve { display: flex; align-items: center; gap: 8px; }
     .joke-body { white-space: pre-wrap; overflow-wrap: anywhere; }
     .joke-submitter { overflow-wrap: anywhere; }
+    #reports-panel label { display: grid; gap: 4px; margin-block: 10px; }
+    #reports-panel input, #reports-panel textarea, #reports-panel select { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }
+    #reports-panel p { white-space: pre-wrap; overflow-wrap: anywhere; }
+    #reports-panel details { white-space: normal; }
     .admin-count { color: var(--text-sub); }
     .admin-tabs { display: flex; flex-wrap: nowrap; gap: 8px; }
     .admin-tabs .btn { flex: 1; min-width: 0; min-height: 44px; white-space: nowrap; padding-inline: 8px; }
@@ -78,6 +82,7 @@
       <button class="btn" id="tab-feedback" type="button" role="tab" aria-selected="true" aria-controls="admin-content">意見回饋</button>
       <button class="btn" id="tab-line-groups" type="button" role="tab" aria-selected="false" aria-controls="line-groups-panel" tabindex="-1">LINE 群組</button>
       <button class="btn" id="tab-jokes" type="button" role="tab" aria-selected="false" aria-controls="jokes-panel" tabindex="-1">笑話</button>
+      <button class="btn" id="tab-reports" type="button" role="tab" aria-selected="false" aria-controls="reports-panel" tabindex="-1">回報</button>
     </div>
     <p id="access" role="status">確認權限中…</p>
     <a class="btn" id="login" href="../me/" hidden>前往我的紀錄登入</a>
@@ -139,7 +144,36 @@
       <h3>已上架笑話</h3><div id="approved-jokes"></div>
       <h3>已下架笑話</h3><div id="rejected-jokes"></div>
     </section>
+    <section class="admin-card" id="reports-panel" role="tabpanel" aria-labelledby="tab-reports" tabindex="0" hidden>
+      <h2>工作回報(測試)</h2>
+      <p>僅限受邀測試。專案只用代稱與假資料，請勿填入真實專案名稱、公司資料、客戶資料或真實單號。</p>
+      <div class="admin-filters">
+        <label>專案<select id="reports-filter-project"><option value="">全部專案</option></select></label>
+        <label>狀態<select id="reports-filter-status"></select></label>
+        <label>緊急<select id="reports-filter-urgency"></select></label>
+        <label>分類<select id="reports-filter-category"></select></label>
+        <label>同步<select id="reports-filter-synced"><option value="">全部</option><option value="yes">已同步</option><option value="no">未同步</option></select></label>
+        <label>關鍵字<input id="reports-filter-keyword" type="search"></label>
+        <button class="btn" id="reports-search" type="button">套用篩選</button>
+        <button class="btn" id="reports-reload" type="button">重新載入</button>
+        <button class="btn" id="reports-export" type="button">匯出全部篩選結果 CSV</button>
+      </div>
+      <p id="reports-status" role="status"></p>
+      <p id="reports-page" role="status"></p>
+      <button class="btn" id="reports-prev" type="button">上一頁</button>
+      <button class="btn" id="reports-next" type="button">下一頁</button>
+      <div id="reports-rows"></div>
+      <details><summary>專案與成員維護</summary>
+        <label>專案代稱（1～20 字）<input id="reports-project-code" maxlength="20" required></label>
+        <label>名稱（1～50 字，只用代稱）<input id="reports-project-name" maxlength="50" required></label>
+        <button class="btn" id="reports-create-project" type="button">建立專案與邀請碼</button>
+        <p id="reports-invite" role="status"></p>
+        <div id="reports-projects"></div><h3>專案成員</h3><div id="reports-members"></div>
+        <p>群組綁定請到「LINE 群組」已核准清單設定。</p>
+      </details>
+      <button class="btn" id="reports-purge" type="button">清空所有測試資料</button>
+    </section>
   </main>
-  <script type="module" src="ui.js?v=e80121c"></script>
+  <script type="module" src="ui.js?v=19c6738"></script>
 </body>
 </html>

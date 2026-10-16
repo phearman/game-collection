@@ -1,12 +1,14 @@
-import { cloudEnabled } from '../shared/supabase-config.js?v=e80121c';
-import { GAMES } from '../shared/games.js?v=e80121c';
-import { createPendingGroupsClient } from './line.js?v=e80121c';
-import { createJokesClient, initJokesPanel } from './jokes.js?v=e80121c';
-import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=e80121c';
+import { createReportsClient, initReportsPanel } from './reports.js?v=19c6738';
+import { appendGroupProjectControl } from './line.js?v=19c6738';
+import { cloudEnabled } from '../shared/supabase-config.js?v=19c6738';
+import { GAMES } from '../shared/games.js?v=19c6738';
+import { createPendingGroupsClient } from './line.js?v=19c6738';
+import { createJokesClient, initJokesPanel } from './jokes.js?v=19c6738';
+import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=19c6738';
 
 // 注入 runtime/client 供測試；未通過管理者檢查不讀取回饋。
 export async function initAdmin({ doc = globalThis.document, view = doc.defaultView ?? globalThis.window,
-  runtime, client, pendingClient, jokesClient, confirm = (text) => globalThis.confirm(text) } = {}) {
+  runtime, client, pendingClient, jokesClient, reportsClient, confirm = (text) => globalThis.confirm(text) } = {}) {
   const $ = (id) => doc.getElementById(id);
   const node = (tag, text, cls) => element(doc, tag, text, cls);
   let rows = [];
@@ -16,7 +18,8 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
   let groupsLoading = false;
   let authorized = false;
   let jokesPanel;
-  const tabs = ['feedback', 'line-groups', 'jokes'];
+  let reportsPanel;
+  const tabs = ['feedback', 'line-groups', 'jokes', 'reports'];
   const selectTab = (tab, focus = false) => {
     if (!authorized) return;
     if (!tabs.includes(tab)) tab = 'feedback';
@@ -24,18 +27,19 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
       const button = $(`tab-${name}`);
       const selected = name === tab;
       button.setAttribute('aria-selected', String(selected)); button.tabIndex = selected ? 0 : -1;
-      $(name === 'feedback' ? 'admin-content' : name === 'jokes' ? 'jokes-panel' : 'line-groups-panel').hidden = !selected;
+      $(name === 'feedback' ? 'admin-content' : name === 'jokes' ? 'jokes-panel' : name === 'reports' ? 'reports-panel' : 'line-groups-panel').hidden = !selected;
     }
     if (view?.location && view.location.hash !== `#${tab}`) view.location.hash = tab;
     if (focus) $(`tab-${tab}`).focus();
+    if (tab === 'reports') return reportsPanel?.open();
     if (tab === 'jokes') return jokesPanel?.open();
   };
-  for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel']) $(id).hidden = true;
+  for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel', 'reports-panel']) $(id).hidden = true;
   const hideData = () => {
     authorized = false;
-    jokesPanel?.clear();
+    jokesPanel?.clear(); reportsPanel?.clear();
     rows = [];
-    for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel']) $(id).hidden = true;
+    for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel', 'reports-panel']) $(id).hidden = true;
     $('feedback-rows').replaceChildren();
     for (const id of ['pending-groups', 'allowed-groups', 'group-actions']) $(id).replaceChildren();
     $('count').textContent = '';
@@ -47,7 +51,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
       const option = node('option', label); option.value = value; select.append(option);
     }
   };
-  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=e80121c')).getCloudRuntime() : null);
+  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=19c6738')).getCloudRuntime() : null);
   if (!rt?.auth.session) {
     hideData();
     $('access').textContent = '登入後才能查看回饋後台'; $('login').hidden = false;
@@ -58,6 +62,9 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
   const userId = rt.auth.session.user.id;
   jokesClient ??= createJokesClient({ auth: rt.auth, client });
   jokesPanel = initJokesPanel({ doc, auth: rt.auth, client: jokesClient, confirm,
+    onDenied: () => { ++epoch; ++groupEpoch; hideData(); $('access').textContent = '沒有權限'; } });
+  reportsClient ??= createReportsClient({ auth: rt.auth, client });
+  reportsPanel = initReportsPanel({ doc, auth: rt.auth, client: reportsClient, confirm,
     onDenied: () => { ++epoch; ++groupEpoch; hideData(); $('access').textContent = '沒有權限'; } });
   const filters = () => ({ game: $('filter-game').value, kind: $('filter-kind').value,
     status: $('filter-status').value, keyword: $('keyword').value, channel: $('filter-channel').value });
@@ -170,6 +177,8 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
   };
 
   const groupLabel = (group) => group.group_name || '(未取得名稱)';
+  const fullyApproved = (allowed, pending) => allowed.group_id === pending.group_id
+    && allowed.bot_present === true && allowed.source_type === pending.source_type;
   const groupButtons = (container, group, approved) => {
     const buttons = [];
     const message = node('p'); message.setAttribute('role', 'status');
@@ -187,7 +196,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
         try {
           // Recheck approval in case another admin approved a row already on this screen.
           const duplicate = action === 'approve' && (await pendingClient.listAllowedGroups())
-            .some((item) => item.group_id === group.group_id);
+            .some((item) => fullyApproved(item, group));
           if (groupEpoch !== savedEpoch || rt.auth.session?.user.id !== userId) return;
           const method = duplicate ? 'ignoreGroup' : action === 'refresh_name' ? 'refreshGroupName' : `${action}Group`;
           await pendingClient[method](group.group_id);
@@ -203,8 +212,8 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
     container.append(message);
   };
   const renderGroups = (pending, allowed, actions) => {
-    const allowedIds = new Set(allowed.map((group) => group.group_id));
-    pending = pending.filter((group) => !allowedIds.has(group.group_id));
+    const allowedById = new Map(allowed.map((group) => [group.group_id, group]));
+    pending = pending.filter((group) => !allowed.some((item) => fullyApproved(item, group)));
     $('tab-line-groups').textContent = pending.length ? `LINE 群組 (${pending.length})` : 'LINE 群組';
     for (const id of ['pending-groups', 'allowed-groups', 'group-actions']) $(id).replaceChildren();
     if (!pending.length) $('pending-groups').append(node('p', '目前沒有待核准群組。'));
@@ -215,8 +224,11 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
         const item = node('div', '', 'admin-card');
         const times = approved ? `核准：${new Date(group.approved_at).toLocaleString()} · ${group.bot_present ? '機器人在群組' : '機器人已不在群組'}`
           : `首次：${new Date(group.first_seen_at).toLocaleString()} · 最後：${new Date(group.last_seen_at).toLocaleString()}`;
-        item.append(node('p', `${groupLabel(group)} · ${group.source_type === 'room' ? '多人聊天室' : '群組'} · groupId：${group.group_id}`), node('p', times));
-        groupButtons(item, group, approved); $(target).append(item);
+        item.append(node('p', `${groupLabel(group)} · ${group.source_type === 'room' ? '多人聊天室' : '群組'}`), node('p', times));
+        if (!approved && allowedById.has(group.group_id)) item.append(node('p', '已核准但狀態異常,核准即修復'));
+        groupButtons(item, group, approved);
+        if (approved && group.source_type === 'group' && group.bot_present) appendGroupProjectControl({ doc, container: item, group, client: reportsClient,
+          isCurrent: () => authorized && rt.auth.session?.user.id === userId && item.parentNode !== null }); $(target).append(item);
       }
     }
     for (const entry of actions) $('group-actions').append(node('p',
@@ -315,10 +327,10 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
 }
 
 if (typeof document !== 'undefined') {
-  const { bindThemeToggle } = await import('../shared/theme.js?v=e80121c');
+  const { bindThemeToggle } = await import('../shared/theme.js?v=19c6738');
   bindThemeToggle(document.getElementById('theme'));
   initAdmin().catch(() => {
-    for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel']) document.getElementById(id).hidden = true;
+    for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel', 'reports-panel']) document.getElementById(id).hidden = true;
     document.getElementById('access').textContent = '後台暫時無法使用，請重新載入';
   });
 }

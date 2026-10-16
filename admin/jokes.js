@@ -1,8 +1,8 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=e80121c';
-import { element } from '../shared/feedback.js?v=e80121c';
-import { JOKE_CATEGORIES, jokeFieldsError, normalizeJokeBody, parseJokeImport } from './joke-import.js?v=e80121c';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=19c6738';
+import { element } from '../shared/feedback.js?v=19c6738';
+import { JOKE_CATEGORIES, jokeFieldsError, normalizeJokeBody, parseJokeImport } from './joke-import.js?v=19c6738';
 
-export { JOKE_CATEGORIES, parseJokeImport } from './joke-import.js?v=e80121c';
+export { JOKE_CATEGORIES, parseJokeImport } from './joke-import.js?v=19c6738';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export function submitterLines(submitter) {
   if (!submitter) return [];

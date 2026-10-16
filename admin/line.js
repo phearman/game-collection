@@ -1,4 +1,35 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=e80121c';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=19c6738';
+
+// Loaded on explicit interaction; group identifiers stay in RPC inputs, never labels.
+export function appendGroupProjectControl({ doc, container, group, client, isCurrent }) {
+  const node = (tag, text) => { const item=doc.createElement(tag); if (text) item.textContent=text; return item; };
+  const open=node('button','設定專案'); open.type='button'; open.className='btn';
+  const output=node('div'); let loading=false;
+  open.addEventListener('click',async () => {
+    if (loading || !isCurrent()) return; loading=true; open.disabled=true;
+    try {
+      const meta=await client.metadata({ group_id:group.group_id }); if (!isCurrent()) return;
+      const select=node('select'); select.setAttribute('aria-label','群組綁定專案');
+      for (const [id,name] of [['','未綁定'],...meta.projects.filter((p) => p.active).map((p) => [p.id,p.code])]) {
+        const option=node('option',name); option.value=id; select.append(option);
+      }
+      select.value=meta.binding_project_id ?? '';
+      const save=node('button','儲存專案綁定'); save.type='button';
+      const status=node('p'); status.setAttribute('role','status');
+      save.addEventListener('click',async () => {
+        if (save.disabled || !isCurrent()) return; save.disabled=true;
+        try {
+          await client.project('bind_group',{ group_id:group.group_id,id:select.value || null });
+          if (isCurrent()) status.textContent='已儲存專案綁定';
+        } catch { if (isCurrent()) status.textContent='儲存失敗，請重新載入後重試'; }
+        finally { save.disabled=false; }
+      });
+      output.replaceChildren(select,save,status);
+    } catch { if (isCurrent()) output.textContent='專案資料讀取失敗，請重試'; }
+    finally { loading=false; open.disabled=false; }
+  });
+  container.append(open,output);
+}
 
 // Admin-only lists and mutations; player queries never carry LINE identifiers.
 export function createPendingGroupsClient({ auth, client, url = SUPABASE_URL,
