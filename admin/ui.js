@@ -1,10 +1,10 @@
-import { createReportsClient, initReportsPanel } from './reports.js?v=359432a';
-import { appendGroupProjectControl } from './line.js?v=359432a';
-import { cloudEnabled } from '../shared/supabase-config.js?v=359432a';
-import { GAMES } from '../shared/games.js?v=359432a';
-import { createPendingGroupsClient } from './line.js?v=359432a';
-import { createJokesClient, initJokesPanel } from './jokes.js?v=359432a';
-import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=359432a';
+import { createReportsClient, initReportsPanel } from './reports.js?v=6d7df09';
+import { appendGroupProjectControl, groupModeSelect, GROUP_MODES } from './line.js?v=6d7df09';
+import { cloudEnabled } from '../shared/supabase-config.js?v=6d7df09';
+import { GAMES } from '../shared/games.js?v=6d7df09';
+import { createPendingGroupsClient } from './line.js?v=6d7df09';
+import { createJokesClient, initJokesPanel } from './jokes.js?v=6d7df09';
+import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=6d7df09';
 
 // 注入 runtime/client 供測試；未通過管理者檢查不讀取回饋。
 export async function initAdmin({ doc = globalThis.document, view = doc.defaultView ?? globalThis.window,
@@ -51,7 +51,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
       const option = node('option', label); option.value = value; select.append(option);
     }
   };
-  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=359432a')).getCloudRuntime() : null);
+  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=6d7df09')).getCloudRuntime() : null);
   if (!rt?.auth.session) {
     hideData();
     $('access').textContent = '登入後才能查看回饋後台'; $('login').hidden = false;
@@ -182,6 +182,34 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
   const groupButtons = (container, group, approved) => {
     const buttons = [];
     const message = node('p'); message.setAttribute('role', 'status');
+    const mode=groupModeSelect(doc,group.mode ?? 'leisure');
+    const project=node('select'); project.setAttribute('aria-label','核准時綁定專案'); project.hidden=true;
+    project.append(node('option','先不綁')); project.value='';
+    if (group.source_type === 'group') container.append(mode);
+    if (!approved && group.source_type === 'group') container.append(project);
+    mode.addEventListener('change',async () => {
+      if (approved || !authorized || rt.auth.session?.user.id !== userId) return;
+      project.hidden=mode.value==='leisure'; project.replaceChildren(node('option','先不綁')); project.value='';
+      if (project.hidden) return;
+      const stamp=groupEpoch; mode.disabled=true;
+      try {
+        const meta=await reportsClient.metadata();
+        if (stamp!==groupEpoch || rt.auth.session?.user.id!==userId) return;
+        for (const p of meta.projects.filter((p) => p.active)) { const option=node('option',p.code); option.value=p.id; project.append(option); }
+      } catch (err) { message.textContent=err.message; }
+      finally { mode.disabled=false; }
+    });
+    if (approved && group.source_type === 'group' && group.bot_present) {
+      const save=node('button','儲存模式','btn'); save.type='button';
+      save.addEventListener('click',async () => {
+        if (save.disabled || !authorized || rt.auth.session?.user.id!==userId) return;
+        save.disabled=true; const stamp=groupEpoch;
+        try { await pendingClient.setGroupMode(group.group_id,mode.value); if (stamp===groupEpoch && rt.auth.session?.user.id===userId) await loadGroups('已儲存模式'); }
+        catch (err) { if (stamp===groupEpoch && rt.auth.session?.user.id===userId) message.textContent=err.message; }
+        finally { save.disabled=false; }
+      });
+      container.append(node('p',`模式：${GROUP_MODES[group.mode ?? 'leisure']}`),save);
+    }
     for (const action of approved ? ['revoke', 'refresh_name'] : ['approve', 'ignore']) {
       const label = { approve: '核准', ignore: '忽略', revoke: '撤銷', refresh_name: '更新名稱' }[action];
       const button = node('button', label, 'btn'); button.type = 'button'; buttons.push(button);
@@ -199,7 +227,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
             .some((item) => fullyApproved(item, group));
           if (groupEpoch !== savedEpoch || rt.auth.session?.user.id !== userId) return;
           const method = duplicate ? 'ignoreGroup' : action === 'refresh_name' ? 'refreshGroupName' : `${action}Group`;
-          await pendingClient[method](group.group_id);
+          await pendingClient[method](group.group_id,...(method==='approveGroup' ? [mode.value,project.value || null] : []));
           if (groupEpoch !== savedEpoch || rt.auth.session?.user.id !== userId) return;
           await loadGroups(duplicate ? '此群組已核准,已清除重複的待核准紀錄'
             : action === 'refresh_name' ? '已更新群組名稱' : '');
@@ -225,14 +253,15 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
         const times = approved ? `核准：${new Date(group.approved_at).toLocaleString()} · ${group.bot_present ? '機器人在群組' : '機器人已不在群組'}`
           : `首次：${new Date(group.first_seen_at).toLocaleString()} · 最後：${new Date(group.last_seen_at).toLocaleString()}`;
         item.append(node('p', `${groupLabel(group)} · ${group.source_type === 'room' ? '多人聊天室' : '群組'}`), node('p', times));
-        if (!approved && allowedById.has(group.group_id)) item.append(node('p', '已核准但狀態異常,核准即修復'));
+        if (!approved && allowedById.has(group.group_id)) item.append(node('p', allowedById.get(group.group_id).reapproval_required
+          ? '重新加入,需重新核准' : '已核准但狀態異常,核准即修復'));
         groupButtons(item, group, approved);
         if (approved && group.source_type === 'group' && group.bot_present) appendGroupProjectControl({ doc, container: item, group, client: reportsClient,
           isCurrent: () => authorized && rt.auth.session?.user.id === userId && item.parentNode !== null }); $(target).append(item);
       }
     }
     for (const entry of actions) $('group-actions').append(node('p',
-      `${new Date(entry.created_at).toLocaleString()} · ${{ approve: '核准', ignore: '忽略', revoke: '撤銷' }[entry.action] ?? entry.action} · ${groupLabel(entry)} · 操作者：${displayName(entry.actor_display_name)}`));
+      `${new Date(entry.created_at).toLocaleString()} · ${{ approve: '核准', ignore: '忽略', revoke: '撤銷',mode:'模式',bind:'綁專案',purge:'清除' }[entry.action] ?? entry.action} · ${groupLabel(entry)} · ${entry.detail ?? ''} · 操作者：${displayName(entry.actor_display_name)}`));
   };
 
   const loadGroups = async (successMessage = '') => {
@@ -300,6 +329,13 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
   for (const id of ['filter-game', 'filter-kind', 'filter-status', 'filter-channel', 'keyword']) $(id).addEventListener('input', render);
   $('reload').addEventListener('click', load);
   $('reload-groups').addEventListener('click', () => loadGroups());
+  $('purge-work-groups')?.addEventListener('click',async () => {
+    if (groupsLoading || !authorized || rt.auth.session?.user.id!==userId) return;
+    const stamp=groupEpoch; $('purge-work-groups').disabled=true;
+    try { const result=await pendingClient.runWorkPurge(); if (stamp===groupEpoch && rt.auth.session?.user.id===userId) await loadGroups(`已清除 ${result.groups} 個到期群組、${result.reports} 則回報`); }
+    catch (err) { if (stamp===groupEpoch && rt.auth.session?.user.id===userId) $('groups-status').textContent=err.message; }
+    finally { $('purge-work-groups').disabled=false; }
+  });
   for (const [index, name] of tabs.entries()) {
     $(`tab-${name}`).addEventListener('click', () => selectTab(name));
     $(`tab-${name}`).addEventListener('keydown', (event) => {
@@ -327,7 +363,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
 }
 
 if (typeof document !== 'undefined') {
-  const { bindThemeToggle } = await import('../shared/theme.js?v=359432a');
+  const { bindThemeToggle } = await import('../shared/theme.js?v=6d7df09');
   bindThemeToggle(document.getElementById('theme'));
   initAdmin().catch(() => {
     for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel', 'reports-panel']) document.getElementById(id).hidden = true;

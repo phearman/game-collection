@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=359432a';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=6d7df09';
 export const REPORT_STATUS = Object.freeze({ draft:'未送出',new:'新的',triage:'評估中',need_info:'需要更多資訊',planned:'已排入處理',released:'已完成',declined:'不處理',duplicate:'重複',cancelled:'回報者已取消' });
 export const REPORT_URGENCY = Object.freeze({ high:'高',mid:'中',low:'低',unsure:'不確定' });
 export const REPORT_CATEGORY = Object.freeze({ issue:'問題',request:'需求',todo:'待辦',query:'查詢',unsure:'不確定' });
@@ -38,13 +38,13 @@ const csvCell = (value) => {
 };
 // Explicit columns: never serialize entire rows into CSV.
 export function reportsCSV(rows) {
-  const columns = ['編號','描述','專案','緊急','分類','狀態','回報者','來源','負責人','備註','理由','重複編號','送出時間','已同步時間','外部單號'];
-  return '\ufeff' + [columns, ...rows.map((r) => [r.report_no,r.body,r.project_unsure ? '不確定' : r.project_code,
+  const columns = ['編號','事件碼','描述','專案','緊急','分類','狀態','回報者','來源','負責人','備註','理由','重複編號','送出時間','已同步時間','外部單號'];
+  return '\ufeff' + [columns, ...rows.map((r) => [r.report_no,r.event_code,r.body,r.project_unsure ? '不確定' : r.project_code,
     REPORT_URGENCY[r.urgency],REPORT_CATEGORY[r.category],REPORT_STATUS[r.status],r.reporter,r.source,r.assignee,
     r.note,r.reason,r.duplicate_of_no,r.submitted_at,r.synced_at,r.external_ref])].map((row) => row.map(csvCell).join(',')).join('\r\n');
 }
 export async function purgeWorkPoc(client, { confirm = globalThis.confirm, prompt = globalThis.prompt } = {}) {
-  if (!confirm('確定清空所有測試回報、專案、成員與群組綁定？')) return null;
+  if (!confirm('確定清空所有測試事項、回報、專案、成員、群組綁定、同意與代稱，並將全部群組重設為休閒群？事件碼計數保留、不重用。')) return null;
   const answer = prompt('此動作無法復原，請輸入「清空」確認');
   if (answer !== '清空') return null;
   return client.purge(answer);
@@ -90,7 +90,7 @@ export function initReportsPanel({ doc, auth, client, confirm = globalThis.confi
       $('reports-projects').append(article);
     }
     for (const m of meta.members) {
-      const item=node('p',`${meta.projects.find((p) => p.id===m.project_id)?.code ?? ''} · ${m.name}`);
+      const item=node('p',`${meta.projects.find((p) => p.id===m.project_id)?.code ?? ''} · ${m.name} · 加入途徑：${m.joined_via==='group' ? m.via_group_name || '群組' : '邀請碼'}`);
       item.append(button('移除成員',() => { if (confirm(`移除「${m.name}」的專案資格？`)) return mutate(() => client.project('remove_member',{ id:m.id })); }));
       $('reports-members').append(item);
     }
@@ -100,7 +100,7 @@ export function initReportsPanel({ doc, auth, client, confirm = globalThis.confi
     if (!rows.length) $('reports-rows').append(node('p','目前沒有符合條件的回報。'));
     for (const r of rows) {
       const card=node('article'); card.className='admin-card';
-      card.append(node('h3',`#${r.report_no} · ${REPORT_STATUS[r.status]}`),node('p',r.body),
+      card.append(node('h3',`${r.event_code ? `${r.event_code} · ` : ''}#${r.report_no} · ${REPORT_STATUS[r.status]}`),node('p',r.body),
         node('p',`${r.reporter} · ${r.source} · ${r.submitted_at}`));
       const fields={};
       fields.status=options(Object.fromEntries(Object.entries(REPORT_STATUS).filter(([s]) => !['draft','cancelled'].includes(s))),r.status);
@@ -169,7 +169,7 @@ export function initReportsPanel({ doc, auth, client, confirm = globalThis.confi
   $('reports-purge').addEventListener('click',() => mutate(async () => {
     const result=await purgeWorkPoc(client,{ confirm,prompt });
     if (result) { $('reports-invite').textContent=''; return result; }
-  },(result) => result ? `已清空 ${result.reports} 則回報、${result.images} 張附圖` : '已取消清空'));
+  },(result) => result ? `已清空 ${result.reports} 則回報、${result.events ?? 0} 筆歷程、${result.images} 張附圖、${result.projects ?? 0} 個專案、${result.members ?? 0} 位成員、${result.bindings ?? 0} 筆綁定、${result.consents ?? 0} 筆同意、${result.aliases ?? 0} 個代稱、${result.purge_due ?? 0} 筆清除倒數、${result.notices ?? 0} 筆提醒、${result.items ?? 0} 則事項、${result.people ?? 0} 筆相關人、${result.item_events ?? 0} 筆事項歷程、${result.queries ?? 0} 筆查詢配額；保留 ${result.counters_retained ?? 0} 筆事件碼計數、不重用；群組已重設為休閒群` : '已取消清空'));
   $('reports-export').addEventListener('click',async () => {
     if (busy) return; const stamp=epoch; busy=true;
     try {

@@ -1,5 +1,5 @@
 // 弓箭射擊繪圖(Canvas,⛔ 圖檔)。只讀狀態畫圖,不改規則;座標用 logic 單位,y 向上,這裡翻成畫面座標。
-import { W, H, ARCHER, GRAB_R } from './logic.js?v=359432a';
+import { W, H, ARCHER, GRAB_R } from './logic.js?v=6d7df09';
 
 export const FLASH_MS = 200;
 export const flashOpacity = (startedAt, now) => startedAt === null ? 0 : Math.max(0, 1 - (now - startedAt) / FLASH_MS);
