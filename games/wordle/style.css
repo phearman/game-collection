@@ -121,7 +121,7 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
 /* 提示(RS9):輔助局才顯示。精簡成分頁式:三鈕 + 一格固定高度的內容(只顯示最後按的那種)(H4) */
 .hints { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 8px; margin: 0 0 8px; }
 .hint-buttons { display: flex; gap: 6px; }
-.hint-buttons .btn { flex: 1 1 0; min-width: 0; min-height: 40px; padding: 4px 6px; font-size: 13px; }
+.hint-buttons .btn { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 4px 6px; font-size: 13px; }
 .hint-buttons .btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 .hint-body { min-height: 40px; margin-top: 6px; display: flex; align-items: center; justify-content: center; }
 .hint-body > [hidden] { display: none; }
@@ -131,6 +131,13 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
 .hint-candidates { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; }
 .hint-candidates .btn { min-height: 40px; padding: 2px 8px; font-size: 13px; text-transform: uppercase; font-family: var(--mono); }
 .hint-note { flex-basis: 100%; margin: 0; font-size: 11px; color: var(--text-sub); text-align: center; }
+/* RS66:中文意思、建議開局字(與候選同樣式,沿用 hint-body 的固定高度) */
+.hint-category { margin: 0; font-size: 15px; }
+.hint-chinese { margin: 0; font-size: 15px; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 6px; }
+.hint-starters { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; margin-top: 6px; }
+.hint-starters[hidden] { display: none; }
+.hint-starters .btn { min-height: 44px; padding: 2px 8px; font-size: 13px; text-transform: uppercase; font-family: var(--mono); }
+.hint-label { font-size: 12px; color: var(--text-sub); margin-right: 2px; }
 #hint[hidden] { display: none; } /* .btn 的 display 會蓋過 hidden 屬性 */
 /* 提示開著時縮小格子、鍵盤略矮,讓 375×667 也看得到整個鍵盤 */
 .page.hinting .board-wrap { max-width: min(300px, calc((100vh - 450px) * 0.8)); max-width: min(300px, calc((100dvh - 450px) * 0.8)); container-type: inline-size; }
@@ -141,3 +148,13 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
 }
 .page.hinting .keyboard { margin-top: 10px; }
 .page.hinting .key { min-height: 40px; }
+/* RS66 簡單模式:8 列。棋盤寬度按 6/8 等比縮小,總高度與 6 列相同,375×667 仍一屏(字級沿用上方 cqw 公式)。 */
+.page.easy .board { grid-template-rows: repeat(8, 1fr); }
+.page.easy .board-wrap { max-width: min(225px, calc((100vh - 360px) * 0.6)); max-width: min(225px, calc((100dvh - 360px) * 0.6)); }
+.page.easy.hinting .board-wrap { max-width: min(225px, calc((100vh - 450px) * 0.59)); max-width: min(225px, calc((100dvh - 450px) * 0.59)); }
+/* 8 列格子較小:簡單模式的字級縮放獨立於 .hinting(結算時提示收起也不撐大格子);行高 1.3,字級除以 5 格 × 1.3 = 6.5。 */
+.page.easy .board-wrap { container-type: inline-size; }
+.page.easy .board-wrap .cell { font-size: min(clamp(14px, 6vw, 26px), calc((100cqw - 40px) / 6.5)); line-height: 1.3; }
+/* 開局字列(約 50px)只在還沒猜時出現:這段期間棋盤再縮一點,維持一屏。 */
+.page.hinting.starting .board-wrap { max-width: min(300px, calc((100vh - 482px) * 0.8)); max-width: min(300px, calc((100dvh - 482px) * 0.8)); }
+.page.easy.hinting.starting .board-wrap { max-width: min(225px, calc((100vh - 482px) * 0.59)); max-width: min(225px, calc((100dvh - 482px) * 0.59)); }

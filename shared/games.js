@@ -2,7 +2,7 @@
 export const GAMES = [
   { id: '2048', code: 'G1', version: '1.5', title: '2048', icon: '🔢', desc: '滑動合併數字方塊', status: 'active' },
   { id: 'minesweeper', code: 'G2', version: '1.1', title: '踩地雷', icon: '💣', desc: '連鎖展開找出地雷', status: 'active' },
-  { id: 'wordle', code: 'G3', version: '1.4', title: 'Wordle', icon: '🔤', desc: '六次內猜中單字', status: 'active' },
+  { id: 'wordle', code: 'G3', version: '1.5', title: 'Wordle', icon: '🔤', desc: '六次內猜中單字', status: 'active' },
   { id: 'tictactoe', code: 'G4', version: '1.1', title: '井字棋', icon: '⭕', desc: '挑戰無敵 AI', status: 'active' },
   { id: 'sudoku', code: 'G5', version: '1.3', title: '數獨', icon: '🧩', desc: '三種難度隨機出題', status: 'active' },
   { id: 'snake', code: 'G6', version: '1.2', title: '貪食蛇', icon: '🐍', desc: '越吃越長別撞牆', status: 'active' },
@@ -13,5 +13,6 @@ export const GAMES = [
   { id: 'memory', code: 'G11', version: '1.0', title: '翻翻樂', icon: '🃏', desc: '翻牌配對考記憶', status: 'active' },
   { id: 'reversi', code: 'G12', version: '1.0', title: '黑白棋', icon: '⚫', desc: '夾住翻轉,子多者勝', status: 'active' },
   { id: 'bridge', code: 'G13', version: '1.0', title: '小人過橋', icon: '🌉', desc: '按住搭橋,剛好就過', status: 'active' },
-  { id: 'archery', code: 'G14', version: '1.0', title: '弓箭射擊', icon: '🏹', desc: '拉弓射靶,看風出手', status: 'active' },
+  { id: 'archery', code: 'G14', version: '1.1', title: '弓箭射擊', icon: '🏹', desc: '拉弓射靶,看風出手', status: 'active' },
+  { id: 'peg', code: 'G15', version: '1.0', title: '孔明棋', icon: '🔵', desc: '跳子吃子,剩一顆最強', status: 'active' },
 ];

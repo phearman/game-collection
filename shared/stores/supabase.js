@@ -255,10 +255,10 @@ export class SupabaseStore {
   async legacyBest() { return 0; }
 }
 
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=6abe362';
-import { writeFailure, allInOrder } from './errors.js?v=6abe362';
-import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=6abe362';
-import { normalizePlay } from './normalize.js?v=6abe362';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=ab8d031';
+import { writeFailure, allInOrder } from './errors.js?v=ab8d031';
+import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=ab8d031';
+import { normalizePlay } from './normalize.js?v=ab8d031';
 
 function recalculateFinish(base, stats, play, live) {
   const missing = (live?.achievements ?? []).filter((id) => !base.achievements?.[id]);

@@ -1,14 +1,15 @@
-import { createReportsClient, initReportsPanel } from './reports.js?v=6abe362';
-import { appendGroupProjectControl, groupModeSelect, GROUP_MODES } from './line.js?v=6abe362';
-import { cloudEnabled } from '../shared/supabase-config.js?v=6abe362';
-import { GAMES } from '../shared/games.js?v=6abe362';
-import { createPendingGroupsClient } from './line.js?v=6abe362';
-import { createJokesClient, initJokesPanel } from './jokes.js?v=6abe362';
-import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=6abe362';
+import { createReportsClient, initReportsPanel } from './reports.js?v=ab8d031';
+import { appendGroupProjectControl, groupModeSelect, GROUP_MODES } from './line.js?v=ab8d031';
+import { cloudEnabled } from '../shared/supabase-config.js?v=ab8d031';
+import { GAMES } from '../shared/games.js?v=ab8d031';
+import { createPendingGroupsClient } from './line.js?v=ab8d031';
+import { createJokesClient, initJokesPanel } from './jokes.js?v=ab8d031';
+import { createTipsClient, initTipsPanel } from './tips.js?v=ab8d031';
+import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=ab8d031';
 
 // 注入 runtime/client 供測試；未通過管理者檢查不讀取回饋。
 export async function initAdmin({ doc = globalThis.document, view = doc.defaultView ?? globalThis.window,
-  runtime, client, pendingClient, jokesClient, reportsClient, confirm = (text) => globalThis.confirm(text) } = {}) {
+  runtime, client, pendingClient, jokesClient, tipsClient, reportsClient, confirm = (text) => globalThis.confirm(text) } = {}) {
   const $ = (id) => doc.getElementById(id);
   const node = (tag, text, cls) => element(doc, tag, text, cls);
   let rows = [];
@@ -17,29 +18,35 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
   let groupEpoch = 0;
   let groupsLoading = false;
   let authorized = false;
+  let activeTab;
   let jokesPanel;
+  let tipsPanel;
   let reportsPanel;
-  const tabs = ['feedback', 'line-groups', 'jokes', 'reports'];
+  const tabs = ['feedback', 'line-groups', 'jokes', 'tips', 'reports'];
   const selectTab = (tab, focus = false) => {
     if (!authorized) return;
     if (!tabs.includes(tab)) tab = 'feedback';
+    const changed = activeTab !== tab;
+    activeTab = tab;
     for (const name of tabs) {
       const button = $(`tab-${name}`);
       const selected = name === tab;
       button.setAttribute('aria-selected', String(selected)); button.tabIndex = selected ? 0 : -1;
-      $(name === 'feedback' ? 'admin-content' : name === 'jokes' ? 'jokes-panel' : name === 'reports' ? 'reports-panel' : 'line-groups-panel').hidden = !selected;
+      $(name === 'feedback' ? 'admin-content' : name === 'line-groups' ? 'line-groups-panel' : `${name}-panel`).hidden = !selected;
     }
     if (view?.location && view.location.hash !== `#${tab}`) view.location.hash = tab;
     if (focus) $(`tab-${tab}`).focus();
     if (tab === 'reports') return reportsPanel?.open();
-    if (tab === 'jokes') return jokesPanel?.open();
+    if (tab === 'jokes' && changed) return jokesPanel?.open();
+    if (tab === 'tips') return tipsPanel?.open();
   };
-  for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel', 'reports-panel']) $(id).hidden = true;
+  for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel', 'tips-panel', 'reports-panel']) $(id).hidden = true;
   const hideData = () => {
     authorized = false;
-    jokesPanel?.clear(); reportsPanel?.clear();
+    activeTab = undefined;
+    jokesPanel?.clear(); tipsPanel?.clear(); reportsPanel?.clear();
     rows = [];
-    for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel', 'reports-panel']) $(id).hidden = true;
+    for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel', 'tips-panel', 'reports-panel']) $(id).hidden = true;
     $('feedback-rows').replaceChildren();
     for (const id of ['pending-groups', 'allowed-groups', 'group-actions']) $(id).replaceChildren();
     $('count').textContent = '';
@@ -51,7 +58,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
       const option = node('option', label); option.value = value; select.append(option);
     }
   };
-  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=6abe362')).getCloudRuntime() : null);
+  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=ab8d031')).getCloudRuntime() : null);
   if (!rt?.auth.session) {
     hideData();
     $('access').textContent = '登入後才能查看回饋後台'; $('login').hidden = false;
@@ -62,6 +69,9 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
   const userId = rt.auth.session.user.id;
   jokesClient ??= createJokesClient({ auth: rt.auth, client });
   jokesPanel = initJokesPanel({ doc, auth: rt.auth, client: jokesClient, confirm, timers: view?.setTimeout ? view : globalThis,
+    onDenied: () => { ++epoch; ++groupEpoch; hideData(); $('access').textContent = '沒有權限'; } });
+  tipsClient ??= createTipsClient({ auth: rt.auth, client });
+  tipsPanel = initTipsPanel({ doc, auth: rt.auth, client: tipsClient, confirm,
     onDenied: () => { ++epoch; ++groupEpoch; hideData(); $('access').textContent = '沒有權限'; } });
   reportsClient ??= createReportsClient({ auth: rt.auth, client });
   reportsPanel = initReportsPanel({ doc, auth: rt.auth, client: reportsClient, confirm,
@@ -363,10 +373,10 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
 }
 
 if (typeof document !== 'undefined') {
-  const { bindThemeToggle } = await import('../shared/theme.js?v=6abe362');
+  const { bindThemeToggle } = await import('../shared/theme.js?v=ab8d031');
   bindThemeToggle(document.getElementById('theme'));
   initAdmin().catch(() => {
-    for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel', 'reports-panel']) document.getElementById(id).hidden = true;
+    for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel', 'tips-panel', 'reports-panel']) document.getElementById(id).hidden = true;
     document.getElementById('access').textContent = '後台暫時無法使用，請重新載入';
   });
 }

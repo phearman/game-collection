@@ -1,15 +1,15 @@
-import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave } from './logic.js?v=6abe362';
-import { createProfile } from '../../shared/profile.js?v=6abe362';
-import { LocalStore } from '../../shared/stores/local.js?v=6abe362';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=6abe362';
-import { bindThemeToggle } from '../../shared/theme.js?v=6abe362';
-import { play as playSound, music } from '../../shared/sound.js?v=6abe362';
-import { setupHelp } from '../../shared/help.js?v=6abe362';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=6abe362';
-import { settlePlay } from '../../shared/settle.js?v=6abe362';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=6abe362';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=6abe362';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=6abe362';
+import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave } from './logic.js?v=ab8d031';
+import { createProfile } from '../../shared/profile.js?v=ab8d031';
+import { LocalStore } from '../../shared/stores/local.js?v=ab8d031';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=ab8d031';
+import { bindThemeToggle } from '../../shared/theme.js?v=ab8d031';
+import { play as playSound, music } from '../../shared/sound.js?v=ab8d031';
+import { setupHelp } from '../../shared/help.js?v=ab8d031';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=ab8d031';
+import { settlePlay } from '../../shared/settle.js?v=ab8d031';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=ab8d031';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=ab8d031';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=ab8d031';
 
 const GAME_ID = 'sudoku';
 const $ = (id) => document.getElementById(id);
@@ -114,7 +114,7 @@ function render() {
   numbers.forEach((btn) => { btn.disabled = locked || !!state.puzzle[cursor]; });
   $('status').textContent = restarting ? '正在產生唯一解題目…' : state.result ? '本局已完成' : bad.size ? `${bad.size} 格有衝突，紅色 ! 格可修改` : state.puzzle[cursor] ? '這是題目給定格，請選空格' : noteMode ? '筆記模式：再按同一數字可移除' : '選一格，再填入數字';
   renderTime();
-  if (isDaily) showDailyBanner(document, daily);
+  if (isDaily) showDailyBanner(document, daily, dailyError);
   $('overlay').hidden = !state.result;
   music(!state.result && !ended); // RS68:遊玩中播背景音樂(選曲見 ? 玩法);完成即淡出
   $('again').disabled = !ended || ended.pending || restarting;
@@ -150,9 +150,11 @@ function finish(result) {
       try {
         daily.row = await dailyClient.finish(GAME_ID, daily.day, result, null);
         daily.completed = true;
+        dailyError = '';
       } catch (error) {
-        ended = { dailyRetry: true }; showDailyBanner(document, daily, error.message); render();
-        $('daily-banner').textContent = error.message; return;
+        // RS73:錯誤狀態保留到重試成功,每次 render 都帶入,說明列才不會在錯誤橫幅下重新出現。
+        dailyError = error.message;
+        ended = { dailyRetry: true }; render(); return;
       }
     }
     const out = await settlePlay(profile, GAME_ID, { result, score: snap.score,

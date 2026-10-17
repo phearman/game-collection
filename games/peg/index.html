@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>孔明棋 · 遊戲集錦</title>
+  <link rel="stylesheet" href="../../shared/style.css?v=ab8d031">
+  <link rel="stylesheet" href="style.css?v=ab8d031">
+</head>
+<body>
+  <main class="page page-narrow">
+    <header class="topbar">
+      <div class="navigation"><a class="btn" href="../../" aria-label="回到大廳" title="回到大廳"><span aria-hidden="true">←</span><span class="topbar-label">大廳</span></a></div>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">剩餘</div><div class="stat-value" id="pegs">32</div></div>
+        <div class="stat"><div class="stat-label">步數</div><div class="stat-value" id="moves">0</div></div>
+        <div class="stat"><div class="stat-label">最佳</div><div class="stat-value" id="best">0</div></div>
+        <button class="btn" id="theme" type="button"></button>
+      </div>
+    </header>
+    <div class="actions">
+      <button class="btn" id="new" type="button">↻ 新遊戲</button>
+      <button class="btn" id="undo" type="button">↶ 復原</button>
+      <button class="btn" id="hint-button" type="button">💡 提示</button>
+      <span id="assist-label" hidden>🧩 輔助局</span>
+    </div>
+    <h1>孔明棋</h1>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+    <div class="board-wrap">
+      <div class="board" id="board" role="group" aria-label="孔明棋棋盤" aria-describedby="hint"></div>
+      <div class="overlay" id="overlay" hidden role="region" aria-labelledby="overlay-title" aria-live="polite">
+        <p class="overlay-title" id="overlay-title"></p>
+        <div class="overlay-info" id="overlay-info"></div>
+        <div class="overlay-actions">
+          <button class="btn" id="again" type="button">↻ 新遊戲</button>
+        </div>
+      </div>
+    </div>
+    <p class="hint" id="hint">點棋子再點淡點落子 · 方向鍵移動 · Enter 或空白鍵選取／落子</p>
+  </main>
+  <dialog class="help confirm" id="assist-dlg" aria-labelledby="assist-title" aria-describedby="assist-text">
+    <h2 class="help-title" id="assist-title">使用提示?</h2>
+    <p id="assist-text">使用提示後本局變成輔助局：不刷新最佳、XP 打對折、不解孔明棋成就(算不出來時不算)。要繼續嗎?</p>
+    <div class="confirm-actions">
+      <button class="btn" type="button" data-act="assist">繼續</button>
+      <button class="btn" type="button" data-act="cancel" autofocus>取消</button>
+    </div>
+  </dialog>
+  <script type="module" src="ui.js?v=ab8d031"></script>
+</body>
+</html>

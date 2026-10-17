@@ -18,6 +18,7 @@ export const SOUNDS = table({
   crash: ['sawtooth', 120, 40, 0.24],
   save: ['sine', 350, 700, 0.20],
   goal: ['triangle', 660, 1320, 0.35],
+  fanfare: ['triangle', 523, 523, 0.55, { steps: [0, 4, 7, 12, 7, 12] }],
 });
 
 // 各遊戲專屬音色(PL56)：只列與預設不同的音；遊戲頁依網址 games/{id}/ 自動套用。

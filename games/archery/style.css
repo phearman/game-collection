@@ -69,6 +69,45 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
 .overlay-info p { margin: 2px 0; }
 .overlay-info .overlay-xp { font-size: 17px; font-weight: 700; }
 
+/* 慶祝佔自己的版面,不覆蓋結算按鈕;彩帶只在橫幅內飄落。 */
+.perfect-celebration {
+  position: relative; flex: none; box-sizing: border-box; width: calc(100% - 16px);
+  padding: 10px 8px; overflow: hidden; border-radius: 10px; text-align: center;
+  background: #18213e; color: #fff4ba; border: 2px solid #ffd65c; pointer-events: none;
+}
+.perfect-celebration[hidden] { display: none; }
+.perfect-celebration strong { position: relative; display: block; font-size: clamp(36px, 12vw, 56px); line-height: 1.1; }
+.perfect-celebration span, .perfect-celebration small { position: relative; display: block; color: #fff; line-height: 1.5; }
+.perfect-celebration span { font-size: 16px; font-weight: 700; }
+.perfect-celebration small { font-size: 12px; }
+.perfect-confetti { position: absolute; inset: 0; overflow: hidden; }
+.perfect-confetti i {
+  position: absolute; top: -14px; left: 5%; width: 7px; height: 12px; background: #ffd65c;
+  animation: perfect-confetti-fall 1.25s linear infinite;
+}
+.perfect-confetti i:nth-child(3n) { background: #ff719a; }
+.perfect-confetti i:nth-child(3n + 1) { background: #6be3ff; }
+.perfect-confetti i:nth-child(2n) { animation-delay: -0.7s; }
+.perfect-confetti i:nth-child(3n) { animation-delay: -0.35s; }
+.perfect-confetti i:nth-child(2) { left: 13%; }
+.perfect-confetti i:nth-child(3) { left: 21%; }
+.perfect-confetti i:nth-child(4) { left: 29%; }
+.perfect-confetti i:nth-child(5) { left: 37%; }
+.perfect-confetti i:nth-child(6) { left: 45%; }
+.perfect-confetti i:nth-child(7) { left: 53%; }
+.perfect-confetti i:nth-child(8) { left: 61%; }
+.perfect-confetti i:nth-child(9) { left: 69%; }
+.perfect-confetti i:nth-child(10) { left: 77%; }
+.perfect-confetti i:nth-child(11) { left: 85%; }
+.perfect-confetti i:nth-child(12) { left: 93%; }
+@keyframes perfect-confetti-fall {
+  to { transform: translateY(170px) rotate(300deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .perfect-confetti { display: none; }
+  .perfect-confetti i { animation: none; }
+}
+
 .hint { font-size: 13px; color: var(--text-sub); text-align: center; margin: 12px 0 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .demo-field { display: block; width: 100%; max-width: 260px; margin: 0 auto; border: 1px solid var(--border); border-radius: 8px; background: var(--ar-bg); }

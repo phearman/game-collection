@@ -1,23 +1,23 @@
 // Wordle 畫面層:狀態、渲染、輸入。規則一律呼叫 logic.js(遊戲)與 shared/profile.js(紀錄),這裡不寫規則。
 import {
-  WORD_LEN, MAX_GUESSES, DIFFICULTIES, evaluate, isWord, initState, typeState, eraseState, guessError, submitState,
+  WORD_LEN, MAX_GUESSES, DIFFICULTIES, maxGuesses, starterWords, evaluate, isWord, initState, typeState, eraseState, guessError, submitState,
   keyStates, scoreFor, overlayFor, toSave, fromSave, isValidState, routeKey,
   assistState, letterHint, canReveal, revealState, candidatesState, fillState, visibleCandidates,
-  initDailyState, shareMarks,
-} from './logic.js?v=6abe362';
-import { HINTS } from './hints.js?v=6abe362';
-import { createProfile } from '../../shared/profile.js?v=6abe362';
-import { LocalStore } from '../../shared/stores/local.js?v=6abe362';
-import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js?v=6abe362';
-import { bindThemeToggle } from '../../shared/theme.js?v=6abe362';
-import { play, music } from '../../shared/sound.js?v=6abe362';
-import { setupHelp } from '../../shared/help.js?v=6abe362';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=6abe362';
-import { settlePlay } from '../../shared/settle.js?v=6abe362';
-import { quitBestNote } from '../../shared/quit.js?v=6abe362';
-import { load, save } from '../../shared/storage.js?v=6abe362';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=6abe362';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=6abe362';
+  shareMarks,
+} from './logic.js?v=ab8d031';
+import { HINTS } from './hints.js?v=ab8d031';
+import { createProfile } from '../../shared/profile.js?v=ab8d031';
+import { LocalStore } from '../../shared/stores/local.js?v=ab8d031';
+import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js?v=ab8d031';
+import { bindThemeToggle } from '../../shared/theme.js?v=ab8d031';
+import { play, music } from '../../shared/sound.js?v=ab8d031';
+import { setupHelp } from '../../shared/help.js?v=ab8d031';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=ab8d031';
+import { settlePlay } from '../../shared/settle.js?v=ab8d031';
+import { quitBestNote } from '../../shared/quit.js?v=ab8d031';
+import { load, save } from '../../shared/storage.js?v=ab8d031';
+import { dailyRequested, dailySlot } from '../../shared/daily.js?v=ab8d031';
+import { showDailyBanner } from '../../shared/daily-ui.js?v=ab8d031';
 
 const GAME_ID = 'wordle';
 const DIFF_KEY = 'difficulty:wordle'; // 上次選的難度(開新局用)
@@ -29,8 +29,7 @@ let daily = null;
 let dailyClient = null;
 let dailyError = '';
 if (isDaily) {
-  try { dailyClient = await browserDailyClient(); daily = await prepareDaily(dailyClient, GAME_ID); }
-  catch (error) { dailyError = error.message; }
+  dailyError = 'Wordle 已不在每日挑戰,改玩踩地雷每日盤';
 }
 
 let state;
@@ -38,7 +37,7 @@ let best = 0; // 本局開始前的最佳分數(profile 管)
 let ended = null; // 本局已結算:{ xp, newAchievements, isBest, bestBefore, score };結算中為 { pending: true }
 let gameNo = 0; // 每開一局 +1;非同步結算回來時,局號不同就不動畫面
 let pendingDifficulty = null; // 確認放棄後要切換的難度
-let activeHint = null; // 目前顯示的提示(letters / sentence / candidates);畫面狀態,提示進度本身在 state
+let activeHint = null; // 目前顯示的提示(letters / category / sentence / candidates / chinese);畫面狀態,提示進度本身在 state
 
 // 紀錄寫入依序執行,避免存檔與結算交錯。
 let queue = Promise.resolve();
@@ -47,10 +46,10 @@ const run = (fn) => { queue = queue.then(fn).catch((e) => console.error(e)); ret
 // 遊戲 state 的進度欄位 → progress.js 的 §4.2 判斷用。
 const progressOf = (s) => ({ everWon: s.won, moves: s.guesses.length, settled: !!ended });
 
-// 難度選單值:normal / hard / assist(輔助模式 = normal + 輔助局,RS9)。
+// 難度選單值:normal / hard / assist(輔助模式 = normal + 輔助局,RS9)/ easy(簡單 = 輔助局 + 8 次機會,RS66)。
 function difficultyPref() {
   const d = load(DIFF_KEY, 'normal');
-  return DIFFICULTIES.includes(d) || d === 'assist' ? d : 'normal';
+  return DIFFICULTIES.includes(d) || d === 'assist' || d === 'easy' ? d : 'normal';
 }
 
 // 最近 10 局答案(stats.detail.recent)⇒ 出題時避開。
@@ -66,8 +65,8 @@ async function startNew(difficulty = difficultyPref()) {
   await run(async () => {
     const recent = await recentAnswers();
     if (no !== gameNo) return;
-    state = difficulty === 'assist'
-      ? initState(Math.random, 'normal', recent, { assist: true })
+    state = difficulty === 'easy' ? initState(Math.random, 'normal', recent, { easy: true })
+      : difficulty === 'assist' ? initState(Math.random, 'normal', recent, { assist: true })
       : initState(Math.random, difficulty, recent);
     ended = null;
     activeHint = null;
@@ -103,7 +102,7 @@ function finish(result) {
     }
     const out = await settlePlay(profile, GAME_ID, {
       result: isDaily ? daily.row.result : result, score: snap.score, difficulty: snap.difficulty,
-      detail: { guesses: snap.guesses, answer: snap.answer,
+      detail: { guesses: snap.guesses, answer: snap.answer, ...(state.easy ? { easy: true } : {}),
         ...(isDaily ? { daily: daily.day, daily_play_id: daily.row.detail.play_id } : {}) }, assist: snap.assist,
     });
     if (!out) { if (no === gameNo) { if (isDaily) location.href = './'; else startNew(); } return; } // 結算失敗且選「不存了」
@@ -142,15 +141,26 @@ function renderHints() {
   $('hint').hidden = isDaily || !!state.assist || !!ended;
   $('hints').hidden = !on;
   document.querySelector('.page').classList.toggle('hinting', on);
-  if (!on) return;
+  if (!on) { document.querySelector('.page').classList.toggle('starting', false); return; }
   for (const btn of $('hints').querySelectorAll('[data-hint]')) btn.setAttribute('aria-pressed', String(btn.dataset.hint === activeHint));
   $('hints').querySelector('[data-hint="letters"]').disabled = activeHint === 'letters' && !canReveal(state);
-  $('hint-body').hidden = !activeHint;
   $('hint-letters').hidden = activeHint !== 'letters';
   $('hint-letters').textContent = letterHint(state).map((ch) => ch ?? '_').join(' ');
+  // 建議開局字(RS66):獨立一列,只看「還沒猜」,與目前開著哪種提示無關;猜一次就消失。
+  const starters = starterWords(state);
+  const showStarters = starters.length > 0;
+  $('hint-body').hidden = !activeHint;
+  $('hint-starters').hidden = !showStarters;
+  document.querySelector('.page').classList.toggle('starting', showStarters);
+  $('hint-starters').innerHTML = showStarters ? `<span class="hint-label">試試開局字</span>${starters
+    .map((w) => `<button class="btn" type="button" data-word="${esc(w)}">${esc(w)}</button>`).join('')}` : '';
   $('hint-sentence').hidden = activeHint !== 'sentence';
   const h = HINTS[state.answer];
-  $('hint-sentence').innerHTML = h ? `${esc(h.en)}<span class="zh">${esc(h.zh)}</span>` : '';
+  $('hint-sentence').textContent = h ? h.en : ''; // RS66:中文意思拆到 🈶 中文
+  $('hint-category').hidden = activeHint !== 'category';
+  $('hint-category').innerHTML = h?.cat ? `類別:<b>${esc(h.cat)}</b>` : '';
+  $('hint-chinese').hidden = activeHint !== 'chinese';
+  $('hint-chinese').innerHTML = h ? `中文:<b>${esc(h.zh)}</b><span class="hint-note">很強的提示,輔助局照常計分</span>` : '';
   const cands = visibleCandidates(state); // 隨新線索過濾,不重抽(H1)
   $('hint-candidates').hidden = activeHint !== 'candidates';
   $('hint-candidates').innerHTML = cands.map((w) => `<button class="btn" type="button" data-word="${esc(w)}">${esc(w)}</button>`).join('')
@@ -247,7 +257,8 @@ function rowHtml(word, marks) {
 function render() {
   if (!state) return;
   const rows = [];
-  for (let r = 0; r < MAX_GUESSES; r++) {
+  document.querySelector('.page').classList.toggle('easy', !!state.easy);
+  for (let r = 0; r < maxGuesses(state); r++) {
     const g = state.guesses[r];
     if (g) rows.push(rowHtml(g, evaluate(g, state.answer)));
     else if (r === state.guesses.length && !state.over) rows.push(rowHtml(state.current, null));
@@ -262,7 +273,8 @@ function render() {
   const score = scoreFor(state);
   $('score').textContent = score.toLocaleString();
   $('best').textContent = (state.assist ? best : Math.max(best, score)).toLocaleString(); // 輔助局不刷新最佳
-  $('difficulty').value = state.assist && state.difficulty === 'normal' && difficultyPref() === 'assist' ? 'assist' : state.difficulty;
+  $('difficulty').value = state.easy ? 'easy'
+    : state.assist && state.difficulty === 'normal' && difficultyPref() === 'assist' ? 'assist' : state.difficulty;
   $('difficulty').disabled = isDaily;
   if (isDaily) showDailyBanner(document, daily);
   renderHints();
@@ -307,7 +319,6 @@ function renderOverlay() {
     button.textContent = ended?.dailyRetry ? '重試送出成績' : '玩一般模式';
     $('overlay-actions').replaceChildren(button);
   } else $('overlay-actions').innerHTML = '<button class="btn" data-act="new">再玩一次</button>';
-  if (isDaily) appendDailySummary(document, $('overlay-info'), daily, daily.row.detail?.marks ?? []);
   overlay.hidden = false;
 }
 
@@ -352,7 +363,7 @@ $('new').addEventListener('click', () => newGame());
 $('difficulty').addEventListener('change', (e) => {
   const d = e.target.value;
   if (ended?.pending) {
-    e.target.value = state.difficulty;
+    render();
     return;
   }
   save(DIFF_KEY, d);
@@ -368,12 +379,12 @@ $('quit-dlg').addEventListener('click', (e) => {
     finish('quit');
     startNew(d ?? undefined);
   } else {
-    $('difficulty').value = state.difficulty; // 不放棄:難度選單還原
+    render(); // 不放棄:難度選單還原
   }
 });
 $('quit-dlg').addEventListener('cancel', () => {
   pendingDifficulty = null;
-  $('difficulty').value = state.difficulty;
+  render();
 });
 // 關閉後瀏覽器會把焦點還給開啟前的按鈕;在 close 事件(Escape 與按鈕關閉都會觸發)再移回遊戲區(W2b)。
 $('quit-dlg').addEventListener('close', focusGame);
@@ -420,22 +431,18 @@ buildKeyboard();
 
 // 載入:有存檔就自動還原(§4.1),否則開新局。
 const saved = await profile.loadSave(GAME_ID);
-if (isDaily && (!daily || (daily.completed && !matchesDailySave(saved, daily, isValidState)))) {
+if (isDaily) {
   ended = { closed: true };
   $('difficulty').disabled = true;
   $('hint').hidden = true;
   $('keyboard').hidden = true;
-  showDailyClosed(document, daily, dailyError);
-} else if (isDaily) {
-  state = matchesDailySave(saved, daily, isValidState) ? fromSave(saved) : initDailyState(daily);
-  best = await profile.best(GAME_ID);
-  profile.startTimer(GAME_ID);
-  if (daily.completed && !state.over) {
-    state = undefined; ended = { closed: true }; $('keyboard').hidden = true; showDailyClosed(document, daily);
-  } else {
-    await profile.saveState(GAME_ID, toSave(state)); render();
-    if (state.over) finish(resultOnGameOver({ everWon: state.won }));
+  showDailyBanner(document, null, dailyError);
+  const wrap = document.querySelector('.board-wrap'); wrap.hidden = true;
+  const box = document.createElement('section'); box.className = 'daily-summary';
+  for (const [text, href] of [['玩一般模式', './'], ['前往今日挑戰', '../minesweeper/?daily=1']]) {
+    const link = document.createElement('a'); link.className = 'btn'; link.textContent = text; link.href = href; box.append(link);
   }
+  wrap.before(box);
 } else if (saved && !saved.daily && isValidState(saved)) {
   state = fromSave(saved);
   if (state.assist) activeHint = state.candidates ? 'candidates' : state.revealed?.length ? 'letters' : null;
@@ -456,6 +463,12 @@ const demoRender = ({ words, typed }) => {
   return `<div class="demo-board">${rows.join('')}</div>`;
 };
 const zz = 'zzzzz';
+// 開局字示範的結果說明:著色由 logic 實算。
+const starterResult = () => {
+  const marks = evaluate('audio', DEMO_ANSWER);
+  const pick = (kind) => [...'audio'].filter((_, i) => marks[i] === kind).map((c) => c.toUpperCase()).join('、');
+  return [pick('correct') && `${pick('correct')} 綠`, pick('present') && `${pick('present')} 黃`, pick('absent') && `${pick('absent')} 灰,一次排除好幾個母音`].filter(Boolean).join(';');
+};
 setupHelp({
   gameId: GAME_ID,
   title: 'Wordle 玩法',
@@ -466,13 +479,16 @@ setupHelp({
       <li><b>綠</b>=字母和位置都對;<b>黃</b>=有這個字母但位置不對;<b>灰</b>=沒有這個字母。</li>
       <li>必須是字庫裡的單字,否則不算一次。</li>
       <li>困難模式:綠字要留在原位、黃字一定要用上。</li>
-      <li>卡住了?選「輔助」模式,或按「💡 提示」:字母挖空、例句挖空(附中文)、4 個候選字。用了提示就是<b>輔助局</b>:不刷新最佳、XP 打對折。</li>
+      <li>卡住了?選「輔助」模式,或按「💡 提示」:建議開局字、字母挖空、題目類別、英文例句挖空、4 個候選字、中文意思。用了提示就是<b>輔助局</b>:不刷新最佳、XP 打對折。</li>
+      <li>「簡單」模式:8 次機會,開局就是輔助局。</li>
       <li>綠格有粗框、黃格有點點;「◐ 高對比」改成橘/藍。</li>
-      <li>勝利條件:6 次內猜中。分數 =(7 − 次數)× 100,最佳 = 單局最高分。</li>
+      <li>勝利條件:6 次內猜中(簡單 8 次)。分數 =(機會數 + 1 − 次數)× 100,最佳 = 單局最高分。</li>
     </ol>`,
   demo: {
     render: demoRender,
     steps: [
+      { before: demoRows([], 'audio'), after: demoRows(['audio'], null), kind: 'ok', caption: '輔助局還沒猜時,點開局字 AUDIO 再按 Enter…',
+        result: `…${starterResult()}` },
       { before: demoRows([], 'angle'), after: demoRows(['angle'], null), caption: '答案是 APPLE,先猜 ANGLE…', result: '…A、L、E 綠:字母和位置都對' },
       { before: demoRows(['angle'], 'paper'), after: demoRows(['angle', 'paper'], null), caption: '再猜 PAPER…', result: '…P、A、E 黃:有但位置不對;R 灰:沒有' },
       {

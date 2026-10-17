@@ -2,8 +2,8 @@
 // profile.finishPlay 是一次提交:失敗會把已寫的紀錄整批還原再丟錯。這裡接住錯誤,跳出共用對話框
 // 「重試 / 不存了,再玩一次」,不讓畫面停在「結算中」。重試 = 從目前的資料重新算一次;不存了 = 什麼都不記、開新局。
 
-import { isCloudOffline, OFFLINE_FINISH_TEXT } from './cloud-status.js?v=6abe362';
-import { failureReason } from './stores/errors.js?v=6abe362';
+import { isCloudOffline, OFFLINE_FINISH_TEXT } from './cloud-status.js?v=ab8d031';
+import { failureReason } from './stores/errors.js?v=ab8d031';
 
 export const STORAGE_WARNING_TEXT = '這台裝置的儲存空間不足或無法寫入,進度可能沒存到;請到「我的紀錄」匯出備份';
 const storageWarned = new WeakSet();

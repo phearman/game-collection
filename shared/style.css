@@ -1,4 +1,4 @@
-@import url("skins.css?v=6abe362");
+@import url("skins.css?v=ab8d031");
 :root {
   --bg: #f6f5f1;
   --surface: #ffffff;
@@ -264,4 +264,5 @@ a.card:hover { border-color: var(--accent); }
 .daily-games { display: flex; flex-wrap: wrap; gap: 8px; }
 .daily-games .btn { flex: 1 1 140px; white-space: normal; overflow-wrap: anywhere; }
 .daily-banner { font-size: 14px; margin: 8px 0; overflow-wrap: anywhere; }
+.daily-note { font-size: 13px; color: var(--text-sub); margin: 4px 0 0; }
 .daily-summary { padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); }

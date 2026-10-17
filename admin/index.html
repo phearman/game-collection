@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>意見回饋後台 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=6abe362">
+  <link rel="stylesheet" href="../shared/style.css?v=ab8d031">
   <style>
     .page.admin { max-width: 1280px; }
     .admin-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin: 20px 0; }
@@ -33,10 +33,10 @@
     .admin details { margin-top: 12px; white-space: pre-wrap; }
     .admin summary { cursor: pointer; }
     .admin [role="status"] { overflow-wrap: anywhere; }
-    #jokes-panel label { display: grid; gap: 4px; margin-block: 12px; }
-    #jokes-panel textarea, #jokes-panel select, #jokes-panel input[type="date"] { width: 100%; min-width: 0; box-sizing: border-box; }
+    #jokes-panel label, #tips-panel label { display: grid; gap: 4px; margin-block: 12px; }
+    #jokes-panel textarea, #jokes-panel select, #jokes-panel input[type="date"], #tips-panel textarea, #tips-panel select { width: 100%; min-width: 0; box-sizing: border-box; }
     #jokes-panel details { white-space: normal; }
-    #jokes-panel .direct-approve { display: flex; align-items: center; gap: 8px; }
+    #jokes-panel .direct-approve, #tips-panel .direct-approve { display: flex; align-items: center; gap: 8px; }
     .joke-body { white-space: pre-wrap; overflow-wrap: anywhere; }
     .joke-submitter { overflow-wrap: anywhere; }
     #reports-panel label { display: grid; gap: 4px; margin-block: 10px; }
@@ -82,6 +82,7 @@
       <button class="btn" id="tab-feedback" type="button" role="tab" aria-selected="true" aria-controls="admin-content">意見回饋</button>
       <button class="btn" id="tab-line-groups" type="button" role="tab" aria-selected="false" aria-controls="line-groups-panel" tabindex="-1">LINE 群組</button>
       <button class="btn" id="tab-jokes" type="button" role="tab" aria-selected="false" aria-controls="jokes-panel" tabindex="-1">笑話</button>
+      <button class="btn" id="tab-tips" type="button" role="tab" aria-selected="false" aria-controls="tips-panel" tabindex="-1">小常識</button>
       <button class="btn" id="tab-reports" type="button" role="tab" aria-selected="false" aria-controls="reports-panel" tabindex="-1">回報</button>
     </div>
     <p id="access" role="status">確認權限中…</p>
@@ -119,6 +120,9 @@
     </section>
     <section class="admin-card" id="jokes-panel" role="tabpanel" aria-labelledby="tab-jokes" tabindex="0" hidden>
       <h2>笑話審核</h2>
+      <p id="jokes-purge-summary" role="status"></p>
+      <button class="btn" id="jokes-purge" type="button" disabled>立即清除到期下架笑話</button>
+      <p id="jokes-purge-status" role="status"></p>
       <p>核准前請確認闔家適宜，沒有政治、宗教、歧視、成人內容或個人資料。</p>
       <details>
         <summary>批次匯入（最多 200 則）</summary>
@@ -162,6 +166,29 @@
       <h3>已上架笑話</h3><div id="approved-jokes"></div>
       <h3>已下架笑話</h3><div id="rejected-jokes"></div>
     </section>
+    <section class="admin-card" id="tips-panel" role="tabpanel" aria-labelledby="tab-tips" tabindex="0" hidden>
+      <h2>小常識審核</h2>
+      <p>核准前請確認事實正確、出處可查證，健康與飲食類不得有劑量、療效或偏方；內容須是自己的話，不可照抄。</p>
+      <details>
+        <summary>批次匯入（最多 200 則）</summary>
+        <p>貼上 CSV（可含標題列「分類,內容,出處」），或每行「分類|內容|出處」。三欄都必填；出處寫機構與標題，不放網址。CSV 含逗號或換行時用雙引號包住。</p>
+        <label for="tips-import-text">匯入文字</label>
+        <textarea id="tips-import-text" rows="8" spellcheck="false"></textarea>
+        <label class="direct-approve"><input id="tips-direct-approve" type="checkbox">直接核准（預設匯入待審）</label>
+        <button class="btn" id="tips-import-check" type="button">檢查與預覽</button>
+        <button class="btn" id="tips-import-submit" type="button" disabled>確認預覽並匯入</button>
+        <p id="tips-import-status" role="status"></p>
+        <div id="tips-import-preview"></div>
+      </details>
+      <div class="admin-filters"><label>狀態<select id="tips-state-filter"></select></label></div>
+      <p>依待審、已上架、已下架排序，同狀態由新到舊。新核准的小常識從隔天起才會出現在 #早安 的今日小常識。</p>
+      <button class="btn" id="reload-tips" type="button">重新載入</button>
+      <button class="btn" id="tips-prev" type="button" disabled>上一頁</button>
+      <button class="btn" id="tips-next" type="button" disabled>下一頁</button>
+      <p id="tips-page" role="status"></p>
+      <p id="tips-status" role="status"></p>
+      <div id="tips-list"></div>
+    </section>
     <section class="admin-card" id="reports-panel" role="tabpanel" aria-labelledby="tab-reports" tabindex="0" hidden>
       <h2>工作回報(測試)</h2>
       <p>僅限受邀測試。專案只用代稱與假資料，請勿填入真實專案名稱、公司資料、客戶資料或真實單號。</p>
@@ -198,6 +225,6 @@
       <button class="btn" id="reports-purge" type="button">清空所有測試資料</button>
     </section>
   </main>
-  <script type="module" src="ui.js?v=6abe362"></script>
+  <script type="module" src="ui.js?v=ab8d031"></script>
 </body>
 </html>

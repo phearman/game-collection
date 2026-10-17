@@ -122,3 +122,5 @@
 .overlay-actions .btn { white-space: nowrap; }
 
 .hint { font-size: 13px; color: var(--text-sub); text-align: center; margin: 12px 0 0; }
+
+.cell.daily-start { outline: 2px solid var(--accent, #4878bc); outline-offset: -3px; }

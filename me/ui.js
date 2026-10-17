@@ -1,14 +1,14 @@
 // 畫面 C「我的」:等級、成就、各遊戲統計、最近 50 局、匯出/匯入。只顯示 profile.summary(),不寫規則。
-import { createProfile } from '../shared/profile.js?v=6abe362';
-import { LocalStore } from '../shared/stores/local.js?v=6abe362';
-import { bindThemeToggle } from '../shared/theme.js?v=6abe362';
-import { ACHIEVEMENTS, xpBreakdown } from '../shared/progress.js?v=6abe362';
-import { XP_EXAMPLES, signedXp } from '../shared/xp-explain.js?v=6abe362';
-import { cloudEnabled } from '../shared/supabase-config.js?v=6abe362';
-import { bindGlobalMusicSelect } from '../shared/help.js?v=6abe362';
+import { createProfile } from '../shared/profile.js?v=ab8d031';
+import { LocalStore } from '../shared/stores/local.js?v=ab8d031';
+import { bindThemeToggle } from '../shared/theme.js?v=ab8d031';
+import { ACHIEVEMENTS, xpBreakdown } from '../shared/progress.js?v=ab8d031';
+import { XP_EXAMPLES, signedXp } from '../shared/xp-explain.js?v=ab8d031';
+import { cloudEnabled } from '../shared/supabase-config.js?v=ab8d031';
+import { bindGlobalMusicSelect } from '../shared/help.js?v=ab8d031';
 
 const $ = (id) => document.getElementById(id);
-const accountReady = cloudEnabled ? await (await import('./account.js?v=6abe362')).initAccount() : null;
+const accountReady = cloudEnabled ? await (await import('./account.js?v=ab8d031')).initAccount() : null;
 const profile = await createProfile({ store: new LocalStore() });
 accountReady?.();
 const RESULT = { win: '勝', lose: '敗', quit: '放棄' };
@@ -76,7 +76,7 @@ async function render() {
   $('plays').replaceChildren(table(
     [['時間'], ['遊戲'], ['結果'], ['分數', 1], ['時長', 1], ['XP', 1]],
     s.plays.map((p) => [
-      mdhm(p.ended_at), titles[p.game_id] ?? p.game_id, (RESULT[p.result] ?? p.result) + (p.is_best ? ' 🎉' : '') + (p.detail?.assist ? ' · 輔助' : '') + (p.detail?.daily ? ' · 今日挑戰' : ''),
+      mdhm(p.ended_at), titles[p.game_id] ?? p.game_id, (RESULT[p.result] ?? p.result) + (p.is_best ? ' 🎉' : '') + (p.detail?.easy ? ' · 簡單(輔助)' : p.detail?.assist ? ' · 輔助' : '') + (p.detail?.daily ? ' · 今日挑戰' : ''),
       p.score.toLocaleString(), ms(p.duration_sec), `+${p.xp_gained}`,
     ]),
     '還沒有紀錄。',

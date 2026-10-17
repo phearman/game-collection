@@ -1,0 +1,70 @@
+.page-narrow { max-width: 500px; }
+.navigation, .stats { display: flex; align-items: center; gap: 4px; }
+.stat { min-width: 44px; }
+.btn { white-space: nowrap; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#assist-label { color: var(--text-sub); font-size: 12px; }
+h1 { margin: 16px 0 4px; font-size: 22px; }
+.status { font-size: 14px; color: var(--text-sub); min-height: 26px; margin: 4px 0 10px; }
+.confirm .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 16px; }
+
+:root {
+  --wood-a: #d9a866; --wood-b: #b97f3f; --wood-edge: #7a4d1d;
+  --hole: #5b3612; --peg-hi: #9fd0ff; --peg-mid: #2f7fd0; --peg-lo: #123e70; --peg-ring: transparent;
+  --mark: #fff6d8; --hint: #ffd84a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wood-a: #8a5f30; --wood-b: #5f3d1a; --wood-edge: #2d1b08;
+    --hole: #1e1206; --peg-ring: #cfe6ff;
+  }
+}
+:root[data-theme="dark"] {
+  --wood-a: #8a5f30; --wood-b: #5f3d1a; --wood-edge: #2d1b08;
+  --hole: #1e1206; --peg-ring: #cfe6ff;
+}
+
+.board-wrap { position: relative; }
+.board {
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0;
+  padding: 6px; border-radius: 14px; border: 2px solid var(--wood-edge);
+  background: repeating-linear-gradient(100deg, #0000 0 9px, #0001 9px 11px), linear-gradient(135deg, var(--wood-a), var(--wood-b));
+}
+.cell { display: grid; place-items: center; position: relative; aspect-ratio: 1; min-width: 0; padding: 0; border: 0; background: transparent; touch-action: manipulation; }
+button.cell { cursor: pointer; }
+.cell.off { visibility: hidden; }
+.cell::before { content: ''; position: absolute; width: 38%; height: 38%; border-radius: 50%; background: var(--hole); box-shadow: inset 0 2px 4px #000a; }
+.cell.off::before { display: none; }
+.cell:focus-visible { outline: 3px solid var(--mark); outline-offset: -3px; border-radius: 8px; z-index: 2; }
+.peg {
+  position: relative; width: 74%; height: 74%; border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, var(--peg-hi), var(--peg-mid) 50%, var(--peg-lo));
+  box-shadow: 1px 3px 4px #0008; border: 2px solid var(--peg-ring);
+}
+.selected .peg { outline: 3px solid var(--mark); outline-offset: 2px; }
+.target::after { content: ''; position: absolute; width: 26%; height: 26%; border-radius: 50%; background: var(--mark); opacity: .85; }
+.hint-from .peg, .hint-to::after { box-shadow: 0 0 0 4px var(--hint), 1px 3px 4px #0008; }
+.hint-to::after { content: ''; position: absolute; width: 30%; height: 30%; border-radius: 50%; background: var(--hint); }
+.landed .peg { animation: land 180ms ease-out; }
+@keyframes land { from { transform: translate(calc(var(--dx, 0) * 135%), calc(var(--dy, 0) * 135%)); } to { transform: none; } }
+.peg.ghost { position: absolute; animation: vanish 180ms ease-in forwards; }
+@keyframes vanish { to { transform: scale(.2); opacity: 0; } }
+.shake { animation: shake 160ms ease-in-out; }
+@keyframes shake { 25%, 75% { transform: translateX(-2px); } 50% { transform: translateX(2px); } }
+
+.overlay { position: absolute; inset: 0; z-index: 10; background: #000d; color: #fff; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 12px; overflow-y: auto; }
+.overlay[hidden] { display: none; }
+.overlay-title { font-size: 24px; font-weight: 700; margin: 0; }
+.overlay-info p { margin: 4px 0; }
+.overlay-grade { font-size: 20px; font-weight: 700; color: var(--hint); }
+.overlay-xp { font-size: 18px; font-weight: 700; }
+.overlay-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.overlay-actions [hidden] { display: none; }
+.hint { font-size: 12px; color: var(--text-sub); text-align: center; }
+.demo-board { pointer-events: none; }
+@media (max-width: 1024px) { .page .topbar { flex-wrap: nowrap; gap: 4px; } }
+@media (prefers-reduced-motion: reduce) {
+  .landed .peg, .peg.ghost { animation: none; }
+  .peg.ghost { display: none; }
+  .shake { animation: none; outline: 2px solid var(--accent); }
+}

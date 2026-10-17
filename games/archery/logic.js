@@ -179,6 +179,9 @@ export const detailFor = (state) => ({
 export const movesOf = (state) => state.shots;
 // 最後一箭得分當下即完成,結果展示的 800ms 不影響勝負或重開結算。
 export const completedResult = (state) => state.scores.length === ARROWS ? resultFor(state) : null;
+// 只判定十箭是否全中既有最內環;不參與計分、XP 或成就,也不排除輔助局。
+export const isPerfectRound = (state) => state.scores.length === ARROWS
+  && state.scores.filter((points) => points === RINGS[0][1]).length === ARROWS;
 export const resultOnRestart = (state) => completedResult(state) ?? (movesOf(state) > 0 ? 'quit' : null);
 
 // 各暫停原因獨立保存;解除自動原因不解除手動暫停。

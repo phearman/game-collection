@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="遊戲集錦 LINE 小幫手使用說明：開遊戲、傳回饋、綁定成績、加入群組排行與查天氣的指令及對話範例。">
   <title>LINE 小幫手使用說明 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=6abe362">
-  <link rel="stylesheet" href="style.css?v=6abe362">
+  <link rel="stylesheet" href="../shared/style.css?v=ab8d031">
+  <link rel="stylesheet" href="style.css?v=ab8d031">
 </head>
 <body>
   <main class="page line-guide">
@@ -81,6 +81,7 @@
           <dl class="command-list">
             <div data-command="綁定" data-scopes="user"><dt><code>#綁定</code><span class="command-scope">私訊</span></dt><dd>點綁定按鈕 → 用平常玩遊戲的 Google 或 GitHub 帳號登入 → 網站按「確認綁定」。連結 10 分鐘內有效、只能用一次；不要分享。群組輸入只會提醒改用私訊。</dd></div>
             <div data-command="成績" data-scopes="user group"><dt><code>#成績</code><span class="command-scope">兩者</span></dt><dd>綁定後看自己的等級、XP、總局數與最佳分數。群組查詢會讓該群成員看到你的成績卡。</dd></div>
+            <div data-command="今日挑戰" data-scopes="user group"><dt><code>#今日挑戰</code><span class="command-scope">兩者</span></dt><dd>每天同題的數獨與踩地雷，需登入網站才能參加，以台灣午夜換日。私訊綁定後可看自己的今日成績；已核准群組只列自行 #加入排行 的成員，兩款各前 5 名。數獨少於 60 秒、踩地雷少於 20 秒不列排行；踩雷不列排行。</dd></div>
             <div data-command="解除綁定" data-scopes="user"><dt><code>#解除綁定</code><span class="command-scope">私訊</span></dt><dd>解除帳號連結並退出所有群組排行；也可到<a href="../me/">我的紀錄</a>解除 LINE 綁定。</dd></div>
             <div data-command="加入排行" data-scopes="group"><dt><code>#加入排行</code><span class="command-scope">群組</span></dt><dd>先私訊綁定，再在已核准群組自行加入；每個群組都要各自加入。</dd></div>
             <div data-command="排行" data-scopes="group"><dt><code>#排行</code><span class="command-scope">群組</span></dt><dd>看本群近 7 天 XP 前 10 名，依每人最近 50 局計算，可能不涵蓋七天全部遊玩。</dd></div>
@@ -96,6 +97,8 @@
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>我的遊戲成績</strong><p>等級 3 · XP 240<br>總局數 12<br>2048：4096</p><span class="sample-action">看完整紀錄</span></div></div></li>
               <li class="player"><div class="bubble"><span class="speaker">小明 · 已核准群組</span>#加入排行</div></li>
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>✅ 小明已加入本群排行</div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小明 · 群組</span>#今日挑戰</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>今日挑戰 · 數獨與踩地雷</strong><p>踩地雷：小明 · 83 秒<br>從開題起算，含離開時間；踩雷即結束，當天不能重玩。分享只含秒數與是否踩雷，不含盤面或答案。</p><span class="sample-action">數獨</span><span class="sample-action">踩地雷</span></div></div></li>
               <li class="player"><div class="bubble"><span class="speaker">小明 · 群組</span>#排行</div></li>
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>本群近 7 天 XP 排行</strong><ol><li>小明 · 120 XP</li><li>小美 · 90 XP</li></ol><p>依最近紀錄計算（每人最近 50 局）</p></div></div></li>
               <li class="player"><div class="bubble"><span class="speaker">小美 · 群組</span>#排行 2048</div></li>
@@ -112,10 +115,11 @@
           <h3 id="life-title">☀️ 生活小幫手</h3>
           <dl class="command-list">
             <div data-command="天氣" data-scopes="user group"><dt><code>#天氣 [縣市]</code><span class="command-scope">兩者</span></dt><dd>查今明 36 小時預報，例如 #天氣 高雄。私訊省略縣市沿用上次查詢，首次預設高雄市；群組預設高雄市。新竹、嘉義請寫市或縣。</dd></div>
-            <div data-command="早安" data-scopes="user group"><dt><code>#早安</code><span class="command-scope">兩者</span></dt><dd>早安問候、台灣時間與天氣提醒。</dd></div>
+            <div data-command="早安" data-scopes="user group"><dt><code>#早安</code><span class="command-scope">兩者</span></dt><dd>早安問候、台灣時間與天氣提醒，再附一則「今日小常識」（全站同一則，每天換）。</dd></div>
             <div data-command="午安" data-scopes="user group"><dt><code>#午安</code><span class="command-scope">兩者</span></dt><dd>午安問候、台灣時間與天氣提醒。</dd></div>
-            <div data-command="晚安" data-scopes="user group"><dt><code>#晚安</code><span class="command-scope">兩者</span></dt><dd>晚安問候、台灣時間與天氣提醒。問候要加 # 或在群組 @ 小幫手才會回應；群組問候使用高雄市天氣。</dd></div>
+            <div data-command="晚安" data-scopes="user group"><dt><code>#晚安</code><span class="command-scope">兩者</span></dt><dd>晚安問候、台灣時間與天氣提醒，再附一則「每日一笑」（全站同一則，每天換；純工作群不附）。問候要加 # 或在群組 @ 小幫手才會回應；群組問候使用高雄市天氣。</dd></div>
             <div data-command="笑話" data-scopes="user group"><dt><code>#笑話 [分類]</code><span class="command-scope">兩者</span></dt><dd>抽未看過的上架笑話，可指定物品、動物、校園、諧音、生活、益智、食物、自然、語文或急轉彎，例如 #笑話 自然。未指定分類不抽急轉彎。看完該分類會重新開始；有出處以小字標示。按三鍵給 1～3 分，重按覆蓋分數。</dd></div>
+            <div data-command="小常識" data-scopes="user group"><dt><code>#小常識</code><span class="command-scope">兩者</span></dt><dd>抽一則你沒看過的生活小常識或冷知識，附查證出處；也可傳 #冷知識。全部看過會重新開始。純工作群不開放。</dd></div>
             <div data-command="急轉彎" data-scopes="user group"><dt><code>#急轉彎</code><span class="command-scope">兩者</span></dt><dd>先抽機智問答題目，按「看答案」才揭曉答案並評分；也可用 #笑話 急轉彎。看答案只限自己抽到的題目。抽題計生活次數，看答案不另計次。資料庫失效時暫停新分類與急轉彎出題，原五類仍有備援但不能評分。</dd></div>
             <div data-command="笑話排行" data-scopes="user group"><dt><code>#笑話排行</code><span class="command-scope">兩者</span></dt><dd>近 30 天至少 3 人評分的前五名，顯示平均分、評分人數與出處；急轉彎只顯示題目。</dd></div>
             <div data-command="投稿" data-scopes="user group"><dt><code>#投稿 內容</code><span class="command-scope">兩者</span></dt><dd>投稿 10～200 字笑話，不含網址、電話或 email。每人每天最多 3 則，預設生活分類，管理者審核後才上架。</dd></div>
@@ -136,6 +140,8 @@
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>晚安！台灣時間 20:00，高雄市多雲。給自己一點休息時間。（時間、天氣示意）</div></li>
               <li class="player"><div class="bubble"><span class="speaker">小美</span>#笑話</div></li>
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>為什麼電腦不怕冷？因為它有視窗，卻不會漏風。<div class="quick-options" aria-label="快速選項示意"><span>再來一則</span><span>天氣</span><span>新聞</span><span>遊戲</span><span>說明</span><span>👋 先這樣</span></div></div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小美</span>#小常識</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>💡 小常識內容（示意）<br>（出處：查證來源）</div></li>
               <li class="player"><div class="bubble"><span class="speaker">小美</span>#急轉彎</div></li>
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>【急轉彎】題目示意</strong><p>先想想答案，再按下方按鈕。</p><span class="sample-action">看答案</span></div></div></li>
               <li class="player"><div class="bubble"><span class="speaker">小美</span>#笑話排行</div></li>
@@ -203,6 +209,6 @@
 
     <footer class="guide-footer"><a href="../privacy/">隱私權政策</a><a href="../">回大廳</a></footer>
   </main>
-  <script type="module" src="ui.js?v=6abe362"></script>
+  <script type="module" src="ui.js?v=ab8d031"></script>
 </body>
 </html>

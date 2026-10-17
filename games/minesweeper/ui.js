@@ -1,18 +1,20 @@
 // 踩地雷畫面層:狀態、渲染、輸入。規則一律呼叫 logic.js(遊戲)與 shared/profile.js(紀錄),這裡不寫規則。
 import {
-  DIFFICULTIES, initState, stateWithMines, revealState, flagState, tickState, scoreFor, resultOf, isOver,
+  DIFFICULTIES, initState, initDailyState, stateWithMines, revealState, flagState, tickState, scoreFor, resultOf, isOver,
   remainingMines, cellView, toSave, fromSave, isValidState, confirmModeFor, cellTapAction,
-} from './logic.js?v=6abe362';
-import { createProfile } from '../../shared/profile.js?v=6abe362';
-import { LocalStore } from '../../shared/stores/local.js?v=6abe362';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=6abe362';
-import { bindThemeToggle } from '../../shared/theme.js?v=6abe362';
-import { play, music } from '../../shared/sound.js?v=6abe362';
-import { setupHelp } from '../../shared/help.js?v=6abe362';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=6abe362';
-import { settlePlay } from '../../shared/settle.js?v=6abe362';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=6abe362';
-import { load, save } from '../../shared/storage.js?v=6abe362';
+} from './logic.js?v=ab8d031';
+import { createProfile } from '../../shared/profile.js?v=ab8d031';
+import { LocalStore } from '../../shared/stores/local.js?v=ab8d031';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=ab8d031';
+import { bindThemeToggle } from '../../shared/theme.js?v=ab8d031';
+import { play, music } from '../../shared/sound.js?v=ab8d031';
+import { setupHelp } from '../../shared/help.js?v=ab8d031';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=ab8d031';
+import { settlePlay } from '../../shared/settle.js?v=ab8d031';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=ab8d031';
+import { load, save } from '../../shared/storage.js?v=ab8d031';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=ab8d031';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=ab8d031';
 
 const GAME_ID = 'minesweeper';
 const LONG_PRESS_MS = 400;
@@ -21,7 +23,13 @@ const coarsePointer = matchMedia('(pointer: coarse)').matches;
 let confirmPreference = load(CONFIRM_KEY);
 const LABELS = { normal: '初級', hard: '中級', expert: '高級' };
 const $ = (id) => document.getElementById(id);
-const profile = await createProfile({ store: new LocalStore() });
+const isDaily = dailyRequested(location.search);
+const profile = await createProfile({ store: new LocalStore(), saveSlots: isDaily ? { [GAME_ID]: dailySlot(GAME_ID) } : {} });
+let daily = null, dailyClient = null, dailyError = '';
+if (isDaily) {
+  try { dailyClient = await browserDailyClient(); daily = await prepareDaily(dailyClient, GAME_ID); }
+  catch (error) { dailyError = error.message; }
+}
 
 let state;
 let best = 0; // 本局開始前的最佳分數(profile 管)
@@ -57,16 +65,33 @@ async function startNew(difficulty = state?.difficulty ?? 'normal') {
 
 // 一局結束:依 §4.2 結算(每局只執行一次),結果顯示在遮罩。
 function finish(result) {
+  if (ended) return queue;
   const snap = { score: scoreFor(result, state.seconds), seconds: state.seconds, mines: state.mineCount, difficulty: state.difficulty };
+  const saved = toSave(state);
   ended = { pending: true };
   const no = gameNo;
   render();
   return run(async () => {
     const bestBefore = best;
+    if (isDaily) {
+      await profile.saveState(GAME_ID, saved);
+      try {
+        daily.row = await dailyClient.finish(GAME_ID, daily.day, result, null);
+        daily.completed = true;
+        dailyError = '';
+        result = daily.row.result;
+        snap.seconds = daily.row.seconds;
+        snap.score = scoreFor(result, snap.seconds);
+      } catch (error) {
+        dailyError = error.message;
+        ended = { dailyRetry: true }; render(); return;
+      }
+    }
     const out = await settlePlay(profile, GAME_ID, {
-      result, score: snap.score, difficulty: snap.difficulty, detail: { seconds: snap.seconds, mines: snap.mines },
+      result, score: snap.score, difficulty: snap.difficulty, detail: { seconds: snap.seconds, mines: snap.mines,
+        ...(isDaily ? { daily: daily.day, daily_play_id: daily.row.detail.play_id, solvable: saved.solvable } : {}) },
     });
-    if (!out) { if (no === gameNo) startNew(snap.difficulty); return; } // 結算失敗且選「不存了」:不記錄、開新局(IR6)
+    if (!out) { if (no === gameNo) { if (isDaily) location.href = './'; else startNew(snap.difficulty); } return; }
     if (out.play.is_best) best = Math.max(best, snap.score);
     if (no !== gameNo) return;
     ended = {
@@ -85,7 +110,8 @@ function finish(result) {
 
 // 新遊戲 / 切換難度:有操作未結束 ⇒ quit;0 次操作不記錄;已結算直接開新局。
 let confirmingQuit = false;
-async function newGame(difficulty = state.difficulty) {
+async function newGame(difficulty = state?.difficulty ?? 'normal') {
+  if (isDaily) { if (!ended?.pending) { await queue; location.href = './'; } return; }
   if (confirmingQuit) return;
   if (ended) {
     if (!ended.pending) startNew(difficulty); // 結算中:忽略連點
@@ -107,7 +133,7 @@ async function newGame(difficulty = state.difficulty) {
 function act(i, kind) {
   profile.input();
   selectedIdx = null;
-  if (ended || isOver(state)) return;
+  if (!state || ended || isOver(state)) return;
   const next = kind === 'flag' ? flagState(state, i) : revealState(state, i);
   if (next === state) { render(); return; }
   play(kind === 'flag' ? 'move' : 'tap');
@@ -160,17 +186,21 @@ function renderCells() {
     el.className = `cell${open ? ` open n${v}` : ` is-${v}`}`;
     el.classList.toggle('is-selected', i === selectedIdx);
     el.setAttribute('aria-selected', String(i === selectedIdx));
-    el.textContent = text;
-    el.setAttribute('aria-label', `${Math.floor(i / state.cols) + 1} 列 ${(i % state.cols) + 1} 欄:${label}`);
+    el.classList.toggle('daily-start', isDaily && i === state.start);
+    el.textContent = isDaily && i === state.start ? '◎' : text;
+    el.setAttribute('aria-label', `${Math.floor(i / state.cols) + 1} 列 ${(i % state.cols) + 1} 欄:${label}${isDaily && i === state.start ? '，每日起點' : ''}`);
     el.tabIndex = i === focusIdx ? 0 : -1;
   }
 }
 
 function render() {
+  if (!state) return;
   renderCells();
   $('seconds').textContent = state.seconds.toLocaleString();
   $('best').textContent = best.toLocaleString();
   $('difficulty').value = state.difficulty;
+  $('difficulty').disabled = isDaily;
+  if (isDaily) showDailyBanner(document, daily, dailyError);
   $('flag-mode').setAttribute('aria-pressed', String(flagMode));
   $('flag-mode').classList.toggle('is-on', flagMode);
   $('confirm-mode').setAttribute('aria-pressed', String(confirmMode));
@@ -193,6 +223,7 @@ const achName = (id) => {
 };
 
 function infoHtml() {
+  if (ended.dailyRetry) return '<p>成績尚未送出，請重試</p>';
   if (ended.pending) return '<p>結算中…</p>';
   const lines = [
     `<p>${ended.seconds.toLocaleString()} 秒 · 分數 ${ended.score.toLocaleString()}</p>`,
@@ -212,9 +243,11 @@ function renderOverlay() {
     overlay.hidden = true;
     return;
   }
-  $('overlay-title').textContent = state.status === 'win' ? '🎉 全部找出來了!' : '💥 踩到地雷';
+  const won = isDaily && daily?.completed ? daily.row.result === 'win' : state.status === 'win';
+  $('overlay-title').textContent = won ? '🎉 全部找出來了!' : '💥 踩到地雷';
   $('overlay-info').innerHTML = infoHtml();
-  $('overlay-actions').innerHTML = '<button class="btn" type="button" data-act="new">再玩一次</button>'
+  if (isDaily) appendDailySummary(document, $('overlay-info'), daily);
+  $('overlay-actions').innerHTML = `<button class="btn" type="button" data-act="${ended.dailyRetry ? 'retry' : 'new'}">${isDaily ? ended.dailyRetry ? '重試送出成績' : '玩一般模式' : '再玩一次'}</button>`
     + '<button class="btn" type="button" data-act="peek">看盤面</button>';
   overlay.hidden = false;
 }
@@ -315,6 +348,7 @@ $('selection-actions').addEventListener('click', (e) => {
 });
 $('overlay-actions').addEventListener('click', (e) => {
   const cmd = e.target.dataset.act;
+  if (cmd === 'retry' && ended?.dailyRetry) { ended = null; finish(resultOf(state)); }
   if (cmd === 'new') newGame();
   if (cmd === 'peek') {
     peek = true;
@@ -324,12 +358,12 @@ $('overlay-actions').addEventListener('click', (e) => {
 
 // 計時:第一下開始,每秒 +1(分頁隱藏時暫停);離頁或隱藏時把秒數寫進存檔。
 setInterval(() => {
-  if (ended || state.status !== 'playing' || document.visibilityState === 'hidden') return;
+  if (!state || ended || state.status !== 'playing' || document.visibilityState === 'hidden') return;
   state = tickState(state);
   $('seconds').textContent = state.seconds.toLocaleString();
 }, 1000);
 const flushSeconds = () => {
-  if (!ended && state.status === 'playing') {
+  if (state && !ended && state.status === 'playing') {
     const saved = toSave(state);
     run(() => profile.saveState(GAME_ID, saved));
   }
@@ -341,17 +375,25 @@ bindThemeToggle($('theme'));
 
 // 載入:有存檔就自動還原(§4.1),否則開新局。
 const saved = await profile.loadSave(GAME_ID);
-if (saved && isValidState(saved)) {
-  state = fromSave(saved);
+if (isDaily && (!daily || daily.row?.cleared || (daily.completed && !matchesDailySave(saved, daily, isValidState)))) {
+  ended = { closed: true }; $('difficulty').disabled = true;
+  showDailyClosed(document, daily, dailyError);
+} else if (isDaily || (saved && !saved.daily && isValidState(saved))) {
+  state = isDaily ? matchesDailySave(saved, daily, isValidState) ? fromSave(saved) : initDailyState(daily) : fromSave(saved);
   confirmMode = confirmModeFor(state.difficulty, coarsePointer, confirmPreference);
   gameNo++;
   focusIdx = Math.floor(state.rows / 2) * state.cols + Math.floor(state.cols / 2);
-  buildBoard();
-  best = await profile.best(GAME_ID);
-  profile.startTimer(GAME_ID);
-  render();
-  const result = resultOf(state);
-  if (result) finish(result);
+  if (isDaily && daily.completed && !isOver(state)) {
+    state = undefined; ended = { closed: true }; showDailyClosed(document, daily);
+  } else {
+    buildBoard();
+    best = await profile.best(GAME_ID);
+    profile.startTimer(GAME_ID);
+    render();
+    const result = resultOf(state);
+    if (result) finish(result);
+    else if (isDaily) await profile.saveState(GAME_ID, toSave(state));
+  }
 } else {
   await startNew('normal');
 }
@@ -383,6 +425,7 @@ setupHelp({
       <li>點已翻開的數字:周圍旗數等於該數字時,一次翻開其餘鄰格(旗插錯會踩雷)。</li>
       <li>翻到地雷就輸。鍵盤:方向鍵移動、Enter 翻開、F 插旗。</li>
       <li><b>勝利</b>:翻開所有不是雷的格子。<b>分數</b> = 10000 − 秒數(越快越高),輸了 0 分。</li>
+      <li>每日盤:全部人同盤同起點,◎ 是自動翻開的安全起點;一天一次,踩雷即結束。成績從開題起算,含離開時間;新遊戲回一般模式,可再回來續玩今日盤。</li>
     </ol>`,
   demo: {
     render: demoBoard,

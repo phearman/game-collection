@@ -122,6 +122,11 @@ export const ACHIEVEMENTS = [
     test: ({ play }) => play?.game_id === 'archery' && (play.detail?.bullseyes ?? 0) >= 3,
   },
   {
+    id: 'peg_genius', name: '孔明棋天才', icon: '🔵', cond: '孔明棋只剩中央 1 顆(不用提示)', game: 'peg',
+    test: ({ play }) => play?.game_id === 'peg' && play.result === 'win' && play.detail?.pegs_left === 1
+      && play.detail?.center === true && !play.detail?.hint_used && !play.detail?.assist,
+  },
+  {
     id: 'wordle_2', name: 'Wordle 2 次猜中', icon: '🔤', cond: 'Wordle 2 次內猜中', game: 'wordle',
     test: ({ play }) => play?.game_id === 'wordle' && play.result === 'win' && (play.detail?.guesses ?? Infinity) <= 2,
   },
@@ -182,14 +187,14 @@ export const WORDLE_RECENT = 10;
 //   wordle:recent 最近 WORDLE_RECENT 局的答案(新到舊,含 quit;出題時避開)
 export function dailyStreak(stats, day) {
   if (typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return 0;
-  const days = new Set(['wordle', 'sudoku'].flatMap((id) => stats[id]?.detail?.daily_days ?? []));
+  const days = new Set(['wordle', 'sudoku', 'minesweeper'].flatMap((id) => stats[id]?.detail?.daily_days ?? []));
   let stamp = Date.parse(`${day}T00:00:00Z`), count = 0;
   while (Number.isFinite(stamp) && days.has(new Date(stamp).toISOString().slice(0, 10))) { count++; stamp -= 86400000; }
   return count;
 }
 
 function nextDetail(gameId, detail, result, play = {}) {
-  if (['wordle', 'sudoku'].includes(gameId) && ['win', 'lose'].includes(result)
+  if (['wordle', 'sudoku', 'minesweeper'].includes(gameId) && ['win', 'lose'].includes(result)
     && typeof play.daily === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(play.daily)) {
     detail = { ...detail, daily_days: [...new Set([...(detail.daily_days ?? []), play.daily])].sort().slice(-35) };
   }

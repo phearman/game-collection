@@ -3,22 +3,22 @@
 import {
   W, H, DT, ARROWS, RESULT_MS, DIFFICULTIES, THRESHOLDS, initState, canGrab, aimFromDrag, adjustAim, previewPath,
   shoot, stepState, nextArrow, simulate, scoreFor, resultFor, detailFor, toSave, fromSave, isValidState,
-  completedResult, resultOnRestart, initialPause, isPaused, changePause,
+  completedResult, isPerfectRound, resultOnRestart, initialPause, isPaused, changePause,
   HELP_RULES, demoAims,
-} from './logic.js?v=6abe362';
-import { drawScene, readPalette, flashOpacity } from './draw.js?v=6abe362';
-import { createProfile } from '../../shared/profile.js?v=6abe362';
-import { LocalStore } from '../../shared/stores/local.js?v=6abe362';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=6abe362';
-import { bindThemeToggle } from '../../shared/theme.js?v=6abe362';
-import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=6abe362';
-import { skinPalette } from './skins.js?v=6abe362';
-import { play, music } from '../../shared/sound.js?v=6abe362';
-import { setupHelp } from '../../shared/help.js?v=6abe362';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=6abe362';
-import { settlePlay } from '../../shared/settle.js?v=6abe362';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=6abe362';
-import { load, save } from '../../shared/storage.js?v=6abe362';
+} from './logic.js?v=ab8d031';
+import { drawScene, readPalette, flashOpacity } from './draw.js?v=ab8d031';
+import { createProfile } from '../../shared/profile.js?v=ab8d031';
+import { LocalStore } from '../../shared/stores/local.js?v=ab8d031';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=ab8d031';
+import { bindThemeToggle } from '../../shared/theme.js?v=ab8d031';
+import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=ab8d031';
+import { skinPalette } from './skins.js?v=ab8d031';
+import { play, music } from '../../shared/sound.js?v=ab8d031';
+import { setupHelp } from '../../shared/help.js?v=ab8d031';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=ab8d031';
+import { settlePlay } from '../../shared/settle.js?v=ab8d031';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=ab8d031';
+import { load, save } from '../../shared/storage.js?v=ab8d031';
 
 const GAME_ID = 'archery';
 const DIFF_KEY = 'difficulty:archery';
@@ -38,6 +38,22 @@ let grabHint = 0;
 let flashStartedAt = null;
 let resultTimer = null;
 let confirmingQuit = false;
+let celebratedGame = null;
+let celebrationTimer = null;
+
+function dismissCelebration() {
+  clearTimeout(celebrationTimer);
+  celebrationTimer = null;
+  $('perfect-celebration').hidden = true;
+}
+
+function celebratePerfectRound() {
+  if (celebratedGame === gameNo || !isPerfectRound(state)) return;
+  celebratedGame = gameNo;
+  $('perfect-celebration').hidden = false;
+  play('fanfare'); // 沿用共用音效開關與程式合成音色。
+  celebrationTimer = setTimeout(dismissCelebration, 2500);
+}
 
 let queue = Promise.resolve();
 const run = (fn) => { queue = queue.then(fn).catch((e) => console.error(e)); return queue; };
@@ -71,6 +87,7 @@ function scheduleNext() {
 
 async function startNew(difficulty = difficultyPref()) {
   clearResultTimer();
+  dismissCelebration();
   state = initState(difficulty);
   drag = null; trail = []; flashStartedAt = null;
   pauseReasons = { ...initialPause(), hidden: document.visibilityState === 'hidden', help: pauseReasons.help };
@@ -262,6 +279,7 @@ function renderOverlay() {
   } else { $('overlay').hidden = true; return; }
   $('overlay').classList.toggle('is-result', kind === 'over');
   $('overlay').hidden = false;
+  if (kind === 'over') celebratePerfectRound();
 }
 
 let shown = '';
@@ -296,6 +314,15 @@ function render() {
 }
 
 // ---- 輸入 ----
+
+// 點擊不攔截:略過慶祝的同一次點擊仍可按到結算按鈕。按鍵在慶祝顯示時只略過,避免 Enter/空白鍵同時觸發焦點所在的按鈕(RS71 審查)。
+document.addEventListener('click', dismissCelebration);
+document.addEventListener('keydown', (e) => {
+  if ($('perfect-celebration').hidden) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  dismissCelebration();
+}, true);
 
 const stage = $('stage');
 function toLogic(e) {

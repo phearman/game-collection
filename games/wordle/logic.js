@@ -1,12 +1,18 @@
 // Wordle 規則層:純函式,不碰 DOM。單字一律小寫。
 // 規則正典:workbook/plans/wordle.md「規則(驗收依據)」。
-import { ANSWERS, ALLOWED } from './words.js?v=6abe362';
-import { seedRng } from '../../shared/seed-rng.js?v=6abe362';
+import { ANSWERS, ALLOWED } from './words.js?v=ab8d031';
+import { seedRng } from '../../shared/seed-rng.js?v=ab8d031';
 
 export const WORD_LEN = 5;
 export const MAX_GUESSES = 6;
 export const DIFFICULTIES = ['normal', 'hard'];
 export const RECENT_LIMIT = 10;
+// 簡單模式(RS66):8 次機會、開局即輔助局。存檔與紀錄仍記 difficulty 'normal'(雲端 plays 難度只收 normal/hard/expert),
+// 另帶 easy: true;機會數一律用 maxGuesses(state)。
+export const EASY_GUESSES = 8;
+export const maxGuesses = (state) => (state?.easy ? EASY_GUESSES : MAX_GUESSES);
+// 建議開局字(RS66):母音多、常見字母多,三字都在 ANSWERS;固定不隨機,玩家可記住反覆用。
+export const STARTERS = Object.freeze(['audio', 'raise', 'stone']);
 
 const ALLOWED_SET = new Set(ALLOWED);
 const isWordShape = (w) => typeof w === 'string' && /^[a-z]{5}$/.test(w);
@@ -67,7 +73,7 @@ export function pickAnswer(rng = Math.random, recent = [], answers = ANSWERS) {
 //   current 輸入中的字母(未送出,不存檔)
 
 // assist = 輔助局(RS9):選「輔助」模式開局,或一般/困難局確認使用提示後轉入;一旦成立維持到局末。
-export function initState(rng = Math.random, difficulty = 'normal', recent = [], { assist = false } = {}) {
+export function initState(rng = Math.random, difficulty = 'normal', recent = [], { assist = false, easy = false } = {}) {
   const state = {
     answer: pickAnswer(rng, recent),
     guesses: [],
@@ -76,6 +82,7 @@ export function initState(rng = Math.random, difficulty = 'normal', recent = [],
     over: false,
     won: false,
   };
+  if (easy) return { ...state, difficulty: 'normal', easy: true, assist: true, revealed: [], candidates: null };
   return assist ? { ...state, assist: true, revealed: [], candidates: null } : state;
 }
 
@@ -112,7 +119,7 @@ export function submitState(state, allowed = ALLOWED_SET) {
   if (guessError(state, allowed)) return state;
   const guesses = [...state.guesses, state.current];
   const won = state.current === state.answer;
-  return { ...state, guesses, current: '', won, over: won || guesses.length >= MAX_GUESSES };
+  return { ...state, guesses, current: '', won, over: won || guesses.length >= maxGuesses(state) };
 }
 
 // 畫面鍵盤:每個字母目前最佳狀態(綠 > 黃 > 灰)。
@@ -127,9 +134,9 @@ export function keyStates({ guesses, answer }) {
   return keys;
 }
 
-// 分數:猜中 (7 − 次數) × 100(1 次 600 … 6 次 100),失敗 0。
-export function scoreFor({ won, guesses }) {
-  return won ? (MAX_GUESSES + 1 - guesses.length) * 100 : 0;
+// 分數:猜中 (機會數 + 1 − 次數) × 100(一般 1 次 600 … 6 次 100;簡單 8 次機會),失敗 0。
+export function scoreFor({ won, guesses, easy }) {
+  return won ? (maxGuesses({ easy }) + 1 - guesses.length) * 100 : 0;
 }
 
 // 結束遮罩:'won' / 'lost' / null。
@@ -204,6 +211,11 @@ export function visibleCandidates(state) {
   return (state.candidates ?? []).filter((w) => w === state.answer || (!tried.has(w) && fitsClues(w, state)));
 }
 
+// 建議開局字:輔助局、還沒猜任何字時才給(猜了之後線索已出現,改由候選接手)。
+export function starterWords(state) {
+  return state?.assist && !state.over && !state.daily && state.guesses.length === 0 ? [...STARTERS] : [];
+}
+
 // 點候選 = 填入輸入列(送出仍算一次猜測)。
 export function fillState(state, word) {
   if (state.over || !isWordShape(word)) return state;
@@ -212,8 +224,8 @@ export function fillState(state, word) {
 
 // ---- 存檔(續玩)----
 
-export function toSave({ answer, guesses, difficulty, assist, revealed, candidates, daily, daily_seed }) {
-  const saved = { answer, guesses, difficulty, ...(daily ? { daily, daily_seed } : {}) };
+export function toSave({ answer, guesses, difficulty, assist, easy, revealed, candidates, daily, daily_seed }) {
+  const saved = { answer, guesses, difficulty, ...(daily ? { daily, daily_seed } : {}), ...(easy ? { easy: true } : {}) };
   return assist ? { ...saved, assist: true, revealed: revealed ?? [], candidates: candidates ?? null } : saved;
 }
 
@@ -221,13 +233,13 @@ export function fromSave(saved) {
   const won = !!saved.daily && saved.guesses.at(-1) === saved.answer;
   const state = { answer: saved.answer, guesses: [...saved.guesses], current: '', difficulty: saved.difficulty,
     over: !!saved.daily && (won || saved.guesses.length === MAX_GUESSES), won,
-    ...(saved.daily ? { daily: saved.daily, daily_seed: saved.daily_seed } : {}) };
+    ...(saved.daily ? { daily: saved.daily, daily_seed: saved.daily_seed } : {}), ...(saved.easy ? { easy: true } : {}) };
   // 輔助局標記與提示進度續玩後仍在
   return saved.assist ? { ...state, assist: true, revealed: [...(saved.revealed ?? [])], candidates: saved.candidates ? [...saved.candidates] : null } : state;
 }
 
 // 存檔 state 格式檢查:只存「進行中」的局(結束就結算並刪檔)。
-//   答案 ∈ ANSWERS;每個猜測 ∈ ALLOWED;猜測 < 6 次且都沒猜中(猜中或滿 6 次就該結算);
+//   答案 ∈ ANSWERS;每個猜測 ∈ ALLOWED;猜測 < 機會數且都沒猜中(猜中或用完就該結算);簡單模式 = normal + 輔助局 + 8 次;
 //   困難模式時每個猜測都符合當時的限制(與實際送出時的規則一致)。
 const ANSWER_SET = new Set(ANSWERS);
 
@@ -248,7 +260,9 @@ export function isValidState(s) {
   if (!isWordShape(answer) || !ANSWER_SET.has(answer) || !DIFFICULTIES.includes(difficulty)) return false;
   if (s.daily !== undefined && (typeof s.daily !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s.daily)
     || !/^[0-9a-f]{16}$/.test(s.daily_seed) || difficulty !== 'normal' || s.assist)) return false;
-  if (!Array.isArray(guesses) || guesses.length > MAX_GUESSES || (!s.daily && guesses.length === MAX_GUESSES)) return false;
+  if (s.easy !== undefined && (s.easy !== true || s.assist !== true || difficulty !== 'normal' || s.daily !== undefined)) return false;
+  const limit = maxGuesses(s);
+  if (!Array.isArray(guesses) || guesses.length > limit || (!s.daily && guesses.length === limit)) return false;
   if (!guesses.every((g, i) => isWord(g) && (g !== answer || (s.daily && i === guesses.length - 1)))) return false;
   if (!validAssist(s)) return false;
   if (difficulty === 'hard') {

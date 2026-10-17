@@ -1,6 +1,8 @@
 // 踩地雷規則層:純函式,不碰 DOM。棋盤以一維陣列存,格子編號 i = r × cols + c。
 // 規則正典:workbook/plans/minesweeper.md「規則(驗收依據)」。
 
+import { seedRng } from '../../shared/seed-rng.js?v=ab8d031';
+
 export const DIFFICULTIES = {
   normal: { rows: 9, cols: 9, mines: 10 },
   hard: { rows: 16, cols: 16, mines: 40 },
@@ -74,6 +76,63 @@ export function initState(difficulty = 'normal') {
     moves: 0,
     seconds: 0,
   };
+}
+
+export function pickDailyStart(rows, cols, rng) {
+  const offset = Math.floor(rng() * (rows - 2) * (cols - 2));
+  return (1 + Math.floor(offset / (cols - 2))) * cols + 1 + offset % (cols - 2);
+}
+
+// Each constraint describes unknown neighboring cells and the remaining mine count.
+// Only visible numbers and already proved mines enter these two deduction rules.
+export function deduceMoves(constraints) {
+  const safe = new Set(), mines = new Set();
+  const classify = (cells, count) => {
+    if (count === 0) cells.forEach((i) => safe.add(i));
+    else if (count === cells.length) cells.forEach((i) => mines.add(i));
+  };
+  for (const a of constraints) {
+    classify(a.cells, a.count);
+    for (const b of constraints) {
+      if (a.cells.length >= b.cells.length || !a.cells.every((i) => b.cells.includes(i))) continue;
+      classify(b.cells.filter((i) => !a.cells.includes(i)), b.count - a.count);
+    }
+  }
+  return { safe: [...safe], mines: [...mines] };
+}
+
+export function solveWithoutGuessing(initial) {
+  let board = { ...initial, open: initial.open.slice(), flags: Array(initial.open.length).fill(false) };
+  while (!isCleared(board, board.open)) {
+    const constraints = [];
+    board.open.forEach((open, i) => {
+      if (!open) return;
+      const around = neighbors(board.rows, board.cols, i);
+      const cells = around.filter((n) => !board.open[n] && !board.flags[n]);
+      if (cells.length) constraints.push({ cells,
+        count: adjacentMines(board, i) - around.filter((n) => board.flags[n]).length });
+    });
+    const next = deduceMoves(constraints);
+    if (!next.safe.length && !next.mines.length) return false;
+    for (const i of next.mines) board.flags[i] = true;
+    if (next.safe.length) board = openCells(board, next.safe);
+    if (board.status === 'lose') return false;
+  }
+  return true;
+}
+
+export function initDailyState({ day, seed }, rng = seedRng(seed)) {
+  let board;
+  for (let attempt = 1; attempt <= 50; attempt++) {
+    const empty = initState('hard');
+    const start = pickDailyStart(empty.rows, empty.cols, rng);
+    const mines = placeMines(empty.rows, empty.cols, empty.mineCount, start, rng);
+    board = { ...openCells({ ...empty, mines, status: 'playing' }, [start]),
+      daily: day, daily_seed: seed, start, moves: 0, status: 'playing', attempts: attempt };
+    board.solvable = solveWithoutGuessing(board);
+    if (board.solvable) break;
+  }
+  return board;
 }
 
 // 指定地雷位置的進行中盤面(示範與測試用;佈雷規則仍以 placeMines 為準)。
@@ -207,7 +266,9 @@ export function cellView(state, i) {
 // state 本身即可序列化。
 export function toSave(state) {
   const { difficulty, rows, cols, mineCount, mines, open, flags, status, exploded, moves, seconds } = state;
-  return { difficulty, rows, cols, mineCount, mines, open, flags, status, exploded, moves, seconds };
+  return { difficulty, rows, cols, mineCount, mines, open, flags, status, exploded, moves, seconds,
+    ...(state.daily ? { daily: state.daily, daily_seed: state.daily_seed, start: state.start,
+      solvable: state.solvable, attempts: state.attempts } : {}) };
 }
 
 export function fromSave(saved) {
@@ -222,6 +283,15 @@ export function isValidState(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return false;
   const d = Object.hasOwn(DIFFICULTIES, s.difficulty) ? DIFFICULTIES[s.difficulty] : null;
   if (!d || s.rows !== d.rows || s.cols !== d.cols || s.mineCount !== d.mines) return false;
+  if (s.daily !== undefined || s.daily_seed !== undefined) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s.daily ?? '') || !/^[0-9a-f]{16}$/.test(s.daily_seed ?? '')
+      || s.difficulty !== 'hard' || !Number.isInteger(s.start) || s.start < 0 || s.start >= d.rows * d.cols
+      || Math.floor(s.start / d.cols) === 0 || Math.floor(s.start / d.cols) === d.rows - 1
+      || s.start % d.cols === 0 || s.start % d.cols === d.cols - 1
+      || typeof s.solvable !== 'boolean' || !Number.isInteger(s.attempts) || s.attempts < 1 || s.attempts > 50
+      || !s.open?.[s.start] || !Array.isArray(s.mines) || s.mines[s.start]
+      || neighbors(d.rows, d.cols, s.start).some((i) => s.mines[i])) return false;
+  }
   const n = d.rows * d.cols;
   if (!STATUSES.includes(s.status) || !isCount(s.moves) || !isCount(s.seconds)) return false;
   if (!isBoolArr(s.open, n) || !isBoolArr(s.flags, n)) return false;

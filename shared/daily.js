@@ -1,7 +1,9 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=6abe362';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=ab8d031';
 
-export const DAILY_GAMES = ['wordle', 'sudoku'];
+export const DAILY_GAMES = ['sudoku', 'minesweeper'];
+const DAILY_NAMES = { wordle: 'Wordle', sudoku: '數獨', minesweeper: '踩地雷' };
 export const DAILY_LOGIN_NOTICE = '登入後才能參加每日挑戰';
+export const DAILY_FIXED_NOTE = '遊戲固定、每天換題目';
 export const taiwanDay = (stamp) => new Date(Number(stamp) + 8 * 3600000).toISOString().slice(0, 10);
 export const dailyDateLabel = (day) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`;
 export const dailySlot = (game) => `${game}-daily`;
@@ -15,18 +17,19 @@ export function dailyStatus(row) {
 export function dailyScore(row) {
   return row.game_id === 'wordle'
     ? `${row.result === 'win' ? row.guesses : 'X'}/6 · ${row.seconds} 秒`
-    : `${row.seconds} 秒`;
+    : `${row.game_id === 'minesweeper' && row.result === 'lose' ? '💥 踩雷 · ' : ''}${row.seconds} 秒`;
 }
 export function dailyShare(day, game, row, marks = []) {
   const squares = { correct: '🟩', present: '🟨', absent: '⬜' };
-  const score = game === 'wordle' ? `${row.result === 'win' ? row.guesses : 'X'}/6` : `${row.seconds} 秒`;
-  return `遊戲集錦 ${dailyDateLabel(day)} ${game === 'wordle' ? 'Wordle' : '數獨'} ${score}`
+  const score = game === 'wordle' ? `${row.result === 'win' ? row.guesses : 'X'}/6`
+    : game === 'minesweeper' && row.result === 'lose' ? '💥' : `${row.seconds} 秒`;
+  return `遊戲集錦 ${dailyDateLabel(day)} ${DAILY_NAMES[game]} ${score}`
     + (game === 'wordle' ? `\n${(Array.isArray(marks) ? marks : []).filter(Array.isArray).slice(0, 6)
       .map((m) => m.slice(0, 5).map((c) => squares[c] ?? '⬜').join('')).join('\n')}` : '');
 }
 export function dailyRank(rows, game) {
   return rows.filter((r) => r.game_id === game && r.finished_at && !r.cleared
-    && (game === 'wordle' || (r.result === 'win' && r.seconds >= 60)))
+    && (game === 'wordle' || (r.result === 'win' && r.seconds >= (game === 'minesweeper' ? 20 : 60))))
     .sort((a, b) => game === 'wordle'
       ? Number(b.result === 'win') - Number(a.result === 'win')
         || (a.result === 'win' && b.result === 'win' ? a.guesses - b.guesses : 0) || a.seconds - b.seconds
@@ -80,7 +83,7 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
 }
 export async function browserDailyClient() {
   if (!cloudEnabled) return createDailyClient();
-  const { auth } = await (await import('./auth.js?v=6abe362')).getCloudRuntime();
+  const { auth } = await (await import('./auth.js?v=ab8d031')).getCloudRuntime();
   return createDailyClient({ auth });
 }
 
@@ -108,7 +111,7 @@ export async function mountDailyLobby(doc, client, createClient = browserDailyCl
         const row = today.results.find((r) => r.game_id === game);
         const link = doc.createElement('a'); link.className = 'btn';
         link.href = `games/${game}/?daily=1`;
-        link.textContent = `${game === 'wordle' ? 'Wordle' : '數獨'} · ${dailyStatus(row)}`;
+        link.textContent = `${DAILY_NAMES[game]} · ${dailyStatus(row)}`;
         list.append(link);
       }
     } catch {

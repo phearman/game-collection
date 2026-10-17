@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Wordle · 遊戲集錦</title>
-  <link rel="stylesheet" href="../../shared/style.css?v=6abe362">
-  <link rel="stylesheet" href="style.css?v=6abe362">
+  <link rel="stylesheet" href="../../shared/style.css?v=ab8d031">
+  <link rel="stylesheet" href="style.css?v=ab8d031">
 </head>
 <body>
   <main class="page page-narrow">
@@ -18,12 +18,12 @@
       </div>
     </header>
     <div class="actions">
-      <a class="btn" id="daily" href="?daily=1">今日挑戰</a>
       <button class="btn" id="new" type="button">↻ 新遊戲</button>
       <select class="btn" id="difficulty" aria-label="難度">
         <option value="normal">普通</option>
         <option value="hard">困難</option>
         <option value="assist">輔助</option>
+        <option value="easy">簡單</option>
       </select>
       <button class="btn" id="hint" type="button" hidden>💡 提示</button>
       <button class="btn" id="contrast" type="button" aria-pressed="false">◐ 高對比</button>
@@ -33,14 +33,19 @@
     <section class="hints" id="hints" aria-label="提示" hidden>
       <div class="hint-buttons">
         <button class="btn" type="button" data-hint="letters">🔤 字母</button>
+        <button class="btn" type="button" data-hint="category">🏷️ 類別</button>
         <button class="btn" type="button" data-hint="sentence">📖 例句</button>
         <button class="btn" type="button" data-hint="candidates">🎯 候選</button>
+        <button class="btn" type="button" data-hint="chinese">🈶 中文</button>
       </div>
       <div class="hint-body" id="hint-body">
         <p class="hint-letters" id="hint-letters" hidden></p>
         <p class="hint-sentence" id="hint-sentence" hidden></p>
         <div class="hint-candidates" id="hint-candidates" hidden></div>
+        <p class="hint-category" id="hint-category" hidden></p>
+        <p class="hint-chinese" id="hint-chinese" hidden></p>
       </div>
+      <div class="hint-starters" id="hint-starters" hidden></div>
     </section>
     <div class="board-wrap" id="board-wrap" tabindex="-1">
       <div class="board" id="board" role="grid" aria-label="Wordle 猜字格"></div>
@@ -69,6 +74,6 @@
       <button class="btn" type="button" data-act="keep" autofocus>先不要</button>
     </div>
   </dialog>
-  <script type="module" src="ui.js?v=6abe362"></script>
+  <script type="module" src="ui.js?v=ab8d031"></script>
 </body>
 </html>

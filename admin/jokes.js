@@ -1,10 +1,17 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=6abe362';
-import { element } from '../shared/feedback.js?v=6abe362';
-import { JOKE_CATEGORIES, jokeFieldsError, normalizeJokeBody, parseJokeImport } from './joke-import.js?v=6abe362';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=ab8d031';
+import { element } from '../shared/feedback.js?v=ab8d031';
+import { JOKE_CATEGORIES, jokeFieldsError, normalizeJokeBody, parseJokeImport } from './joke-import.js?v=ab8d031';
 
-export { JOKE_CATEGORIES, parseJokeImport } from './joke-import.js?v=6abe362';
+export { JOKE_CATEGORIES, parseJokeImport } from './joke-import.js?v=ab8d031';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export const JOKE_SOURCES = ['editor', 'submitted', 'builtin'];
+
+export function jokePurgeDate(value) {
+  if (!value || !Number.isFinite(Date.parse(value))) return '時間未記錄';
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei',
+    year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(value));
+  return ['year', 'month', 'day'].map((name) => parts.find((p) => p.type === name).value).join('-');
+}
 
 // Date inputs are calendar dates in Asia/Taipei, independent of the browser zone.
 export function jokeDateRange(mode = 'all', from = '', to = '', now = new Date()) {
@@ -80,6 +87,12 @@ export function createJokesClient({ auth, client, url = SUPABASE_URL, key = SUPA
     return data;
   }
   return {
+    async purge() {
+      const id = await requireAdmin();
+      const result = await call(id, 'rpc/purge_rejected_jokes', {});
+      if (!Number.isInteger(result) || result < 0 || result > 500) throw new Error('清除結果無效，請重新載入確認');
+      return result;
+    },
     async list(filters = {}) {
       const params = jokeListParams(filters);
       const id = await requireAdmin();
@@ -123,9 +136,10 @@ export function initJokesPanel({ doc, auth, client, onDenied = () => {}, confirm
   const $ = (id) => doc.getElementById(id);
   const node = (tag, text, cls) => element(doc, tag, text, cls);
   const userId = auth.session?.user.id;
-  let epoch = 0; let loaded = false; let loading = false;
+  let epoch = 0; let loading = false;
   let page = 1; let total = 0; let preview = null; let importing = false; let importEpoch = 0;
   let noticeTimer;
+  let purgeDue = 0; let purging = false; let purgeEpoch = 0;
   const clearNotice = () => { timers.clearTimeout(noticeTimer); $('jokes-notice').textContent = ''; };
   const showNotice = () => {
     clearNotice(); $('jokes-notice').textContent = '已儲存';
@@ -148,8 +162,11 @@ export function initJokesPanel({ doc, auth, client, onDenied = () => {}, confirm
   };
   const current = (stamp) => stamp === epoch && auth.session?.user.id === userId;
   const clear = () => {
-    ++epoch; loaded = false; loading = false; clearNotice();
+    ++epoch; ++purgeEpoch; loading = false; clearNotice();
     ++importEpoch; preview = null; importing = false; page = 1; total = 0;
+    purgeDue = 0; purging = false;
+    $('jokes-purge').disabled = true;
+    $('jokes-purge-summary').textContent = ''; $('jokes-purge-status').textContent = '';
     for (const id of ['pending-jokes', 'approved-jokes', 'rejected-jokes', 'jokes-import-preview']) $(id).replaceChildren();
     $('jokes-import-text').value = ''; $('jokes-direct-approve').checked = false;
     $('jokes-import-status').textContent = ''; $('jokes-page').textContent = '';
@@ -172,11 +189,17 @@ export function initJokesPanel({ doc, auth, client, onDenied = () => {}, confirm
     catch (error) { $('jokes-status').textContent = `讀取失敗：${error.message}`; return; }
     clearNotice();
     const stamp = ++epoch; loading = true; $('reload-jokes').disabled = true;
+    $('jokes-purge').disabled = true; purgeDue = 0;
     $('jokes-status').textContent = '載入中…';
     try {
       const result = await client.list(query);
       if (!current(stamp)) return;
       const rows = result.rows; page = result.page; total = result.total;
+      const hasPurgeStats = Number.isSafeInteger(result.purged_total) && result.purged_total >= 0 &&
+        Number.isSafeInteger(result.purge_due) && result.purge_due >= 0;
+      purgeDue = hasPurgeStats ? result.purge_due : 0;
+      $('jokes-purge-summary').textContent = '下架滿 30 天的笑話會自動刪除（保留去重指紋，同梗不能重錄）。' +
+        (hasPurgeStats ? `已清除累計 ${result.purged_total} 則。到期待清除 ${purgeDue} 則。` : '清除統計暫時無法使用。');
       $('jokes-page').textContent = `第 ${page} / ${Math.max(1, Math.ceil(total / 50))} 頁 · 共 ${total} 則 · 每頁 50 則`;
       $('jokes-prev').disabled = page <= 1; $('jokes-next').disabled = page * 50 >= total;
       for (const id of ['pending-jokes', 'approved-jokes', 'rejected-jokes']) $(id).replaceChildren();
@@ -190,6 +213,8 @@ export function initJokesPanel({ doc, auth, client, onDenied = () => {}, confirm
             for (const line of submitterLines(row.submitter)) card.append(node('p', line, 'joke-submitter'));
           }
           if (status === 'rejected') {
+            const purgeLabel = row.purge_at === null ? '不自動清除' : `將於 ${jokePurgeDate(row.purge_at)} 清除`;
+            card.append(node('p', `下架於 ${jokePurgeDate(row.reviewed_at)} · ${purgeLabel}`));
             card.append(node('p', `分類：${row.category}`), node('p', `答案：${row.answer ?? '無'}`),
               node('p', `出處：${row.credit ?? '原創（無出處）'}`), node('p', `下架理由：${row.reject_reason ?? ''}`));
             $(id).append(card); continue;
@@ -236,7 +261,7 @@ export function initJokesPanel({ doc, auth, client, onDenied = () => {}, confirm
           card.append(message); $(id).append(card);
         }
       }
-      loaded = true; $('jokes-status').textContent = '';
+      $('jokes-status').textContent = '';
       if (saved) showNotice();
     } catch (error) {
       if (!current(stamp)) return;
@@ -245,7 +270,10 @@ export function initJokesPanel({ doc, auth, client, onDenied = () => {}, confirm
         if (saved) showNotice();
         $('jokes-status').textContent = `讀取失敗：${error.message}，請重新載入重試。`;
       }
-    } finally { if (current(stamp)) { loading = false; $('reload-jokes').disabled = false; } }
+    } finally { if (current(stamp)) {
+      loading = false; $('reload-jokes').disabled = false;
+      $('jokes-purge').disabled = purging || purgeDue === 0;
+    } }
   };
   const categories = $('jokes-category-filter');
   for (const value of ['', ...JOKE_CATEGORIES]) { const option = node('option', value || '全部分類'); option.value = value; categories.append(option); }
@@ -327,5 +355,27 @@ export function initJokesPanel({ doc, auth, client, onDenied = () => {}, confirm
     }
   });
   $('reload-jokes').addEventListener('click', () => load());
-  return { clear, load, open: () => loaded ? undefined : load() };
+  $('jokes-purge').addEventListener('click', async () => {
+    if (loading || purging || importing || purgeDue === 0 || auth.session?.user.id !== userId) return;
+    if (!confirm(`刪除 ${Math.min(purgeDue, 500)} 則下架滿 30 天的笑話與其評分、看過紀錄，無法復原？（依執行時到期資料，每批最多 500 則）`)) return;
+    const stamp = ++purgeEpoch;
+    const currentPurge = () => stamp === purgeEpoch && auth.session?.user.id === userId;
+    purging = true; $('jokes-purge').disabled = true;
+    $('jokes-purge-status').textContent = '清除中…';
+    try {
+      const count = await client.purge();
+      if (!currentPurge()) return;
+      await load();
+      if (!currentPurge()) return;
+      $('jokes-purge-status').textContent = `本次手動清除 ${count} 則；重新載入時另會自動清除最多 50 則。` +
+        (purgeDue > 0 ? '仍有到期題目，請再按一次。' : '');
+    } catch (error) {
+      if (!currentPurge()) return;
+      if (error.message.startsWith('沒有權限')) { clear(); onDenied(); }
+      else $('jokes-purge-status').textContent = `清除失敗：${error.message}；請重新載入確認後再試。`;
+    } finally {
+      if (currentPurge()) { purging = false; $('jokes-purge').disabled = loading || purgeDue === 0; }
+    }
+  });
+  return { clear, load, open: () => load() };
 }
