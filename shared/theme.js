@@ -1,6 +1,6 @@
-import { load, save } from './storage.js?v=3f1141d';
-import { mountSoundToggle } from './sound.js?v=3f1141d';
-import { mountSkinToggle } from './skin.js?v=3f1141d';
+import { load, save } from './storage.js?v=8edf046';
+import { mountSoundToggle } from './sound.js?v=8edf046';
+import { mountSkinToggle } from './skin.js?v=8edf046';
 
 const root = document.documentElement;
 
