@@ -2,18 +2,18 @@
 import {
   SIZE, TICK_MS, DIFFICULTIES, initState, turnState, tickState, pauseState, resumeState, overlayFor,
   toSave, fromSave, isValidState,
-} from './logic.js?v=8edf046';
-import { createProfile } from '../../shared/profile.js?v=8edf046';
-import { LocalStore } from '../../shared/stores/local.js?v=8edf046';
-import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js?v=8edf046';
-import { bindThemeToggle } from '../../shared/theme.js?v=8edf046';
-import { play } from '../../shared/sound.js?v=8edf046';
-import { setupHelp } from '../../shared/help.js?v=8edf046';
-import { swipe, dpad } from '../../shared/touch.js?v=8edf046';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=8edf046';
-import { settlePlay } from '../../shared/settle.js?v=8edf046';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=8edf046';
-import { load, save } from '../../shared/storage.js?v=8edf046';
+} from './logic.js?v=6abe362';
+import { createProfile } from '../../shared/profile.js?v=6abe362';
+import { LocalStore } from '../../shared/stores/local.js?v=6abe362';
+import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js?v=6abe362';
+import { bindThemeToggle } from '../../shared/theme.js?v=6abe362';
+import { play, music } from '../../shared/sound.js?v=6abe362';
+import { setupHelp } from '../../shared/help.js?v=6abe362';
+import { swipe, dpad } from '../../shared/touch.js?v=6abe362';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=6abe362';
+import { settlePlay } from '../../shared/settle.js?v=6abe362';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=6abe362';
+import { load, save } from '../../shared/storage.js?v=6abe362';
 
 const GAME_ID = 'snake';
 const DIFF_KEY = 'difficulty:snake'; // 上次選的難度(開新局用)
@@ -151,6 +151,7 @@ function steer(dir) {
 // 只在「進行中且未結算」時跑 tick;難度決定間隔。
 function syncLoop() {
   const want = !confirmingQuit && !state.paused && !state.over && !ended;
+  music(want); // RS68:遊玩中播背景音樂(選曲見 ? 玩法);暫停/結束/確認框即淡出
   if (want && !loop) loop = setInterval(tick, TICK_MS[state.difficulty]);
   if (!want && loop) {
     clearInterval(loop);

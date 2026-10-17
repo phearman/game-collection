@@ -1,7 +1,7 @@
 // 下樓梯繪圖模組(RS11):只負責畫面與特效,⛔ 不改 state、不含規則。
 // 座標單位 = 場地單位(logic.js 的 W × H,x 往右、y 往下);呼叫端先把 ctx 縮放到場地單位。
 // 美術正典:workbook/plans/rs11-stairs-art.md「RS11 美術要求」;第 1 輪退回(PR #20 A1~A3)後改為「高塔內部」世界觀。
-import { W, H, PLAYER, CEIL, FLIP_DELAY, MAX_LIVES, HURT_SEC, heartBox, enemyBox, scrolledBy, canonicalState, directionFor, stageFor } from './logic.js?v=8edf046';
+import { W, H, PLAYER, CEIL, FLIP_DELAY, MAX_LIVES, HURT_SEC, heartBox, enemyBox, scrolledBy, canonicalState, directionFor, stageFor } from './logic.js?v=6abe362';
 
 export const THICK = 0.3; // 平台畫面厚度(碰撞只看上緣)
 export const END_SEC = 0.8; // 結束動畫長度(≤ 1 秒),播完才顯示結算遮罩
@@ -125,7 +125,7 @@ export function fxEvents(fx, prev, next, { dir = 0, reduced = false } = {}) {
     burst(fx, 'star', cx, feet, reduced);
     fx.texts.push({ text: '踩敵 +5', x: cx, y: next.player.y - .5, life: .9, max: .9 });
   }
-  if (next.cloudUses < prev.cloudUses && next.cloudTime > 0) burst(fx, 'dust', cx, feet, reduced);
+  if ((next.cloudSerial ?? 0) > (prev.cloudSerial ?? 0)) burst(fx, 'dust', cx, feet, reduced); // 駕雲結束生雲接住
   if (next.stageCleared && !prev.stageCleared) burst(fx, 'star', cx, feet, reduced);
   for (const p of prev.platforms) {
     if (p.kind === 'flip' && p.flip !== null && p.y > -0.5 && !next.platforms.some((q) => q.n === p.n)) {
@@ -1210,6 +1210,12 @@ export function drawScene(c, s, pal, fx = null, opts = {}) {
   drawBackground(c, pal, s.mode === 'adventure' ? s.speed * s.time : scrolledBy(s.difficulty, s.time), t, opts.reduced);
   drawPlatforms(c, s, pal, fx, t, opts.reduced);
   drawCeiling(c, s, pal, t, opts.reduced);
+  if (s.mode === 'adventure' && s.cloudTime > 0) { // 駕雲中(IR48):腳下踩著一朵雲
+    c.globalAlpha = s.cloudTime < 2 && !opts.reduced ? .55 + .45 * Math.abs(Math.sin(t * 8)) : 1; // 快到期閃爍
+    cloudPath(c, s.player.x - .35, s.player.y + PLAYER - .12, PLAYER + .7, .32);
+    c.fillStyle = pal.cloud; c.fill(); ink(c, pal);
+    c.globalAlpha = 1;
+  }
   drawPlayer(c, s, pal, fx, opts);
   if (fx) drawParticles(c, fx, pal, reversed);
   c.restore();

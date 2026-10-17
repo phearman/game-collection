@@ -1,6 +1,6 @@
 // 數獨規則與狀態轉移：純函式；亂數、時間均由呼叫端注入。
-import { timerInit, timerEvent } from '../../shared/progress.js?v=8edf046';
-import { seedRng } from '../../shared/seed-rng.js?v=8edf046';
+import { timerInit, timerEvent } from '../../shared/progress.js?v=6abe362';
+import { seedRng } from '../../shared/seed-rng.js?v=6abe362';
 
 export const SIZE = 9;
 export const DIFFICULTIES = { easy: 46, normal: 40, hard: 32, expert: 26 };

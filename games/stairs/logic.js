@@ -1,7 +1,7 @@
 // 下樓梯規則層:純函式,不碰 DOM。座標單位 = 場地單位,x 往右、y 往下(0 在畫面頂端)。
 // 規則正典:workbook/plans/stairs.md「規則(驗收依據)」。
-import { STAGES, ADVENTURE, stageFor, directionFor, stageComplete } from './stages.js?v=8edf046';
-export { STAGES, ADVENTURE, stageFor, directionFor, goalText, goalProgress, stageComplete } from './stages.js?v=8edf046';
+import { STAGES, ADVENTURE, stageFor, directionFor, stageComplete } from './stages.js?v=6abe362';
+export { STAGES, ADVENTURE, stageFor, directionFor, flipNotice, goalText, goalProgress, stageComplete } from './stages.js?v=6abe362';
 
 export const W = 9; // 場地寬
 export const H = 16; // 場地高
@@ -217,11 +217,16 @@ export function resumeState(state) {
 const overlaps = (x, p) => x + PLAYER > p.x && x < p.x + p.w;
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-// 推進一步。input = { dir: -1 左 / 0 不動 / 1 右 }。暫停或已結束 ⇒ 原 state。
+// 駕雲中(IR48):雲寶物生效期間自由飛,不受重力、不落地。
+export const ridingCloud = (s) => s.mode === 'adventure' && s.cloudTime > 0;
+
+// 推進一步。input = { dir: -1 左 / 0 不動 / 1 右, dy: -1 往畫面上 / 0 / 1 往畫面下(只在駕雲時有效), dismount: 下雲 }。
+// 暫停或已結束 ⇒ 原 state。
 export function stepState(state, input = {}, dt = DT) {
   if (state.paused || state.over || state.stageCleared) return state;
   const reversed = directionFor(state) === -1;
-  const next = stepSimulation(reversed ? mirrorState(state) : state, input, dt);
+  // dy 以畫面方向給;翻轉關在內部座標上下相反。
+  const next = stepSimulation(reversed ? mirrorState(state) : state, reversed ? { ...input, dy: -(input.dy || 0) } : input, dt);
   return reversed ? mirrorState(next) : next;
 }
 
@@ -254,10 +259,14 @@ function stepSimulation(state, input = {}, dt = DT) {
   }
   const filled = fill(platforms, state.seed, state.nextN, state.difficulty, adventure ? state.stage : null);
   platforms = filled.platforms;
-  let clouds = adventure ? state.clouds.map((p) => ({ ...p, y: p.y - dy, life: p.life - dt })).filter((p) => p.life > 0 && p.y >= -1) : [];
+  // 雲平台固定在畫面上不隨平台上捲(IR48:站在雲上不會被帶去撞頂刺),到期消散。
+  let clouds = adventure ? state.clouds.map((p) => ({ ...p, life: p.life - dt })).filter((p) => p.life > 0) : [];
   let star = adventure ? Math.max(0, state.star - dt) : 0;
-  let cloudTime = adventure ? Math.max(0, state.cloudTime - dt) : 0;
-  let cloudUses = cloudTime > 0 ? state.cloudUses : 0;
+  // 駕雲:本步仍在雲上(沒按下雲)就自由飛;時間在本步用完 ⇒ 飛完這步後生雲接住。
+  const riding = ridingCloud(state) && !input.dismount;
+  let cloudTime = riding ? Math.max(0, state.cloudTime - dt) : 0;
+  const rideEnded = riding && cloudTime === 0;
+  let cloudUses = riding ? state.cloudUses : 0;
   let cloudSerial = state.cloudSerial ?? 0;
   let shield = adventure && state.shield;
   let stomps = state.stomps ?? 0;
@@ -287,14 +296,21 @@ function stepSimulation(state, input = {}, dt = DT) {
 
   // 3. 站著:隨平台上移;走出平台或平台消失 ⇒ 開始掉。
   const standing = on === null ? null : [...platforms, ...clouds].find((p) => p.n === on);
-  if (standing && overlaps(x, standing)) {
+  if (riding) {
+    // 駕雲:不受重力、不落地,上下由 dy 控制;最高 cloudTop(碰不到頂刺)、最低貼底(不會掉出去)。
+    on = null;
+    drop = null;
+    vy = 0;
+    fallingVy = 0; // 舊存檔可能帶著下落速度;駕雲時不能用它觸發踩頭改寫位置
+    y = clamp(y + Math.sign(input.dy || 0) * ADVENTURE.flySpeed * dt, ADVENTURE.cloudTop, H - PLAYER);
+  } else if (standing && overlaps(x, standing)) {
     y = standing.y - PLAYER;
     vy = 0;
   } else {
     on = null;
     // 4. 空中:重力;以「相對平台」的掃掠判定落地(避免高速穿過)。
     const prevBottom = y + PLAYER;
-    vy = Math.min(cloudTime > 0 ? MAX_FALL / 2 : MAX_FALL, vy + GRAVITY * dt);
+    vy = Math.min(MAX_FALL, vy + GRAVITY * dt);
     fallingVy = vy;
     y += vy * dt;
     const bottom = y + PLAYER;
@@ -302,7 +318,7 @@ function stepSimulation(state, input = {}, dt = DT) {
     for (const p of [...platforms, ...clouds]) {
       if (p.n === drop) continue;
       // 相對平台:步初在上緣之上(gap0 ≥ 0)、步末在上緣之下(gap1 ≤ 0)⇒ 本步穿過上緣。
-      const gap0 = p.y + dy - prevBottom;
+      const gap0 = p.y + (p.kind === 'cloud' ? 0 : dy) - prevBottom; // 雲不上捲
       const gap1 = p.y - bottom;
       if (gap0 < -1e-9 || gap1 > 0) continue;
       // 水平重疊看「穿過上緣那一刻」的 x(依交會時刻內插),不看步末的 x。
@@ -356,6 +372,13 @@ function stepSimulation(state, input = {}, dt = DT) {
     });
   }
 
+  // 駕雲時敵人碰撞後仍套飛行界線,不會被修正回頂刺區。
+  if (riding) {
+    y = clamp(y, ADVENTURE.cloudTop, H - PLAYER);
+    vy = 0;
+    on = null;
+  }
+
   // 5. 落地與踩頭修正位置後統一處理頂刺(第 5 關翻轉為底刺)。
   // 扣 1 命，穿過腳下平台被推開；無敵或護盾也必須修正位置。
   if (y < CEIL) {
@@ -366,17 +389,16 @@ function stepSimulation(state, input = {}, dt = DT) {
     vy = Math.max(vy, PUSH_V);
   }
 
-  if (adventure && lives > 0) {
-    // 踩空或接近出界時生成雲。持續站在雲上不消耗第二次。
-    if (on === null && vy > 0 && cloudUses > 0 && (state.player.on !== null || y + PLAYER >= ADVENTURE.cloudCatchY)) {
-      cloudUses--;
-      const n = -(++cloudSerial);
-      const cloud = { n, x: clamp(x + PLAYER / 2 - ADVENTURE.cloudWidth / 2, 0, W - ADVENTURE.cloudWidth), y: y + PLAYER, w: ADVENTURE.cloudWidth, kind: 'cloud', flip: null, life: ADVENTURE.cloudLife };
-      clouds.push(cloud);
-      on = n;
-      vy = 0;
-    }
+  if (adventure && lives > 0 && rideEnded && on === null && cloudUses > 0) {
+    // 駕雲時間到:腳下生一朵靜止的雲接住,讓玩家有時間走回平台。
+    cloudUses--;
+    const n = -(++cloudSerial);
+    const cloud = { n, x: clamp(x + PLAYER / 2 - ADVENTURE.cloudWidth / 2, 0, W - ADVENTURE.cloudWidth), y: y + PLAYER, w: ADVENTURE.cloudWidth, kind: 'cloud', flip: null, life: ADVENTURE.cloudLife };
+    clouds.push(cloud);
+    on = n;
+    vy = 0;
   }
+  if (cloudTime === 0) cloudUses = 0;
 
   // 6. 碰到愛心就撿起:生命 +1(上限 3);滿血也撿走但不加命(RS17)。
   let { hearts } = state;
@@ -502,7 +524,8 @@ function validAdventure(saved) {
   if (!inRange(s.lives, 1, MAX_LIVES) || !Number.isInteger(s.lives)) return false;
   if (!['floors', 'stageCoins', 'coins', 'bankedFloors', 'stomps', 'hearts', 'cloudSerial'].every((k) => isCount(s[k])) || s.stageCoins > s.coins) return false;
   if (!inRange(s.star, 0, ADVENTURE.starSec) || !inRange(s.hurt, 0, HURT_SEC) || typeof s.shield !== 'boolean') return false;
-  if (!inRange(s.cloudTime, 0, ADVENTURE.cloudSec) || !isCount(s.cloudUses) || s.cloudUses > ADVENTURE.cloudUses || (s.cloudTime === 0 && s.cloudUses !== 0)) return false;
+  // IR48 前的存檔雲可接住 2 次;載入後依新規則只在駕雲結束時用 1 次。
+  if (!inRange(s.cloudTime, 0, ADVENTURE.cloudSec) || !isCount(s.cloudUses) || s.cloudUses > 2 || (s.cloudTime === 0 && s.cloudUses !== 0)) return false;
   if (!Array.isArray(ps) || !ps.length || ps.length > 20) return false;
   const kinds = ['normal', ...st.kinds.map(([k]) => k)];
   for (let i = 0; i < ps.length; i++) {

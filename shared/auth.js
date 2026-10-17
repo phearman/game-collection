@@ -1,6 +1,6 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=8edf046';
-import { levelFor } from './progress.js?v=8edf046';
-import { markCloudOffline } from './cloud-status.js?v=8edf046';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=6abe362';
+import { levelFor } from './progress.js?v=6abe362';
+import { markCloudOffline } from './cloud-status.js?v=6abe362';
 
 const AUTH_KEY = 'gc:auth';
 const REFRESH_LOCK_KEY = 'gc:auth-refresh-lock';
@@ -9,6 +9,8 @@ const REFRESH_TIMEOUT_MS = 10000;
 const RETRY_BASE_MS = 15000;
 const RETRY_MAX_MS = 300000;
 const RETRY_AT_KEY = 'gc:auth-retry-at'; // 跨分頁共享的退避期限(ms)
+// 本分頁已確認「這個帳號 + 這台裝置」合併過(IR32):值 = `${user id}|${device id}`,換帳號自然對不上;登出、登入失效時清除。
+const MERGED_KEY = 'gc:merged-device';
 const CLOCK_SKEW_MS = 1000; // 共享退避期限比上限還晚超過這麼多 ⇒ 異常(時鐘回撥等),不採用
 const TRANSIENT_STATUS = (status) => status === 408 || status === 429 || (status >= 500 && status <= 599);
 // 錯誤分類(IR30,refresh 與雲端準備共用):網路錯誤(連不上、讀本文中斷,呼叫端標 transient)、逾時、408、429、5xx 是暫時故障;
@@ -129,6 +131,7 @@ export function createAuth({
     message = text;
     clearTimer(timer);
     try { storage.removeItem(AUTH_KEY); } catch { /* 記憶體仍登出 */ }
+    try { sessionStorage.removeItem(MERGED_KEY); } catch { /* 下次照舊向雲端查 */ }
     emit();
   };
   // 換 token。逾時涵蓋整次請求(連線、讀本文、解析);分類見 isTransientError。
@@ -357,9 +360,14 @@ export function getCloudRuntime() {
 }
 
 export async function prepareCloudStore({ auth, local, cloud, storage = globalThis.localStorage,
-  choose, confirm = globalThis.confirm, now = Date.now } = {}) {
+  choose, confirm = globalThis.confirm, now = Date.now, session = globalThis.sessionStorage } = {}) {
   const id = deviceId(storage);
-  if (await cloud.hasMergedDevice(id)) return '';
+  // 同一分頁換頁時不必每頁再問一次雲端「合併過沒」(IR32:大廳少等一個網路來回);讀不到記號就照舊查。
+  const userId = auth?.session?.user?.id;
+  const mark = `${userId}|${id}`;
+  const remember = () => { try { if (userId) session?.setItem(MERGED_KEY, mark); } catch { /* 下次照舊查 */ } };
+  try { if (userId && session?.getItem(MERGED_KEY) === mark) return ''; } catch { /* 照舊查 */ }
+  if (await cloud.hasMergedDevice(id)) { remember(); return ''; }
   const localData = await local.exportAll();
   const cloudData = await cloud.exportAll(); // 讀取失敗不能當成「雲端是空的」
   const decision = firstLoginDecision(localData, cloudData);
@@ -390,6 +398,7 @@ export async function prepareCloudStore({ auth, local, cloud, storage = globalTh
   } else {
     await cloud.mergeDevice(id, localData, 'cloud');
   }
+  remember();
   return notice;
 }
 
@@ -485,7 +494,7 @@ export async function selectCloudStore(local) {
   };
   if (!rt.auth.session) { showNotice(); return guarded(local); }
   if (!rt.store) {
-    const { SupabaseStore } = await import('./stores/supabase.js?v=8edf046');
+    const { SupabaseStore } = await import('./stores/supabase.js?v=6abe362');
     rt.store = new SupabaseStore({ auth: rt.auth });
     try {
       rt.notice = await prepareCloudStore({ auth: rt.auth, local, cloud: rt.store });

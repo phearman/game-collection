@@ -10,12 +10,16 @@ export const STAGES = Object.freeze([
 
 export const ADVENTURE = Object.freeze({
   movingSpeed: 1.2, iceAccel: 18, iceDrag: 3, enemySpeed: .8, enemySize: .65,
-  stompBounce: 4.5, starSec: 6, cloudSec: 10, cloudUses: 2, cloudLife: 1.5,
-  cloudWidth: 2, cloudCatchY: 14, clearScore: 30, coinScore: 2, stompScore: 5,
+  // 雲(IR48):取得後 cloudSec 秒內駕雲自由飛(上下左右,flySpeed 單位/秒),最高只到 cloudTop(碰不到頂刺);
+  // 可隨時下雲;時間到還在空中時,腳下生一朵靜止的雲(cloudUses 次)接住,cloudLife 秒後消散。
+  stompBounce: 4.5, starSec: 6, cloudSec: 10, cloudUses: 1, cloudLife: 1.5,
+  cloudWidth: 2, flySpeed: 5, cloudTop: 1.4, clearScore: 30, coinScore: 2, stompScore: 5,
 });
 
 export const stageFor = (s) => STAGES[s.stage - 1];
 export const directionFor = (s) => s.mode === 'adventure' ? stageFor(s).direction : 1;
+// 往上爬的關卡(第 5 關)畫面上下顛倒,進關時大字提醒(IR48 / G7-11)。
+export const flipNotice = (s) => directionFor(s) === -1 ? '畫面倒過來了——就像把手機倒著拿！' : null;
 export function goalText(s) {
   const st = stageFor(s);
   if (st.goal === 'time') return `存活 ${st.target} 秒`;

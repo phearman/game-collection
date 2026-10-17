@@ -1,13 +1,14 @@
 // 畫面 C「我的」:等級、成就、各遊戲統計、最近 50 局、匯出/匯入。只顯示 profile.summary(),不寫規則。
-import { createProfile } from '../shared/profile.js?v=8edf046';
-import { LocalStore } from '../shared/stores/local.js?v=8edf046';
-import { bindThemeToggle } from '../shared/theme.js?v=8edf046';
-import { ACHIEVEMENTS, xpBreakdown } from '../shared/progress.js?v=8edf046';
-import { XP_EXAMPLES, signedXp } from '../shared/xp-explain.js?v=8edf046';
-import { cloudEnabled } from '../shared/supabase-config.js?v=8edf046';
+import { createProfile } from '../shared/profile.js?v=6abe362';
+import { LocalStore } from '../shared/stores/local.js?v=6abe362';
+import { bindThemeToggle } from '../shared/theme.js?v=6abe362';
+import { ACHIEVEMENTS, xpBreakdown } from '../shared/progress.js?v=6abe362';
+import { XP_EXAMPLES, signedXp } from '../shared/xp-explain.js?v=6abe362';
+import { cloudEnabled } from '../shared/supabase-config.js?v=6abe362';
+import { bindGlobalMusicSelect } from '../shared/help.js?v=6abe362';
 
 const $ = (id) => document.getElementById(id);
-const accountReady = cloudEnabled ? await (await import('./account.js?v=8edf046')).initAccount() : null;
+const accountReady = cloudEnabled ? await (await import('./account.js?v=6abe362')).initAccount() : null;
 const profile = await createProfile({ store: new LocalStore() });
 accountReady?.();
 const RESULT = { win: '勝', lose: '敗', quit: '放棄' };
@@ -130,6 +131,10 @@ $('import-dlg').addEventListener('click', async (e) => {
 });
 
 bindThemeToggle($('theme'));
+
+// 全站配樂預設(RS68):各遊戲沒自己選時用這個;別頁改了即時更新選單。
+const bgm = $('bgm-default');
+if (bgm) bindGlobalMusicSelect(bgm);
 await render();
 
 // 「XP 怎麼算?」(RS5):範例由 xpBreakdown 實算;網址帶 #xp 時自動展開並捲到該處。

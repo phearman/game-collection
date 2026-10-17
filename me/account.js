@@ -1,10 +1,10 @@
-import { getCloudRuntime } from '../shared/auth.js?v=8edf046';
-import { isCloudOffline } from '../shared/cloud-status.js?v=8edf046';
-import { exportData, exportFileName } from '../shared/progress.js?v=8edf046';
-import { createFeedbackClient, KINDS, playerFeedbackStatus, element, displayName } from '../shared/feedback.js?v=8edf046';
-import { GAMES } from '../shared/games.js?v=8edf046';
-import { initLineLinkStatus } from '../shared/line-link.js?v=8edf046';
-import { initAvatarPicker } from '../shared/avatars.js?v=8edf046';
+import { getCloudRuntime } from '../shared/auth.js?v=6abe362';
+import { isCloudOffline } from '../shared/cloud-status.js?v=6abe362';
+import { exportData, exportFileName } from '../shared/progress.js?v=6abe362';
+import { createFeedbackClient, KINDS, playerFeedbackStatus, element, displayName } from '../shared/feedback.js?v=6abe362';
+import { GAMES } from '../shared/games.js?v=6abe362';
+import { initLineLinkStatus } from '../shared/line-link.js?v=6abe362';
+import { initAvatarPicker } from '../shared/avatars.js?v=6abe362';
 
 export function renderMyFeedback(doc, rows) {
   const items = doc.getElementById('feedback-items');

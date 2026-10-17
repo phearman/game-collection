@@ -29,6 +29,8 @@ export class SupabaseStore {
     // 原生 fetch 須以 globalThis 呼叫,存成物件方法會丟失呼叫對象(Illegal invocation)。
     this.fetch = (...args) => request.apply(globalThis, args);
     this.cache = new Map();
+    // 快取世代(IR32):整份匯入/合併清空快取時 +1;清空前就發出、之後才回來的讀取不得回填舊資料。
+    this.cacheEpoch = 0;
     this.pending = new Map();
     this.lastFinish = new Map();
     this.dirty = new Set();
@@ -85,6 +87,7 @@ export class SupabaseStore {
   }
 
   async read(path) {
+    const epoch = this.cacheEpoch;
     try {
       const rows = await this.request(path);
       const clean = (rows ?? []).map(({ user_id, ...row }) => {
@@ -95,7 +98,7 @@ export class SupabaseStore {
         if (path.startsWith('saves?') && row.live === null) delete row.live;
         return row;
       });
-      this.cache.set(path, structuredClone(clean));
+      if (epoch === this.cacheEpoch) this.cache.set(path, structuredClone(clean));
       return clean;
     } catch (err) {
       if (this.cache.has(path)) return structuredClone(this.cache.get(path));
@@ -172,12 +175,14 @@ export class SupabaseStore {
     return Object.fromEntries((await this.read('stats?select=*')).map((s) => [s.game_id, s]));
   }
   async exportAll() {
-    return { profile: await this.getProfile(), stats: await this.listStats(), plays: await this.listPlays(), saves: await this.listSaves() };
+    // 四份互不相依,同時讀(IR32);錯誤與完成時機同依序讀(allInOrder)。
+    const [profile, stats, plays, saves] = await allInOrder([this.getProfile(), this.listStats(), this.listPlays(), this.listSaves()]);
+    return { profile, stats, plays, saves };
   }
   async importAll(data) {
     // 匯入不排程重試；失敗由呼叫者決定，不能日後默默覆蓋新的紀錄。
     await this.request('rpc/import_all', { method: 'POST', body: { data: cleanData(data) } });
-    this.pending.clear(); this.cache.clear(); this.dirty.clear(); this.emit();
+    this.pending.clear(); this.cache.clear(); this.cacheEpoch += 1; this.dirty.clear(); this.emit();
   }
   async hasMergedDevice(deviceId) {
     const query = new URLSearchParams({ select: 'device_id', device_id: `eq.${deviceId}`, limit: '1' });
@@ -185,7 +190,7 @@ export class SupabaseStore {
   }
   async mergeDevice(deviceId, data, mode = 'merge') {
     await this.request('rpc/merge_device', { method: 'POST', body: { device_id: deviceId, data: { ...cleanData(data), _mode: mode } } });
-    this.pending.clear(); this.cache.clear(); this.dirty.clear(); this.emit();
+    this.pending.clear(); this.cache.clear(); this.cacheEpoch += 1; this.dirty.clear(); this.emit();
   }
   async sendFinish(pending) {
     let result;
@@ -250,10 +255,10 @@ export class SupabaseStore {
   async legacyBest() { return 0; }
 }
 
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=8edf046';
-import { writeFailure } from './errors.js?v=8edf046';
-import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=8edf046';
-import { normalizePlay } from './normalize.js?v=8edf046';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=6abe362';
+import { writeFailure, allInOrder } from './errors.js?v=6abe362';
+import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=6abe362';
+import { normalizePlay } from './normalize.js?v=6abe362';
 
 function recalculateFinish(base, stats, play, live) {
   const missing = (live?.achievements ?? []).filter((id) => !base.achievements?.[id]);

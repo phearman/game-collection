@@ -1,7 +1,8 @@
 // 共用「? 玩法」說明與示範(RS3)。每款遊戲提供規則文字與示範步驟,
 // 第一次進入該遊戲自動開啟一次;之後由頂列的「? 玩法」按鈕開啟。
-import { load, save } from './storage.js?v=8edf046';
-import { GAMES } from './games.js?v=8edf046';
+import { load, save } from './storage.js?v=6abe362';
+import { GAMES } from './games.js?v=6abe362';
+import { SONGS, GAME_MUSIC, DEFAULT_SONG, musicChoice, setMusicChoice, globalMusicChoice, setGlobalMusicChoice } from './sound.js?v=6abe362';
 
 // 依遊戲 id 取編號(DV11;code 依 games.js 順序固定 G1 起、新遊戲往後編、不重排)。沒有 code 或查無此遊戲回 null。
 export function gameCode(id) {
@@ -17,6 +18,35 @@ export function kindLabel(kind) {
   if (kind === 'ok') return '✅ 成功';
   if (kind === 'fail') return '❌ 失敗';
   return '';
+}
+
+// 配樂選單(RS68)。曲名一律來自曲庫常數,不含使用者輸入。
+const songOption = (choice) => (value, text) => `<option value="${value}"${value === choice ? ' selected' : ''}>${text}</option>`;
+const songTitle = (gameId) => SONGS[GAME_MUSIC[gameId] ?? DEFAULT_SONG].title;
+// 全站預設這個值,放到某款遊戲時實際是什麼(給選單顯示用)
+function globalLabel(gameId, global) {
+  if (global === 'none') return '關閉';
+  return global === 'auto' ? `依遊戲預設・${songTitle(gameId)}` : SONGS[global].title;
+}
+// 各遊戲選單(「? 玩法」):跟隨全站預設(標出目前會播什麼)/曲庫各曲/關閉;遊戲的選擇優先於全站預設。
+export function musicOptions(gameId, choice = 'default', global = 'auto') {
+  const option = songOption(choice);
+  return [option('default', `跟隨全站預設(${globalLabel(gameId, global)})`),
+    ...Object.entries(SONGS).map(([id, song]) => option(id, song.title)),
+    option('none', '關閉')].join('');
+}
+// 全站預設選單(「我的紀錄」頁)的選項 [值, 文字]:依遊戲預設/曲庫各曲/關閉。該頁以 DOM 建立選項(不用 innerHTML)。
+export function globalMusicEntries() {
+  return [['auto', '依遊戲預設(每款遊戲各自的曲子)'], ...Object.entries(SONGS).map(([id, song]) => [id, song.title]), ['none', '關閉']];
+}
+// 綁定全站預設選單:建立選項、改選即存;別頁改了 gc:bgm(或清空網站資料)時同步顯示目前值(審查 #150 r2)。
+export function bindGlobalMusicSelect(select, { win = globalThis, get = globalMusicChoice, set = setGlobalMusicChoice } = {}) {
+  for (const [value, text] of globalMusicEntries()) select.append(new win.Option(text, value));
+  select.value = get();
+  select.addEventListener('change', () => set(select.value));
+  win.addEventListener?.('storage', (event) => {
+    if (event.key === 'gc:bgm' || event.key === null) select.value = get();
+  });
 }
 
 // opts:
@@ -70,6 +100,7 @@ export function setupHelp({ gameId, title, rules, demo, mountAfter, onClose }) {
     </div>
     <div class="help-rules">${rules}</div>
     <p class="help-rules">頂列 🔊 可切換：🎵 音效＋音樂 → 🔊 只有音效 → 🔇 靜音</p>
+    <label class="help-music">🎼 配樂 <select data-music aria-label="配樂">${musicOptions(gameId, musicChoice(gameId), globalMusicChoice())}</select></label>
     ${demo ? `
       <div class="help-demo">
         <div class="help-demo-head">
@@ -84,8 +115,10 @@ export function setupHelp({ gameId, title, rules, demo, mountAfter, onClose }) {
   document.body.append(dlg);
 
   const runner = demo ? demoRunner(dlg, demo) : null;
+  const pick = dlg.querySelector?.('[data-music]');
   const open = () => {
     document.dispatchEvent(new CustomEvent('helpopen'));
+    if (pick) pick.innerHTML = musicOptions(gameId, musicChoice(gameId), globalMusicChoice()); // 別頁可能改過選擇或全站預設
     dlg.showModal();
     runner?.reset();
     runner?.play();
@@ -95,11 +128,12 @@ export function setupHelp({ gameId, title, rules, demo, mountAfter, onClose }) {
     dlg.close();
   };
 
+  pick?.addEventListener('change', (e) => setMusicChoice(e.target.value, gameId));
   btn.addEventListener('click', open);
   dlg.addEventListener('click', async (e) => {
     if (e.target.closest('[data-feedback]')) {
       close();
-      const { openFeedback } = await import('./feedback.js?v=8edf046');
+      const { openFeedback } = await import('./feedback.js?v=6abe362');
       await openFeedback({ gameId, meHref: '../../me/' });
       return;
     }

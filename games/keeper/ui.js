@@ -5,18 +5,18 @@ import {
   tally, movesOf, finishInfo, classifyGesture, normalizeShots, toSave, fromSave, isValidState,
   ROLES, roleOf, kickerTally, aimAt, nudgeAim, chooseCurve, chargeShot, releaseShot, cancelCharge,
   CURVES, CURVE_NAMES, POWER_HALF_MS, kickFlightMs, KICKER_WIN_GOALS,
-} from './logic.js?v=8edf046';
-import { FIELD_H, aimFromPoint, drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js?v=8edf046';
-import { createProfile } from '../../shared/profile.js?v=8edf046';
-import { LocalStore } from '../../shared/stores/local.js?v=8edf046';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=8edf046';
-import { bindThemeToggle } from '../../shared/theme.js?v=8edf046';
-import { play } from '../../shared/sound.js?v=8edf046';
-import { setupHelp } from '../../shared/help.js?v=8edf046';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=8edf046';
-import { settlePlay } from '../../shared/settle.js?v=8edf046';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=8edf046';
-import { load, save } from '../../shared/storage.js?v=8edf046';
+} from './logic.js?v=6abe362';
+import { FIELD_H, aimFromPoint, drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js?v=6abe362';
+import { createProfile } from '../../shared/profile.js?v=6abe362';
+import { LocalStore } from '../../shared/stores/local.js?v=6abe362';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=6abe362';
+import { bindThemeToggle } from '../../shared/theme.js?v=6abe362';
+import { play, music } from '../../shared/sound.js?v=6abe362';
+import { setupHelp } from '../../shared/help.js?v=6abe362';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=6abe362';
+import { settlePlay } from '../../shared/settle.js?v=6abe362';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=6abe362';
+import { load, save } from '../../shared/storage.js?v=6abe362';
 
 const GAME_ID = 'keeper';
 const DIFF_KEY = 'difficulty:keeper'; // 上次選的難度(開新局用)
@@ -231,6 +231,7 @@ function draw() {
 // ---- 畫面(DOM)----
 
 function render() {
+  music(!confirmingQuit && !state.paused && state.phase !== 'ready' && state.phase !== 'over'); // RS68:遊玩中播背景音樂(選曲見 ? 玩法);準備/暫停/結束即淡出
   const kicker = roleOf(state) === 'kicker';
   const t = kicker ? kickerTally(state) : tally(state.log, state.weather);
   $('score').textContent = t.score.toLocaleString();

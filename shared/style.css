@@ -1,4 +1,4 @@
-@import url("skins.css?v=8edf046");
+@import url("skins.css?v=6abe362");
 :root {
   --bg: #f6f5f1;
   --surface: #ffffff;
@@ -148,6 +148,8 @@ a.card:hover { border-color: var(--accent); }
 .help-rules { font-size: 14px; }
 .help-rules ol, .help-rules ul { padding-left: 20px; margin: 8px 0; }
 .help-rules li { margin: 4px 0; }
+.help-music { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 0 0 8px; }
+.help-music select { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 8px; min-height: 40px; }
 .help-demo { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; }
 .help-demo-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .help-stage { max-width: 220px; margin: 0 auto; }

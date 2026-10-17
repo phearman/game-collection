@@ -2,16 +2,16 @@
 import {
   DIFFICULTIES, HIDE_MS, initState, flip, hideState, tickState, scoreFor, resultOf, isOver, isWaiting,
   hasActed, seededRng, demoPlan, remainingPairs, cardView, symbolOf, detailOf, pairsOf, toSave, fromSave, isValidState,
-} from './logic.js?v=8edf046';
-import { createProfile } from '../../shared/profile.js?v=8edf046';
-import { LocalStore } from '../../shared/stores/local.js?v=8edf046';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=8edf046';
-import { bindThemeToggle } from '../../shared/theme.js?v=8edf046';
-import { play } from '../../shared/sound.js?v=8edf046';
-import { setupHelp } from '../../shared/help.js?v=8edf046';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=8edf046';
-import { settlePlay } from '../../shared/settle.js?v=8edf046';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=8edf046';
+} from './logic.js?v=6abe362';
+import { createProfile } from '../../shared/profile.js?v=6abe362';
+import { LocalStore } from '../../shared/stores/local.js?v=6abe362';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=6abe362';
+import { bindThemeToggle } from '../../shared/theme.js?v=6abe362';
+import { play, music } from '../../shared/sound.js?v=6abe362';
+import { setupHelp } from '../../shared/help.js?v=6abe362';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=6abe362';
+import { settlePlay } from '../../shared/settle.js?v=6abe362';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=6abe362';
 
 const GAME_ID = 'memory';
 const LABELS = { normal: '一般', hard: '困難', expert: '專家' };
@@ -178,6 +178,7 @@ function render() {
   const d = DIFFICULTIES[state.difficulty];
   $('status').textContent = `🃏 剩餘 ${remainingPairs(state)} 對 · 步數 ${state.moves} · 失誤 ${state.misses} · ${LABELS[state.difficulty]} ${d.cols}×${d.rows}`;
   renderOverlay();
+  music(!ended && (state.status === 'ready' || state.status === 'playing') && $('overlay').hidden); // RS68:遊玩中播背景音樂(選曲見 ? 玩法);終局後看盤面也不重播
 }
 
 // 成就 id 可能來自匯入檔:只顯示白名單名稱,其餘一律 escape。

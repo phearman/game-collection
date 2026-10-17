@@ -2,17 +2,17 @@ import {
   BLACK, DIFFICULTIES, ORDERS, AI_DELAY, PASS_DELAY, initState, newGameState, stepState, aiStepState,
   undoState, canUndo, isPlayerTurn, playerColor, legalMoves, counts, detailFor, resultFor, scoreFor,
   cursorMove, HELP_RULES, demoSteps,
-} from './logic.js?v=8edf046';
-import { createProfile } from '../../shared/profile.js?v=8edf046';
-import { LocalStore } from '../../shared/stores/local.js?v=8edf046';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=8edf046';
-import { bindThemeToggle } from '../../shared/theme.js?v=8edf046';
-import { play as playSound } from '../../shared/sound.js?v=8edf046';
-import { setupHelp } from '../../shared/help.js?v=8edf046';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=8edf046';
-import { settlePlay } from '../../shared/settle.js?v=8edf046';
-import { confirmQuitBest } from '../../shared/quit.js?v=8edf046';
-import { load, save } from '../../shared/storage.js?v=8edf046';
+} from './logic.js?v=6abe362';
+import { createProfile } from '../../shared/profile.js?v=6abe362';
+import { LocalStore } from '../../shared/stores/local.js?v=6abe362';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=6abe362';
+import { bindThemeToggle } from '../../shared/theme.js?v=6abe362';
+import { play as playSound, music } from '../../shared/sound.js?v=6abe362';
+import { setupHelp } from '../../shared/help.js?v=6abe362';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=6abe362';
+import { settlePlay } from '../../shared/settle.js?v=6abe362';
+import { confirmQuitBest } from '../../shared/quit.js?v=6abe362';
+import { load, save } from '../../shared/storage.js?v=6abe362';
 
 const GAME_ID = 'reversi';
 const PREF_KEY = `preferences:${GAME_ID}`;
@@ -78,6 +78,7 @@ function render() {
   $('hints').textContent = `提示：${hints ? '開' : '關'}`;
   $('hints').setAttribute('aria-pressed', String(hints));
   $('overlay').hidden = !state.over;
+  music(!state.over && !ended); // RS68:遊玩中播背景音樂(選曲見 ? 玩法);終局即淡出
   $('again').disabled = !ended || !!ended.pending || restarting;
   if (!state.over) return;
   $('overlay-title').textContent = { win: '你贏了！', lose: 'AI 勝利', draw: '平手！' }[resultFor(state)];

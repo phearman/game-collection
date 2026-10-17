@@ -2,21 +2,21 @@
 import {
   W, H, PLAYER, DT, MAX_LIVES, DIFFICULTIES, initState, stepState, pauseState, resumeState, overlayFor,
   toSave, fromSave, isValidState,
-  initAdventure, nextStage, scoreFor, detailFor, resultFor, stageFor, goalText, goalProgress,
-} from './logic.js?v=8edf046';
-import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=8edf046';
-import { createProfile } from '../../shared/profile.js?v=8edf046';
-import { LocalStore } from '../../shared/stores/local.js?v=8edf046';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=8edf046';
-import { bindThemeToggle } from '../../shared/theme.js?v=8edf046';
-import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=8edf046';
-import { skinPalette } from './skins.js?v=8edf046';
-import { play, music } from '../../shared/sound.js?v=8edf046';
-import { setupHelp } from '../../shared/help.js?v=8edf046';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=8edf046';
-import { settlePlay } from '../../shared/settle.js?v=8edf046';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=8edf046';
-import { load, save } from '../../shared/storage.js?v=8edf046';
+  initAdventure, nextStage, scoreFor, detailFor, resultFor, stageFor, goalText, goalProgress, flipNotice, ridingCloud,
+} from './logic.js?v=6abe362';
+import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=6abe362';
+import { createProfile } from '../../shared/profile.js?v=6abe362';
+import { LocalStore } from '../../shared/stores/local.js?v=6abe362';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=6abe362';
+import { bindThemeToggle } from '../../shared/theme.js?v=6abe362';
+import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=6abe362';
+import { skinPalette } from './skins.js?v=6abe362';
+import { play, music } from '../../shared/sound.js?v=6abe362';
+import { setupHelp } from '../../shared/help.js?v=6abe362';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=6abe362';
+import { settlePlay } from '../../shared/settle.js?v=6abe362';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=6abe362';
+import { load, save } from '../../shared/storage.js?v=6abe362';
 
 const GAME_ID = 'stairs';
 const DIFF_KEY = 'difficulty:stairs'; // 上次選的難度(開新局用)
@@ -142,9 +142,10 @@ function togglePause() {
 
 // ---- 輸入:按住移動、放開停止 ----
 
-const keys = { left: false, right: false };
-const touches = new Map(); // pointerId → -1 / 1(後按的優先)
-function clearInput() { keys.left = false; keys.right = false; touches.clear(); }
+const keys = { left: false, right: false, up: false, down: false };
+const touches = new Map(); // pointerId → { side: -1 / 1, x, y 場地座標 }(後按的優先)
+let dismountQueued = false; // 按了下雲,下一步生效
+function clearInput() { keys.left = false; keys.right = false; keys.up = false; keys.down = false; touches.clear(); dismountQueued = false; }
 
 function advanceStage() {
   const next = nextStage(state);
@@ -162,10 +163,18 @@ const noteInput = (t = performance.now()) => {
   profile.input();
 };
 
-function inputDir() {
-  if (touches.size) return [...touches.values()].at(-1);
-  return (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+const RIDE_DEADZONE = 0.4; // 駕雲觸控:手指離角色中心這麼近就不動(場地單位)
+// 本步輸入 { dir, dy }。駕雲時觸控 = 往手指的方向飛;平常觸控 = 按住左半邊/右半邊。
+function inputNow() {
+  if (touches.size) {
+    const t = [...touches.values()].at(-1);
+    if (!ridingCloud(state)) return { dir: t.side, dy: 0 };
+    const toward = (d) => (Math.abs(d) < RIDE_DEADZONE ? 0 : Math.sign(d));
+    return { dir: toward(t.x - (state.player.x + PLAYER / 2)), dy: toward(t.y - (state.player.y + PLAYER / 2)) };
+  }
+  return { dir: (keys.right ? 1 : 0) - (keys.left ? 1 : 0), dy: (keys.down ? 1 : 0) - (keys.up ? 1 : 0) };
 }
+const inputDir = () => inputNow().dir;
 
 // ---- 迴圈:固定步長累積;進行中,或特效/結束動畫還沒播完時跑 ----
 
@@ -184,12 +193,14 @@ function frame(t) {
   last = t;
   if (playing()) {
     acc += dt;
-    if (inputDir() !== 0 && t - lastInputAt >= HOLD_INPUT_MS) noteInput(t);
+    const held = inputNow();
+    if ((held.dir !== 0 || held.dy !== 0) && t - lastInputAt >= HOLD_INPUT_MS) noteInput(t);
     while (acc >= DT && playing()) {
       acc -= DT;
       const prev = state;
-      const dir = inputDir();
-      state = stepState(state, { dir });
+      const { dir, dy } = inputNow();
+      state = stepState(state, { dir, dy, dismount: dismountQueued });
+      dismountQueued = false;
       if ((prev.player.on === null && state.player.on !== null)
         || (prev.player.vy >= 0 && state.player.vy < 0 && state.player.on === null
           && state.platforms.some((p) => p.kind === 'bounce' && Math.abs(p.y - state.player.y - PLAYER) < 0.3))) play('land');
@@ -275,7 +286,7 @@ function render() {
     const treasures = [`生命 ${state.lives}/${MAX_LIVES}`, `金幣 ${state.coins}`];
     if (state.star > 0) treasures.push(`星星 ${Math.ceil(state.star)}秒`);
     if (state.shield) treasures.push('護盾 ×1');
-    if (state.cloudTime > 0) treasures.push(`雲 ${Math.ceil(state.cloudTime)}秒 · ${state.cloudUses}次`);
+    if (state.cloudTime > 0) treasures.push(`駕雲 ${Math.ceil(state.cloudTime)}秒`);
     $('treasures').textContent = treasures.join(' · ');
   }
   const pauseBtn = $('pause');
@@ -284,6 +295,7 @@ function render() {
   pauseBtn.setAttribute('aria-label', label);
   pauseBtn.title = `${label}(P)`;
   pauseBtn.disabled = !!ended || state.over || state.stageCleared;
+  $('cloud-off').hidden = !ridingCloud(state) || state.paused || state.over;
   draw();
   renderOverlay();
   syncLoop();
@@ -324,6 +336,8 @@ function renderOverlay() {
   $('overlay-info').textContent = '';
   if (kind === 'ready') {
     $('overlay-title').textContent = state.mode === 'adventure' ? `第 ${state.stage} 關：${stageFor(state).name}` : '準備開始';
+    const flip = state.mode === 'adventure' ? flipNotice(state) : null;
+    if (flip) infoLine(`🙃 ${flip}`, 'overlay-flip');
     if (state.mode === 'adventure') infoLine(goalText(state));
     infoLine('按 ← →,或按住場地左半邊/右半邊開始');
     actions.innerHTML = '<button class="btn" data-act="resume">▶ 開始</button>';
@@ -349,7 +363,12 @@ function renderOverlay() {
 
 // ---- 事件 ----
 
-const KEYS = { ArrowLeft: 'left', ArrowRight: 'right', a: 'left', d: 'right' };
+const KEYS = { ArrowLeft: 'left', ArrowRight: 'right', a: 'left', d: 'right', ArrowUp: 'up', ArrowDown: 'down', w: 'up', s: 'down' };
+function dismount() {
+  if (!ridingCloud(state) || state.paused) return;
+  dismountQueued = true;
+  noteInput();
+}
 
 document.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]')) return;
@@ -359,6 +378,11 @@ document.addEventListener('keydown', (e) => {
     if (ended || e.repeat) return;
     profile.input();
     togglePause();
+    return;
+  }
+  if (e.key === ' ' && ridingCloud(state) && !state.paused) { // 空白鍵下雲
+    e.preventDefault();
+    if (!e.repeat) dismount();
     return;
   }
   const k = KEYS[e.key] || KEYS[e.key.toLowerCase()];
@@ -374,29 +398,30 @@ document.addEventListener('keyup', (e) => {
   const k = KEYS[e.key] || KEYS[e.key?.toLowerCase()];
   if (k) keys[k] = false;
 });
-window.addEventListener('blur', () => { keys.left = false; keys.right = false; touches.clear(); });
+window.addEventListener('blur', clearInput);
 
 // 觸控:按住場地左半邊/右半邊移動,放開停止;暫停中按下就繼續。遮罩上的按鈕照常點。
 const stage = $('stage');
-const sideOf = (e) => {
-  const r = stage.getBoundingClientRect();
-  return e.clientX < r.left + r.width / 2 ? -1 : 1;
+// 觸點在場地座標(畫面方向,與 state 一致)。
+const touchOf = (e) => {
+  const r = canvas.getBoundingClientRect();
+  return { side: e.clientX < r.left + r.width / 2 ? -1 : 1, x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
 };
 stage.addEventListener('pointerdown', (e) => {
   if (ended || state.over || e.target.closest('button')) return;
   e.preventDefault();
   stage.setPointerCapture?.(e.pointerId);
   touches.delete(e.pointerId);
-  touches.set(e.pointerId, sideOf(e));
+  touches.set(e.pointerId, touchOf(e));
   noteInput();
   if (state.paused) resume();
 });
 stage.addEventListener('pointermove', (e) => {
   if (!touches.has(e.pointerId)) return;
-  const side = sideOf(e);
-  if (side === touches.get(e.pointerId)) return;
-  touches.set(e.pointerId, side);
-  noteInput(); // 拖移換邊 = 一次新輸入
+  const t = touchOf(e);
+  const changed = t.side !== touches.get(e.pointerId).side;
+  touches.set(e.pointerId, t); // 駕雲時手指拖到哪就往哪飛
+  if (changed) noteInput(); // 拖移換邊 = 一次新輸入
 });
 const release = (e) => touches.delete(e.pointerId);
 stage.addEventListener('pointerup', release);
@@ -410,6 +435,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 $('new').addEventListener('click', () => newGame());
+$('cloud-off').addEventListener('click', dismount);
 $('pause').addEventListener('click', () => {
   profile.input();
   togglePause();
@@ -502,11 +528,11 @@ setupHelp({
   mountAfter: document.querySelector('.topbar .btn'),
   rules: `
     <ol>
-      <li>闖關模式依序挑戰六關：層數、生存時間、金幣與終點旗；第五關往上爬，危險刺在底部。每關按開始，過關回 1 命並延續生命。</li>
+      <li>闖關模式依序挑戰六關：層數、生存時間、金幣與終點旗；第五關往上爬，畫面上下顛倒（像把手機倒著拿），危險刺在底部。每關按開始，過關回 1 命並延續生命。</li>
       <li>平台不斷往上捲;用 ← → / A D,或按住畫面左半邊/右半邊移動。</li>
       <li>刺平台扣 1 命;彈跳平台會把你彈起;翻轉平台踩上 0.5 秒後消失。</li>
       <li>移動平台會載你左右往返；冰平台左右加速、放開仍會滑。敵人側碰扣 1 命，從上方落下踩頭消滅並得 5 分。</li>
-      <li>金幣得 2 分；星星無敵 6 秒，碰敵人直接消滅；護盾擋一次傷害；雲 10 秒內慢落並自動接住踩空兩次，每朵雲 1.5 秒後消散。</li>
+      <li>金幣得 2 分；星星無敵 6 秒，碰敵人直接消滅；護盾擋一次傷害；雲：10 秒內駕雲自由飛（← → ↑ ↓，或手指按住要去的位置），碰不到頂刺也不會掉出去；空白鍵或「☁ 下雲」隨時下來；時間到還在空中時，腳下生一朵雲接住，1.5 秒後消散。</li>
       <li>被推到頂端的刺扣 1 命並往下掉;掉出畫面底部直接結束。</li>
       <li>生命 3 格,每下 10 層站上普通平台回 1 命;碰到愛心也回 1 命(滿血照樣撿走)。</li>
       <li>P 或 ⏸ 暫停；難度只影響無盡模式，難度越高捲得越快、刺越多，XP 越多。</li>
@@ -522,8 +548,8 @@ setupHelp({
       { ...demoStep(adventureDemo({
         player: { x: 1, y: 8 - PLAYER, vy: 0, vx: 0, on: 1, drop: null },
         platforms: [demoPlatform(1, 8, 'normal', 5, 3), ...below(1)], nextN: 4,
-        cloudTime: 10, cloudUses: 2,
-      }), (s) => stepState(s), '雲寶物生效時踩空…', '…腳下生雲接住！剩餘 1 次，1.5 秒後消散'), kind: 'ok' },
+        cloudTime: 10, cloudUses: 1,
+      }), (s) => { for (let i = 0; i < 30; i++) s = stepState(s, { dy: -1 }); return s; }, '雲寶物生效時按住 ↑…', '…駕雲往上飛，最高停在頂刺下方；隨時可下雲'), kind: 'ok' },
       { ...demoStep(demoState({ x: 4, y: 3 }, [demoPlatform(1, 7), ...below(1)]), landOn,
         '往下掉到普通平台…', '…站穩了:層數 +1'), kind: 'ok' },
       demoStep(demoState({ x: 4, y: 3 }, [demoPlatform(1, 7, 'bounce'), ...below(1)]), (s) => steps(stepUntil(s, (x) => x.player.vy < 0), 12),

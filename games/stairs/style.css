@@ -248,6 +248,10 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
 .overlay-info { text-align: center; font-size: 14px; padding: 0 16px; }
 .overlay-info p { margin: 2px 0; }
 .overlay-info .overlay-xp { font-size: 18px; font-weight: 700; }
+.overlay-info .overlay-flip { font-size: clamp(18px, 5.5vw, 24px); font-weight: 700; color: #ffd166; margin-bottom: 6px; }
+/* 駕雲中才出現的下雲鈕(IR48):右下角,不擋左右半邊觸控的主要區域。 */
+.cloud-off { position: absolute; right: 8px; bottom: 8px; min-height: 48px; min-width: 48px; z-index: 2; } /* _common-game.md 即時遊戲虛擬按鈕 ≥ 48px */
+.cloud-off[hidden] { display: none; }
 
 .hint { font-size: 13px; color: var(--text-sub); text-align: center; margin: 12px 0 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
