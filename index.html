@@ -4,26 +4,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>遊戲集錦</title>
-  <link rel="stylesheet" href="shared/style.css?v=ab8d031">
+  <link rel="stylesheet" href="shared/style.css?v=ef71b5f">
   <!-- IR32/IR46:大廳模組一次並行下載,不必等上一層 import 解析完才發現下一層(原本要一層層往返)。
        清單 = 大廳靜態 import 全集 + 登入用的 auth.js;tests/lobby-preload.test.js 會比對,漏列或多列都會失敗。 -->
-  <link rel="modulepreload" href="shared/games.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/profile-core.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/stores/local.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/progress.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/stores/errors.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/settle.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/cloud-status.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/supabase-config.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/theme.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/storage.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/sound.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/skin.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/whats-new.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/changelog.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/daily.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/skin-compare.js?v=ab8d031">
-  <link rel="modulepreload" href="shared/auth.js?v=ab8d031">
+  <link rel="modulepreload" href="shared/games.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/profile-core.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/stores/local.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/progress.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/stores/errors.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/settle.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/cloud-status.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/supabase-config.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/theme.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/storage.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/sound.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/skin.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/whats-new.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/changelog.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/daily.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/skin-compare.js?v=ef71b5f">
+  <link rel="modulepreload" href="shared/auth.js?v=ef71b5f">
 </head>
 <body>
   <main class="page">
@@ -51,18 +51,18 @@
     <footer class="lobby-footer"><a href="changelog/">更新紀錄</a><span aria-hidden="true"> · </span><a href="privacy/">隱私權政策</a><span aria-hidden="true"> · </span><a id="feedback-link" href="me/">意見回饋</a><span aria-hidden="true"> · </span><a href="line/">LINE 小幫手使用說明</a></footer>
   </main>
   <script type="module">
-    import { GAMES } from './shared/games.js?v=ab8d031';
-    import { createProfile } from './shared/profile-core.js?v=ab8d031';
-    import { LocalStore } from './shared/stores/local.js?v=ab8d031';
-    import { bindThemeToggle } from './shared/theme.js?v=ab8d031';
-    import { cloudEnabled } from './shared/supabase-config.js?v=ab8d031';
-    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=ab8d031';
-    import { mountDailyLobby } from './shared/daily.js?v=ab8d031';
+    import { GAMES } from './shared/games.js?v=ef71b5f';
+    import { createProfile } from './shared/profile-core.js?v=ef71b5f';
+    import { LocalStore } from './shared/stores/local.js?v=ef71b5f';
+    import { bindThemeToggle } from './shared/theme.js?v=ef71b5f';
+    import { cloudEnabled } from './shared/supabase-config.js?v=ef71b5f';
+    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=ef71b5f';
+    import { mountDailyLobby } from './shared/daily.js?v=ef71b5f';
 
     bindThemeToggle(document.getElementById('theme'));
     document.getElementById('feedback-link').addEventListener('click', async (event) => {
       event.preventDefault();
-      const { openFeedback } = await import('./shared/feedback.js?v=ab8d031');
+      const { openFeedback } = await import('./shared/feedback.js?v=ef71b5f');
       await openFeedback();
     });
 
@@ -102,7 +102,7 @@
     setupWhatsNew({ hasHistory: hasPlayHistory(sum) });
     void mountDailyLobby(document).catch(() => {});
     if (cloudEnabled) {
-      const { auth, notice } = await (await import('./shared/auth.js?v=ab8d031')).getCloudRuntime();
+      const { auth, notice } = await (await import('./shared/auth.js?v=ef71b5f')).getCloudRuntime();
       const icon = document.getElementById('account-link');
       icon.hidden = false;
       const renderAccount = () => {
@@ -121,6 +121,6 @@
       }
     }
   </script>
-  <script type="module" src="shared/skin-compare.js?v=ab8d031"></script>
+  <script type="module" src="shared/skin-compare.js?v=ef71b5f"></script>
 </body>
 </html>

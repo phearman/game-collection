@@ -1,5 +1,5 @@
 // 大廳「主題樣板比較」區塊(RS19 第一期):列出各主題,一鍵切換;選定後隨 SKIN_COMPARE_PHASE 收起。
-import { SKINS, SKIN_EVENT, SKIN_COMPARE_PHASE, currentSkin, setSkin } from './skin.js?v=ab8d031';
+import { SKINS, SKIN_EVENT, SKIN_COMPARE_PHASE, currentSkin, setSkin } from './skin.js?v=ef71b5f';
 
 const box = document.getElementById('skin-compare');
 const list = document.getElementById('skin-compare-list');
