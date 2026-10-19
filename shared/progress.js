@@ -11,6 +11,20 @@ export const IDLE_MS = 60_000;
 export const ACHIEVEMENT_XP = 30;
 export const DAILY_FIRST_XP = 5;
 
+// 收據獨立於最近 50 局;匯入合併時同 id 保留既有收據。
+export const FINISHED_LIMIT = 1000;
+export const FINISHED_AGE_MS = 400 * 86400000;
+export function mergeFinished(current = [], incoming = [], now = Date.now()) {
+  const ids = new Set();
+  return [...(Array.isArray(current) ? current : []), ...(Array.isArray(incoming) ? incoming : [])].filter((r) => {
+    if (!r || typeof r.id !== 'string' || typeof r.finished_at !== 'string'
+      || !Number.isFinite(Date.parse(r.finished_at)) || Date.parse(r.finished_at) < now - FINISHED_AGE_MS || ids.has(r.id)) return false;
+    ids.add(r.id);
+    return true;
+  }).map(({ id, finished_at }) => ({ id, finished_at }))
+    .sort((a, b) => Date.parse(b.finished_at) - Date.parse(a.finished_at)).slice(0, FINISHED_LIMIT);
+}
+
 export const RESULTS = ['win', 'lose', 'quit', 'draw'];
 export const DIFFICULTY_MULT = { normal: 1, hard: 1.5, expert: 2 };
 
@@ -413,6 +427,7 @@ export function isValidSave(s) {
   if (!isObj(s) || !isGameId(s.game_id) || !isObj(s.state)) return false;
   if (!isNum(s.active_sec) || s.active_sec < 0 || !isNum(s.version)) return false;
   if (!isTime(s.started_at) || !isTime(s.updated_at)) return false;
+  if (s.round_id !== undefined && !(isStr(s.round_id) && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(s.round_id))) return false;
   if (s.live !== undefined && !(isObj(s.live) && isNum(s.live.xp) && Array.isArray(s.live.achievements) && s.live.achievements.every(isAchievementId))) return false;
   // 局中即時獎勵只來自成就,每個固定 ACHIEVEMENT_XP;數字對不上的存檔一律拒收(RS5 R1,否則明細與紀錄會不一致)。
   if (s.live !== undefined && s.live.xp !== ACHIEVEMENT_XP * s.live.achievements.length) return false;
@@ -449,6 +464,8 @@ export function validateImport(data, stateValidators = {}) {
   if (data.schema_version !== SCHEMA_VERSION) return { ok: false, error: `不支援的版本:${data.schema_version}` };
   const error = checkProfile(data.profile) || checkStats(data.stats) || checkPlays(data.plays) || checkSaves(data.saves, stateValidators);
   if (error) return { ok: false, error };
+  if (data.finished !== undefined && (!Array.isArray(data.finished)
+    || !data.finished.every((r) => isObj(r) && isStr(r.id) && isTime(r.finished_at)))) return { ok: false, error: 'finished 收據格式錯誤' };
   return {
     ok: true,
     data,
@@ -460,8 +477,9 @@ export function validateImport(data, stateValidators = {}) {
   };
 }
 
-export function exportData({ profile, stats, plays, saves, now }) {
-  return { app: APP_ID, schema_version: SCHEMA_VERSION, exported_at: iso(now), profile, stats, plays, saves };
+export function exportData({ profile, stats, plays, saves, finished, now }) {
+  return { app: APP_ID, schema_version: SCHEMA_VERSION, exported_at: iso(now), profile, stats, plays, saves,
+    ...(finished === undefined ? {} : { finished }) };
 }
 
 export function exportFileName(now) {

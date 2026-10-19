@@ -1,6 +1,6 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=ef71b5f';
-import { levelFor } from './progress.js?v=ef71b5f';
-import { markCloudOffline } from './cloud-status.js?v=ef71b5f';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=0bbccd3';
+import { levelFor } from './progress.js?v=0bbccd3';
+import { markCloudOffline } from './cloud-status.js?v=0bbccd3';
 
 const AUTH_KEY = 'gc:auth';
 const REFRESH_LOCK_KEY = 'gc:auth-refresh-lock';
@@ -448,7 +448,7 @@ export async function createCloudProfile(options, factory) {
     const result = await finish(gameId, input);
     const accepted = store.lastFinish.get(gameId);
     const out = accepted?.recomputed;
-    return { ...result, ...(out ? { xpGained: out.xpGained, xpBreakdown: out.xpBreakdown,
+    return { ...result, ...(out && !result.duplicate ? { xpGained: out.xpGained, xpBreakdown: out.xpBreakdown,
       newAchievements: out.newAchievements } : {}), level: accepted?.level ?? result.level };
   };
   return api;
@@ -494,7 +494,7 @@ export async function selectCloudStore(local) {
   };
   if (!rt.auth.session) { showNotice(); return guarded(local); }
   if (!rt.store) {
-    const { SupabaseStore } = await import('./stores/supabase.js?v=ef71b5f');
+    const { SupabaseStore } = await import('./stores/supabase.js?v=0bbccd3');
     rt.store = new SupabaseStore({ auth: rt.auth });
     try {
       rt.notice = await prepareCloudStore({ auth: rt.auth, local, cloud: rt.store });

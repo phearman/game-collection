@@ -1,8 +1,8 @@
 // LocalStore:store 介面的 localStorage 實作(第一期)。介面說明見 supabase.js。
 // localStorage 可能不可用(隱私模式、封鎖網站資料、配額滿):讀失敗回空值、寫失敗回傳 { ok:false, reason },遊戲照常可玩。
 // 例外:importAll 要整份覆蓋或完全不動,寫入失敗會還原原資料並丟錯。
-import { PLAYS_LIMIT, pushPlay } from '../progress.js?v=ef71b5f';
-import { writeFailure } from './errors.js?v=ef71b5f';
+import { PLAYS_LIMIT, pushPlay, mergeFinished } from '../progress.js?v=0bbccd3';
+import { writeFailure } from './errors.js?v=0bbccd3';
 
 const PREFIX = 'game-collection:';
 const V1 = `${PREFIX}v1:`;
@@ -12,6 +12,7 @@ const KEY = {
   plays: `${V1}plays`,
   stats: `${V1}stats`,
   imported: `${V1}imported`,
+  finished: 'gc:finished',
 };
 
 // localStorage 以 UTF-16 字元估算容量。plays 除原有 50 筆上限外也限大小;
@@ -30,6 +31,8 @@ function limitError() {
 
 function encode(key, value) {
   const raw = JSON.stringify(value);
+  // 收據依筆數與天數裁切,不改既有 LOCAL_LIMITS 公開介面。
+  if (key === KEY.finished) return raw;
   const type = key.startsWith(KEY.save('')) ? 'save' : Object.keys(LOCAL_LIMITS).find((type) => KEY[type] === key);
   if (!type || typeof raw !== 'string' || (key.length + raw.length) * 2 > LOCAL_LIMITS[type]) throw limitError();
   return raw;
@@ -77,9 +80,14 @@ function rollback(ls, touched, backup, err, label) {
 
 export class LocalStore {
   // storage:預設 globalThis.localStorage;測試可注入假物件。
-  constructor({ storage } = {}) {
+  constructor({ storage, locks = globalThis.navigator?.locks, now = Date.now } = {}) {
     this.storage = storage;
+    this.locks = locks;
+    this.now = now;
   }
+
+  get finishFromBaseline() { return true; }
+  withFinishLock(action) { return this.locks?.request ? this.locks.request('gc:finish', action) : action(); }
 
   ls() { return this.storage ?? globalThis.localStorage; }
 
@@ -148,24 +156,29 @@ export class LocalStore {
   }
 
   async exportAll() {
-    return { profile: await this.getProfile(), stats: await this.listStats(), plays: await this.listPlays(), saves: await this.listSaves() };
+    const finished = await this.listFinished();
+    return { profile: await this.getProfile(), stats: await this.listStats(), plays: await this.listPlays(), saves: await this.listSaves(),
+      ...(finished.length ? { finished } : {}) };
   }
+  async listFinished() { return mergeFinished(this.read(KEY.finished, []), [], this.now()); }
   // 整份覆蓋:先備份本 app 的 v1 資料 → 寫入 → 任何一步失敗就回滾並丟錯(不會只覆蓋一部分)。
   // 回滾:只處理本次真的動過的 key——先全部移除(騰出新值占的空間),再逐一寫回備份並讀回驗證;
   // 仍還原不了就丟 rollbackFailed 錯誤,讓畫面明講「原紀錄可能不完整」。
   // 匯入通知標記不算資料:不備份、不刪、不回滾(否則失敗的匯入也會觸發其他分頁作廢,IR9-2);
   // 它是最後一步、寫不進去也算匯入失敗並回滾(否則其他分頁不知道要作廢,IR9-3)。
-  async importAll({ profile, stats, plays, saves }) {
+  async importAll(data) { return this.withFinishLock(() => this.importUnlocked(data)); }
+  async importUnlocked({ profile, stats, plays, saves, finished = [] }) {
     const filtered = filterImportSaves(saves);
     saves = filtered.saves;
     const ls = this.ls(); // 不可用就直接丟錯,什麼都還沒動
-    const ours = () => Array.from({ length: ls.length }, (_, i) => ls.key(i)).filter((k) => k?.startsWith(V1) && k !== KEY.imported);
+    const ours = () => Array.from({ length: ls.length }, (_, i) => ls.key(i)).filter((k) => (k?.startsWith(V1) && k !== KEY.imported) || k === KEY.finished);
     const backup = new Map(ours().map((k) => [k, ls.getItem(k)]));
     if (new Set(saves.map((s) => s.game_id)).size > LOCAL_LIMITS.saveSlots) throw limitError();
     const next = new Map([
       [KEY.profile, encode(KEY.profile, profile)],
       [KEY.stats, encode(KEY.stats, stats)],
       [KEY.plays, encode(KEY.plays, plays.slice(0, PLAYS_LIMIT))],
+      [KEY.finished, encode(KEY.finished, mergeFinished(this.read(KEY.finished, []), finished, this.now()))],
       ...saves.map((s) => [KEY.save(s.game_id), encode(KEY.save(s.game_id), s)]),
     ]);
     const touched = new Set(); // 寫入/移除成功的 key(setItem 失敗不會改動該 key)
@@ -182,20 +195,34 @@ export class LocalStore {
 
   // 結算一次提交(IR6):刪存檔 → profile → stats → 局紀錄,任一步失敗就把動過的 key 還原成原值並丟錯。
   // 先刪存檔:之後失敗會還原,所以不會出現「紀錄寫了、存檔還在,重載又結算一次」。
-  async commitFinish({ gameId, saveId = gameId, profile, stats, play }) {
+  async commitFinish(input) { return this.withFinishLock(() => this.commitUnlocked(input)); }
+  commitUnlocked({ gameId, saveId = gameId, profile, stats, play, prepare }) {
     const ls = this.ls(); // 不可用就直接丟錯,什麼都還沒動
-    const keys = [KEY.save(saveId), KEY.profile, KEY.stats, KEY.plays];
+    const keys = [KEY.save(saveId), KEY.profile, KEY.stats, KEY.plays, KEY.finished];
     const backup = new Map(keys.map((k) => [k, ls.getItem(k)]));
     const parse = (raw, fallback) => {
       try { return raw === null ? fallback : JSON.parse(raw); } catch { return fallback; }
     };
-    const allStats = parse(backup.get(KEY.stats), {});
+    const rawStats = parse(backup.get(KEY.stats), {});
+    const allStats = rawStats && typeof rawStats === 'object' && !Array.isArray(rawStats) ? rawStats : {};
     const plays = parse(backup.get(KEY.plays), []);
+    const finished = mergeFinished(parse(backup.get(KEY.finished), []), [], this.now());
+    if (finished.some((r) => r.id === play.id)) {
+      ls.removeItem(KEY.save(saveId));
+      return { duplicate: true, profile: parse(backup.get(KEY.profile), null) };
+    }
+    const out = prepare?.(parse(backup.get(KEY.profile), null), allStats);
+    if (out) {
+      profile = out.profile;
+      play = out.play;
+      stats = out.stats[gameId];
+    }
     const writes = [
       [KEY.save(saveId), null],
       [KEY.profile, encode(KEY.profile, profile)],
       [KEY.stats, encode(KEY.stats, { ...(allStats && typeof allStats === 'object' && !Array.isArray(allStats) ? allStats : {}), [stats.game_id]: stats })],
       [KEY.plays, encode(KEY.plays, pushPlay(Array.isArray(plays) ? plays : [], play))],
+      [KEY.finished, encode(KEY.finished, mergeFinished([{ id: play.id, finished_at: new Date(this.now()).toISOString() }], finished, this.now()))],
     ];
     const touched = [];
     try {
@@ -207,6 +234,7 @@ export class LocalStore {
     } catch (err) {
       throw rollback(ls, touched, backup, err, 'finish');
     }
+    return { duplicate: false, out };
   }
 
   // 整份匯入成功後寫入的標記 key:其他分頁收到它的 storage 事件就讓 profile 快取全部作廢。

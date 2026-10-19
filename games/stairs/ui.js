@@ -3,20 +3,20 @@ import {
   W, H, PLAYER, DT, MAX_LIVES, DIFFICULTIES, initState, stepState, pauseState, resumeState, overlayFor,
   toSave, fromSave, isValidState,
   initAdventure, nextStage, scoreFor, detailFor, resultFor, stageFor, goalText, goalProgress, flipNotice, ridingCloud,
-} from './logic.js?v=ef71b5f';
-import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=ef71b5f';
-import { createProfile } from '../../shared/profile.js?v=ef71b5f';
-import { LocalStore } from '../../shared/stores/local.js?v=ef71b5f';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=ef71b5f';
-import { bindThemeToggle } from '../../shared/theme.js?v=ef71b5f';
-import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=ef71b5f';
-import { skinPalette } from './skins.js?v=ef71b5f';
-import { play, music } from '../../shared/sound.js?v=ef71b5f';
-import { setupHelp } from '../../shared/help.js?v=ef71b5f';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=ef71b5f';
-import { settlePlay } from '../../shared/settle.js?v=ef71b5f';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=ef71b5f';
-import { load, save } from '../../shared/storage.js?v=ef71b5f';
+} from './logic.js?v=0bbccd3';
+import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=0bbccd3';
+import { createProfile } from '../../shared/profile.js?v=0bbccd3';
+import { LocalStore } from '../../shared/stores/local.js?v=0bbccd3';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=0bbccd3';
+import { bindThemeToggle } from '../../shared/theme.js?v=0bbccd3';
+import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=0bbccd3';
+import { skinPalette } from './skins.js?v=0bbccd3';
+import { play, music } from '../../shared/sound.js?v=0bbccd3';
+import { setupHelp } from '../../shared/help.js?v=0bbccd3';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=0bbccd3';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=0bbccd3';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=0bbccd3';
+import { load, save } from '../../shared/storage.js?v=0bbccd3';
 
 const GAME_ID = 'stairs';
 const DIFF_KEY = 'difficulty:stairs'; // 上次選的難度(開新局用)
@@ -80,7 +80,7 @@ function finish(result) {
     if (out.play.is_best) best = Math.max(best, snap.score);
     if (no !== gameNo) return;
     ended = {
-      xp: out.xpGained,
+      duplicate: out.duplicate, xp: out.xpGained,
       xpBreakdown: out.xpBreakdown,
       newAchievements: out.newAchievements,
       isBest: out.play.is_best,
@@ -318,8 +318,9 @@ function resultInfo() {
   const adventure = ended.detail.mode === 'adventure';
   infoLine(adventure ? `本局 ${ended.score.toLocaleString()} 分 · 通過 ${ended.detail.cleared} / 6 關` : `下了 ${ended.score.toLocaleString()} 層`);
   if (adventure) infoLine(`本關金幣 ${state.stageCoins} · 累計金幣 ${ended.detail.coins} · 剩餘生命 ${state.lives}`);
+  if (ended.duplicate) infoLine(DUPLICATE_FINISH_TEXT);
   infoLine(`本局 +${ended.xp} XP`, 'overlay-xp');
-  appendXpBreakdown($('overlay-info'), ended.xpBreakdown, document);
+  if (!ended.duplicate) appendXpBreakdown($('overlay-info'), ended.xpBreakdown, document);
   if (ended.newAchievements.length) infoLine(`新成就:${ended.newAchievements.map(achName).join('、')}`);
   const line = bestLine({ ...ended, noun: '紀錄', unit: adventure ? ' 分' : ' 層' });
   if (line) infoLine(line);

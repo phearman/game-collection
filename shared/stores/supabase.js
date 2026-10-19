@@ -9,8 +9,10 @@
 //   getStats(gameId) → stats | null        putStats(stats)   listStats() → { [game_id]: stats }
 //   exportAll() → { profile, stats, plays, saves }
 //   importAll(data)                        整份覆蓋;失敗須丟錯且原資料不變
-//   commitFinish({ gameId, profile, stats, play })  結算一次提交:刪該款存檔 + 寫 profile/stats/局紀錄;
-//                                          任一步失敗須丟錯且四者還原成原值,⛔ 回 false(IR6);還原不了丟
+//   commitFinish({ gameId, profile, stats, play, prepare? }) → { duplicate, out?, profile? }
+//       本機 prepare(baseProfile, allStats) 在鎖內查收據後同步計算,回 applyFinish 結果(out)。
+//       結算一次提交:刪該款存檔 + 寫 profile/stats/局紀錄/收據;
+//                                          任一步失敗須丟錯且整批還原成原值,⛔ 回 false(IR6);還原不了丟
 //                                          rollbackFailed 錯誤並附 retryRestore() → 再還原一次,回傳同規則的錯誤
 //   isImportKey(key) → boolean(選填,同步)  storage 事件的 key 是否為「整份匯入」標記;profile 據此讓快取全部作廢
 //   legacyBest(gameId) → number            RS1 前舊最佳分數(只有本機有;雲端實作回 0)
@@ -96,7 +98,7 @@ export class SupabaseStore {
           if (row[field]) row[field] = new Date(row[field]).toISOString();
         }
         if (path.startsWith('saves?') && row.live === null) delete row.live;
-        return row;
+        return path.startsWith('saves?') ? restoreSave(row) : row;
       });
       if (epoch === this.cacheEpoch) this.cache.set(path, structuredClone(clean));
       return clean;
@@ -111,6 +113,7 @@ export class SupabaseStore {
   }
   filter(gameId) { return new URLSearchParams({ game_id: `eq.${gameId}` }).toString(); }
   updateCache(table, value, removeGame) {
+    if (table === 'saves' && value) value = restoreSave(value);
     const idField = table === 'plays' ? 'id' : 'game_id';
     for (const [path, rows] of this.cache) {
       if (!path.startsWith(`${table}?`)) continue;
@@ -214,6 +217,7 @@ export class SupabaseStore {
     if (result?.profile) pending.body.profile = result.profile;
     if (result?.stats) pending.body.stats = result.stats;
     if (result?.play) pending.body.play = result.play;
+    pending.duplicate = result?.duplicate === true;
     pending.done = true;
     this.updateCache('profiles', pending.body.profile);
     this.updateCache('stats', pending.body.stats);
@@ -240,9 +244,9 @@ export class SupabaseStore {
     Object.assign(profile, structuredClone(pending.body.profile));
     Object.assign(stats, structuredClone(pending.body.stats));
     Object.assign(play, structuredClone(pending.body.play));
-    this.lastFinish.set(gameId, { recomputed: pending.recomputed, level: pending.body.profile.level });
+    this.lastFinish.set(gameId, { recomputed: pending.recomputed, level: pending.body.profile.level, duplicate: pending.duplicate });
     this.pending.delete(gameId);
-    return pending.recomputed;
+    return { duplicate: pending.duplicate, profile: pending.body.profile };
   }
   async retryPending() {
     for (const pending of this.pending.values()) {
@@ -255,10 +259,10 @@ export class SupabaseStore {
   async legacyBest() { return 0; }
 }
 
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=ef71b5f';
-import { writeFailure, allInOrder } from './errors.js?v=ef71b5f';
-import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=ef71b5f';
-import { normalizePlay } from './normalize.js?v=ef71b5f';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=0bbccd3';
+import { writeFailure, allInOrder } from './errors.js?v=0bbccd3';
+import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=0bbccd3';
+import { normalizePlay } from './normalize.js?v=0bbccd3';
 
 function recalculateFinish(base, stats, play, live) {
   const missing = (live?.achievements ?? []).filter((id) => !base.achievements?.[id]);
@@ -275,8 +279,15 @@ const FIELDS = {
   plays: ['id', 'game_id', 'started_at', 'ended_at', 'duration_sec', 'result', 'score', 'difficulty', 'is_best', 'xp_gained', 'detail'],
   saves: ['game_id', 'state', 'active_sec', 'started_at', 'updated_at', 'version', 'live'],
 };
+// POST 成功後的快取也使用共用存檔介面;離線讀回時不得重新補發 id。
+function restoreSave(save) {
+  if (!save.state?.round_id) return save;
+  const { round_id, ...state } = save.state;
+  return { ...save, round_id, state };
+}
 function pick(table, value) {
   if (table === 'plays') value = normalizePlay(value);
+  if (table === 'saves' && value.round_id) value = { ...value, state: { ...value.state, round_id: value.round_id } };
   return structuredClone(Object.fromEntries(FIELDS[table].filter((f) => value[f] !== undefined).map((f) => [f, value[f]])));
 }
 function cleanData(data) {

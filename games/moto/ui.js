@@ -2,17 +2,17 @@
 import {
   W, H, DT, DIFFICULTIES, MODES, SENSITIVITIES, initState, stepState, pauseState, resumeState,
   overlayFor, playerOf, resultFor, toSave, fromSave, isValidGhost, ghostFor, betterGhost, ghostAt,
-} from './logic.js?v=ef71b5f';
-import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=ef71b5f';
-import { createProfile } from '../../shared/profile.js?v=ef71b5f';
-import { LocalStore } from '../../shared/stores/local.js?v=ef71b5f';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=ef71b5f';
-import { bindThemeToggle } from '../../shared/theme.js?v=ef71b5f';
-import { play, music } from '../../shared/sound.js?v=ef71b5f';
-import { setupHelp } from '../../shared/help.js?v=ef71b5f';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=ef71b5f';
-import { settlePlay } from '../../shared/settle.js?v=ef71b5f';
-import { load, save } from '../../shared/storage.js?v=ef71b5f';
+} from './logic.js?v=0bbccd3';
+import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=0bbccd3';
+import { createProfile } from '../../shared/profile.js?v=0bbccd3';
+import { LocalStore } from '../../shared/stores/local.js?v=0bbccd3';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=0bbccd3';
+import { bindThemeToggle } from '../../shared/theme.js?v=0bbccd3';
+import { play, music } from '../../shared/sound.js?v=0bbccd3';
+import { setupHelp } from '../../shared/help.js?v=0bbccd3';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=0bbccd3';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=0bbccd3';
+import { load, save } from '../../shared/storage.js?v=0bbccd3';
 
 const GAME_ID = 'moto';
 const SAVE_EVERY = 30;
@@ -72,7 +72,7 @@ function finish(quit = false) {
     if (!out) { ended = { abandoned: true }; render(); return; }
     if (!quit && snap.mode === 'time') writeGhost(snap);
     best = await profile.best(GAME_ID);
-    ended = { ...args, xp: out.xpGained, xpBreakdown: out.xpBreakdown, newAchievements: out.newAchievements,
+    ended = { ...args, duplicate: out.duplicate, xp: out.xpGained, xpBreakdown: out.xpBreakdown, newAchievements: out.newAchievements,
       isBest: out.play.is_best, bestBefore };
     render();
   }).then(async () => {
@@ -192,8 +192,9 @@ function renderOverlay() {
     else if (ended?.abandoned) paragraph(info, '本局紀錄未儲存');
     else if (ended) {
       paragraph(info, `${state.mode === 'race' ? `第 ${ended.detail.place} 名 · ` : ''}${(ended.detail.ms / 1000).toFixed(2)} 秒`);
+      if (ended.duplicate) paragraph(info, DUPLICATE_FINISH_TEXT);
       paragraph(info, `${ended.score.toLocaleString()} 分 · 本局 +${ended.xp} XP`, 'overlay-xp');
-      appendXpBreakdown(info, ended.xpBreakdown);
+      if (!ended.duplicate) appendXpBreakdown(info, ended.xpBreakdown);
       if (ended.newAchievements.length) paragraph(info, `新成就:${ended.newAchievements.map((id) => {
         const a = ACHIEVEMENTS.find((x) => x.id === id); return a ? `${a.icon} ${a.name}` : id;
       }).join('、')}`);

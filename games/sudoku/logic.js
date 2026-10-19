@@ -1,6 +1,6 @@
 // 數獨規則與狀態轉移：純函式；亂數、時間均由呼叫端注入。
-import { timerInit, timerEvent } from '../../shared/progress.js?v=ef71b5f';
-import { seedRng } from '../../shared/seed-rng.js?v=ef71b5f';
+import { timerInit, timerEvent } from '../../shared/progress.js?v=0bbccd3';
+import { seedRng } from '../../shared/seed-rng.js?v=0bbccd3';
 
 export const SIZE = 9;
 // beginner=入門(RS77,給定 56、自己想);easy=引導學習(原入門,給定 46、預設自動候選),內部鍵不改以相容舊存檔與雲端紀錄。
@@ -254,6 +254,12 @@ export function undoState(state) {
   const prev = state.history.at(-1);
   // 不回退活動秒數／有效操作數，避免全部復原後逃過 quit 紀錄。
   return { ...state, board: prev.board.slice(), notes: prev.notes.map((n) => n.slice()), history: state.history.slice(0, -1) };
+}
+
+// RS75 每日挑戰「清空重來」:盤面回題目初始、筆記與復原歷史清空;計時、操作數與每日欄位保留,不算結束。
+export function clearBoardState(state) {
+  if (state.result) return state;
+  return { ...state, board: state.puzzle.slice(), notes: indices.map(() => []), history: [] };
 }
 
 export function cursorMove(index, direction) {

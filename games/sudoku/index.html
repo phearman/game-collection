@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>數獨 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../../shared/style.css?v=ef71b5f">
-  <link rel="stylesheet" href="style.css?v=ef71b5f">
+  <link rel="stylesheet" href="../../shared/style.css?v=0bbccd3">
+  <link rel="stylesheet" href="style.css?v=0bbccd3">
 </head>
 <body>
   <main class="page page-narrow">
@@ -21,6 +21,7 @@
       <a class="btn" id="daily" href="?daily=1">今日挑戰</a>
       <button class="btn" id="new" type="button">↻ 新遊戲</button>
       <button class="btn" id="undo" type="button">↶ 復原</button>
+      <button class="btn" id="reset" type="button" hidden>⟲ 清空重來</button>
       <label class="difficulty">難度
         <select id="difficulty"><option value="easy">引導學習 · 給定 46</option><option value="beginner">入門 · 給定 56</option><option value="normal">一般 · 給定 40</option><option value="hard">困難 · 給定 32</option><option value="expert">專家 · 給定 26</option></select>
       </label>
@@ -64,6 +65,14 @@
       <button class="btn" type="button" data-act="cancel" autofocus>取消</button>
     </div>
   </dialog>
-  <script type="module" src="ui.js?v=ef71b5f"></script>
+  <dialog class="help confirm" id="reset-dlg" aria-labelledby="reset-title" aria-describedby="reset-text">
+    <h2 class="help-title" id="reset-title">清空重來?</h2>
+    <p id="reset-text">清空所有填寫,計時照算,確定嗎?</p>
+    <div class="confirm-actions">
+      <button class="btn" type="button" data-act="reset">確定清空</button>
+      <button class="btn" type="button" data-act="cancel" autofocus>取消</button>
+    </div>
+  </dialog>
+  <script type="module" src="ui.js?v=0bbccd3"></script>
 </body>
 </html>

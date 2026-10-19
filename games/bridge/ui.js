@@ -1,17 +1,17 @@
 import { FIELD_W, FIELD_H, DT, DIFFICULTIES, initState, stepState, pauseState, resumeState,
-  canPress, isAnimating, checkpointFor, toSave, fromSave, finishInfo, statusText, HELP_RULES, demoSteps } from './logic.js?v=ef71b5f';
-import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js?v=ef71b5f';
-import { createProfile } from '../../shared/profile.js?v=ef71b5f';
-import { LocalStore } from '../../shared/stores/local.js?v=ef71b5f';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=ef71b5f';
-import { bindThemeToggle } from '../../shared/theme.js?v=ef71b5f';
-import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=ef71b5f';
-import { setupHelp } from '../../shared/help.js?v=ef71b5f';
-import { play, music } from '../../shared/sound.js?v=ef71b5f';
-import { settlePlay } from '../../shared/settle.js?v=ef71b5f';
-import { confirmQuitBest } from '../../shared/quit.js?v=ef71b5f';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=ef71b5f';
-import { load, save } from '../../shared/storage.js?v=ef71b5f';
+  canPress, isAnimating, checkpointFor, toSave, fromSave, finishInfo, statusText, HELP_RULES, demoSteps } from './logic.js?v=0bbccd3';
+import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js?v=0bbccd3';
+import { createProfile } from '../../shared/profile.js?v=0bbccd3';
+import { LocalStore } from '../../shared/stores/local.js?v=0bbccd3';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=0bbccd3';
+import { bindThemeToggle } from '../../shared/theme.js?v=0bbccd3';
+import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=0bbccd3';
+import { setupHelp } from '../../shared/help.js?v=0bbccd3';
+import { play, music } from '../../shared/sound.js?v=0bbccd3';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=0bbccd3';
+import { confirmQuitBest } from '../../shared/quit.js?v=0bbccd3';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=0bbccd3';
+import { load, save } from '../../shared/storage.js?v=0bbccd3';
 
 const GAME_ID = 'bridge';
 const PREF_KEY = 'difficulty:bridge';
@@ -95,8 +95,9 @@ function render() {
       add(`${state.score} 分 · 過 ${state.pillars} 根 · 完美 ${state.perfects} 次`);
       if (!ended || ended.pending) add('結算中…');
       else if (ended.play) {
+        if (ended.duplicate) add(DUPLICATE_FINISH_TEXT);
         add(`本局 +${ended.xpGained} XP`, 'overlay-xp');
-        appendXpBreakdown(info, ended.xpBreakdown, document);
+        if (!ended.duplicate) appendXpBreakdown(info, ended.xpBreakdown, document);
         const note = bestLine({ isBest: ended.play.is_best, bestBefore: ended.bestBefore, score: state.score });
         if (note) add(note);
         if (ended.newAchievements.length) add(`新成就：${ended.newAchievements.map((id) => {

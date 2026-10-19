@@ -1,7 +1,8 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=ef71b5f';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=0bbccd3';
+import { formatDuration } from './duration.js?v=0bbccd3';
 
 export const DAILY_GAMES = ['sudoku', 'minesweeper'];
-const DAILY_NAMES = { wordle: 'Wordle', sudoku: '數獨', minesweeper: '踩地雷' };
+export const DAILY_NAMES = { wordle: 'Wordle', sudoku: '數獨', minesweeper: '踩地雷' };
 export const DAILY_LOGIN_NOTICE = '登入後才能參加每日挑戰';
 export const DAILY_FIXED_NOTE = '遊戲固定、每天換題目';
 export const taiwanDay = (stamp) => new Date(Number(stamp) + 8 * 3600000).toISOString().slice(0, 10);
@@ -16,13 +17,13 @@ export function dailyStatus(row) {
 }
 export function dailyScore(row) {
   return row.game_id === 'wordle'
-    ? `${row.result === 'win' ? row.guesses : 'X'}/6 · ${row.seconds} 秒`
-    : `${row.game_id === 'minesweeper' && row.result === 'lose' ? '💥 踩雷 · ' : ''}${row.seconds} 秒`;
+    ? `${row.result === 'win' ? row.guesses : 'X'}/6 · ${formatDuration(row.seconds)}`
+    : `${row.game_id === 'minesweeper' && row.result === 'lose' ? '💥 踩雷 · ' : ''}${formatDuration(row.seconds)}`;
 }
 export function dailyShare(day, game, row, marks = []) {
   const squares = { correct: '🟩', present: '🟨', absent: '⬜' };
   const score = game === 'wordle' ? `${row.result === 'win' ? row.guesses : 'X'}/6`
-    : game === 'minesweeper' && row.result === 'lose' ? '💥' : `${row.seconds} 秒`;
+    : game === 'minesweeper' && row.result === 'lose' ? '💥' : formatDuration(row.seconds);
   return `遊戲集錦 ${dailyDateLabel(day)} ${DAILY_NAMES[game]} ${score}`
     + (game === 'wordle' ? `\n${(Array.isArray(marks) ? marks : []).filter(Array.isArray).slice(0, 6)
       .map((m) => m.slice(0, 5).map((c) => squares[c] ?? '⬜').join('')).join('\n')}` : '');
@@ -83,7 +84,7 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
 }
 export async function browserDailyClient() {
   if (!cloudEnabled) return createDailyClient();
-  const { auth } = await (await import('./auth.js?v=ef71b5f')).getCloudRuntime();
+  const { auth } = await (await import('./auth.js?v=0bbccd3')).getCloudRuntime();
   return createDailyClient({ auth });
 }
 

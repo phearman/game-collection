@@ -2,16 +2,16 @@
 import {
   DIFFICULTIES, HIDE_MS, initState, flip, hideState, tickState, scoreFor, resultOf, isOver, isWaiting,
   hasActed, seededRng, demoPlan, remainingPairs, cardView, symbolOf, detailOf, pairsOf, toSave, fromSave, isValidState,
-} from './logic.js?v=ef71b5f';
-import { createProfile } from '../../shared/profile.js?v=ef71b5f';
-import { LocalStore } from '../../shared/stores/local.js?v=ef71b5f';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=ef71b5f';
-import { bindThemeToggle } from '../../shared/theme.js?v=ef71b5f';
-import { play, music } from '../../shared/sound.js?v=ef71b5f';
-import { setupHelp } from '../../shared/help.js?v=ef71b5f';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=ef71b5f';
-import { settlePlay } from '../../shared/settle.js?v=ef71b5f';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=ef71b5f';
+} from './logic.js?v=0bbccd3';
+import { createProfile } from '../../shared/profile.js?v=0bbccd3';
+import { LocalStore } from '../../shared/stores/local.js?v=0bbccd3';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=0bbccd3';
+import { bindThemeToggle } from '../../shared/theme.js?v=0bbccd3';
+import { play, music } from '../../shared/sound.js?v=0bbccd3';
+import { setupHelp } from '../../shared/help.js?v=0bbccd3';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=0bbccd3';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=0bbccd3';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=0bbccd3';
 
 const GAME_ID = 'memory';
 const LABELS = { normal: '一般', hard: '困難', expert: '專家' };
@@ -86,7 +86,7 @@ function finish(result) {
     if (no !== gameNo) return;
     ended = {
       result,
-      xp: out.xpGained,
+      duplicate: out.duplicate, xp: out.xpGained,
       xpBreakdown: out.xpBreakdown,
       newAchievements: out.newAchievements,
       isBest: out.play.is_best,
@@ -191,6 +191,7 @@ const achName = (id) => {
 function infoHtml() {
   if (ended.pending) return '<p>結算中…</p>';
   const { moves, misses, seconds } = ended.detail;
+  if (ended.duplicate) return `<p>${DUPLICATE_FINISH_TEXT}</p><p class="overlay-xp">本局 +0 XP</p>`;
   const lines = [
     `<p>${moves} 步 · 失誤 ${misses} · ${seconds.toLocaleString()} 秒</p>`,
     `<p>分數 ${ended.score.toLocaleString()}</p>`,

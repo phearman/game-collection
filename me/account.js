@@ -1,10 +1,11 @@
-import { getCloudRuntime } from '../shared/auth.js?v=ef71b5f';
-import { isCloudOffline } from '../shared/cloud-status.js?v=ef71b5f';
-import { exportData, exportFileName } from '../shared/progress.js?v=ef71b5f';
-import { createFeedbackClient, KINDS, playerFeedbackStatus, element, displayName } from '../shared/feedback.js?v=ef71b5f';
-import { GAMES } from '../shared/games.js?v=ef71b5f';
-import { initLineLinkStatus } from '../shared/line-link.js?v=ef71b5f';
-import { initAvatarPicker } from '../shared/avatars.js?v=ef71b5f';
+import { getCloudRuntime } from '../shared/auth.js?v=0bbccd3';
+import { isCloudOffline } from '../shared/cloud-status.js?v=0bbccd3';
+import { exportData, exportFileName } from '../shared/progress.js?v=0bbccd3';
+import { createFeedbackClient, KINDS, playerFeedbackStatus, element, displayName } from '../shared/feedback.js?v=0bbccd3';
+import { GAMES } from '../shared/games.js?v=0bbccd3';
+import { initLineLinkStatus } from '../shared/line-link.js?v=0bbccd3';
+import { initAvatarPicker } from '../shared/avatars.js?v=0bbccd3';
+import { initDailyPublic } from '../shared/daily-public.js?v=0bbccd3';
 
 export function renderMyFeedback(doc, rows) {
   const items = doc.getElementById('feedback-items');
@@ -24,7 +25,7 @@ export const syncStatusText = (store, offline) => store?.status ?? (offline ? '�
 
 // RPC 在單一交易清除帳號紀錄與自己的回饋，本機紀錄不動。
 export const CLEAR_ASK = [
-  '要清除帳號裡的雲端紀錄、每日挑戰成績和你送出的意見回饋嗎?當天每日挑戰只保留首次開始時間與已清除標記，不能重玩。這也會解除 LINE 綁定並退出所有群組排行。這台裝置上的紀錄不受影響。',
+  '要清除帳號裡的雲端紀錄、每日挑戰成績和你送出的意見回饋嗎?當天每日挑戰只保留首次開始時間與已清除標記，不能重玩。這也會解除 LINE 綁定並退出所有群組排行,並關閉網站今日排行的公開設定(含暱稱)。這台裝置上的紀錄不受影響。',
   '清除紀錄和意見回饋後無法復原,其他裝置登入後也會看到空白紀錄。確定清除?',
 ];
 // 二次確認,兩次都按「確定」才清除;→ true 已清除、false 已取消。失敗時丟錯(呼叫端顯示訊息)。
@@ -34,12 +35,13 @@ export async function clearCloudRecords(store, ask = (message) => globalThis.con
   return true;
 }
 
-export async function initAccount({ doc = globalThis.document, runtime, client, lineClient, avatarClient } = {}) {
+export async function initAccount({ doc = globalThis.document, runtime, client, lineClient, avatarClient, dailyPublicClient } = {}) {
   const $ = (id) => doc.getElementById(id);
   const rt = runtime ?? await getCloudRuntime();
   const feedback = client ?? createFeedbackClient({ auth: rt.auth });
   initLineLinkStatus({ doc, auth: rt.auth, client: lineClient });
   initAvatarPicker({ doc, auth: rt.auth, client: avatarClient });
+  initDailyPublic({ doc, auth: rt.auth, client: dailyPublicClient }); // RS78 今日挑戰排行公開設定
   let adminEpoch = 0;
   const renderAdmin = async () => {
     const epoch = ++adminEpoch;

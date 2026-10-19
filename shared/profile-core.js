@@ -1,14 +1,14 @@
 // 個人紀錄 API 核心(RS1):規則一律呼叫 progress.js,這裡只串接 store。
 // 不載入各遊戲的 logic.js(IR46):大廳只讀摘要,直接用本檔;要讀存檔或匯入的頁面用 profile.js(帶各遊戲存檔檢查)。
-import { GAMES } from './games.js?v=ef71b5f';
-import { LocalStore, filterImportSaves } from './stores/local.js?v=ef71b5f';
-import { failureReason, allInOrder } from './stores/errors.js?v=ef71b5f';
-import { showStorageWarning } from './settle.js?v=ef71b5f';
-import { cloudEnabled } from './supabase-config.js?v=ef71b5f';
+import { GAMES } from './games.js?v=0bbccd3';
+import { LocalStore, filterImportSaves } from './stores/local.js?v=0bbccd3';
+import { failureReason, allInOrder } from './stores/errors.js?v=0bbccd3';
+import { showStorageWarning } from './settle.js?v=0bbccd3';
+import { cloudEnabled } from './supabase-config.js?v=0bbccd3';
 import {
   emptyProfile, migrateLegacyBest, applyFinish, applyUnlock, levelProgress, ACHIEVEMENTS, ACHIEVEMENT_XP, recentOrder,
   timerInit, timerEvent, timerSeconds, validateImport, isValidGameSave, pushPlay, exportData, exportFileName, iso, PLAYS_LIMIT,
-} from './progress.js?v=ef71b5f';
+} from './progress.js?v=0bbccd3';
 
 // randomUUID 只在安全來源(https / localhost)可用;其他情況退回 getRandomValues 組 v4 UUID。
 function uuid() {
@@ -39,7 +39,7 @@ export async function createProfile({
     } catch { /* 儲存不可用仍可免登入遊玩 */ }
   }
   if (cloudEnabled && win && store instanceof LocalStore && !store.storage) {
-    const { selectCloudStore, createCloudProfile } = await import('./auth.js?v=ef71b5f');
+    const { selectCloudStore, createCloudProfile } = await import('./auth.js?v=0bbccd3');
     store = await selectCloudStore(store);
     if (store.cloud) return createCloudProfile({ store, now, gameList, doc, win, stateValidators, saveSlots }, createProfile);
   }
@@ -101,6 +101,11 @@ export async function createProfile({
   // 計時:一次只計一款遊戲(一頁一款)。
   let timer = null; // { gameId, startedAt, t: progress timer }
   const loaded = new Map(); // gameId → 最近一次讀到/寫入的存檔(接續秒數與開局時間)
+  const rounds = new Map();
+  const roundId = (gameId) => {
+    if (!rounds.has(gameId)) rounds.set(gameId, uuid());
+    return rounds.get(gameId);
+  };
   const savesDirty = new Set(); // 最近一次寫入失敗的存檔 gameId ⇒ 快照以 loaded 為準
   const live = new Map(); // gameId → 本局即時獎勵明細 { xp, achievements }(隨存檔保存)
   const stored = new Set(); // 存檔曾成功寫入 store(或從 store 讀到)的 gameId:用來區分「從未存成功」與「被其他分頁刪除」(IR9)
@@ -120,6 +125,7 @@ export async function createProfile({
     playsMem.length = 0;
     savesDirty.clear();
     loaded.clear();
+    rounds.clear();
     live.clear();
     stored.clear();
     if (timer) {
@@ -148,6 +154,7 @@ export async function createProfile({
     const running = timer?.gameId === gameId;
     const save = {
       game_id: saveKey(gameId),
+      round_id: prev?.round_id ?? roundId(gameId),
       state,
       active_sec: running ? elapsed() : (prev?.active_sec ?? 0),
       started_at: running ? iso(timer.startedAt) : (prev?.started_at ?? iso(t)),
@@ -197,13 +204,21 @@ export async function createProfile({
 
   const api = {
     async loadSave(gameId) {
-      const save = await store.getSave(saveKey(gameId));
-      // 沒有、壞掉、或 game_id 與請求不符的存檔 ⇒ 開新局,且不建立 loaded/live 快取(IR3)
-      if (save?.game_id !== saveKey(gameId) || !isValidGameSave(save, stateValidators)) return null;
-      loaded.set(gameId, save);
-      live.set(gameId, save.live ?? noLive());
-      stored.add(gameId);
-      return save.state;
+      const load = async () => {
+        const save = await store.getSave(saveKey(gameId));
+        // 沒有、壞掉、或 game_id 與請求不符的存檔 ⇒ 開新局,且不建立 loaded/live 快取(IR3)
+        if (save?.game_id !== saveKey(gameId) || !isValidGameSave(save, stateValidators)) return null;
+        if (!save.round_id) {
+          save.round_id = uuid();
+          if ((await write('putSave', save)) === false) savesDirty.add(gameId);
+        }
+        rounds.set(gameId, save.round_id);
+        loaded.set(gameId, save);
+        live.set(gameId, save.live ?? noLive());
+        stored.add(gameId);
+        return save.state;
+      };
+      return store.withFinishLock ? store.withFinishLock(load) : load();
     },
 
     saveState(gameId, state) {
@@ -212,6 +227,7 @@ export async function createProfile({
 
     // 丟棄不記錄的局(例:Wordle 只用了提示、沒猜過就重開):刪存檔、清快取與計時,下一局從 0 起算。
     async discardSave(gameId) {
+      rounds.delete(gameId);
       loaded.delete(gameId);
       savesDirty.delete(gameId);
       stored.delete(gameId);
@@ -223,6 +239,8 @@ export async function createProfile({
     // 開始計時:有載入的存檔就接著它的秒數與開局時間,否則從 0 起算。分頁目前隱藏就先暫停。
     startTimer(gameId) {
       const save = loaded.get(gameId);
+      if (save?.round_id) rounds.set(gameId, save.round_id);
+      else roundId(gameId);
       const t = now();
       timer = {
         gameId,
@@ -254,35 +272,56 @@ export async function createProfile({
       const save = loaded.get(gameId);
       const running = timer?.gameId === gameId;
       const lv = live.get(gameId);
-      const base = (await store.getProfile()) ?? emptyProfile(mem.device_id);
-      const missing = (lv?.achievements ?? []).filter((id) => !base.achievements?.[id]);
-      const profile = missing.length
-        ? {
-          ...base,
-          achievements: { ...base.achievements, ...Object.fromEntries(missing.map((id) => [id, iso(t)])) },
-          xp: (base.xp ?? 0) + ACHIEVEMENT_XP * missing.length,
-        }
-        : base;
-      const out = applyFinish({
-        profile,
-        stats: await store.listStats(),
-        gameId, result, score, difficulty, detail, assist,
-        startedAt: running ? timer.startedAt : (save ? Date.parse(save.started_at) : t),
-        endedAt: t,
-        durationSec: running ? elapsed() : (save?.active_sec ?? 0),
-        id: detail.daily_play_id ?? uuid(),
-        live: lv,
-      });
-      await write('commitFinish', { gameId, saveId: saveKey(gameId), profile: out.profile, stats: out.stats[gameId], play: out.play });
-      mem = out.profile;
+      const id = detail.daily_play_id ?? save?.round_id ?? roundId(gameId);
+      const round = save?.round_id ?? rounds.get(gameId);
+      const durationSec = running ? elapsed() : (save?.active_sec ?? 0);
+      const prepare = (base, stats) => {
+        base ??= emptyProfile(mem.device_id);
+        const missing = (lv?.achievements ?? []).filter((id) => !base.achievements?.[id]);
+        const profile = missing.length
+          ? {
+            ...base,
+            achievements: { ...base.achievements, ...Object.fromEntries(missing.map((id) => [id, iso(t)])) },
+            xp: (base.xp ?? 0) + ACHIEVEMENT_XP * missing.length,
+          }
+          : base;
+        const out = applyFinish({
+          profile,
+          stats,
+          gameId, result, score, difficulty, detail, assist,
+          startedAt: running ? timer.startedAt : (save ? Date.parse(save.started_at) : t),
+          endedAt: t,
+          durationSec,
+          id,
+          live: lv,
+        });
+        return out;
+      };
+      let out = store.finishFromBaseline ? null : prepare(await store.getProfile(), await store.listStats());
+      const accepted = await write('commitFinish', { gameId, saveId: saveKey(gameId),
+        profile: out?.profile, stats: out?.stats[gameId], play: out?.play ?? { id }, prepare });
+      out = accepted?.out ?? out;
+      const duplicate = accepted?.duplicate === true;
+      mem = duplicate ? (accepted.profile ?? mem) : out.profile;
       memDirty = false;
       delete statsMem[gameId];
       loaded.delete(gameId);
       savesDirty.delete(gameId);
       stored.delete(gameId);
       live.delete(gameId);
+      rounds.delete(gameId);
       if (timer?.gameId === gameId) timer = null;
-      return { play: out.play, xpGained: out.xpGained, xpBreakdown: out.xpBreakdown, newAchievements: out.newAchievements, level: out.level };
+      if (duplicate) {
+        // 雲端判重複時伺服器不會刪存檔,他分頁可能已把同局存檔寫回;仍是同一局(round_id 相同)才刪,⛔ 刪到別局。
+        try {
+          const current = await store.getSave(saveKey(gameId));
+          if (round && current?.round_id === round) await write('deleteSave', saveKey(gameId));
+        } catch { /* 刪不掉不影響本次結果;下次載入再結算仍判重複 */ }
+      }
+      if (duplicate) return { duplicate: true,
+        play: { ...(out?.play ?? { id, game_id: gameId, result, score }), is_best: false, xp_gained: 0 },
+        xpGained: 0, xpBreakdown: { items: [], total: 0 }, newAchievements: [], level: mem.level };
+      return { duplicate: false, play: out.play, xpGained: out.xpGained, xpBreakdown: out.xpBreakdown, newAchievements: out.newAchievements, level: out.level };
     },
 
     // 結算失敗後使用者選「不存了」:紀錄已整批還原(什麼都沒記);丟掉本局存檔與快取,下一局從 0 起算(IR6)。
@@ -326,7 +365,8 @@ export async function createProfile({
 
     async exportFile() {
       const t = now();
-      return { name: exportFileName(t), data: exportData({ ...(await snapshot()), now: t }) };
+      return { name: exportFileName(t), data: exportData({ ...(await snapshot()),
+        ...(store.listFinished ? { finished: await store.listFinished() } : {}), now: t }) };
     },
 
     // 只驗證、不寫入:→ { ok, error } 或 { ok, summary, data }
@@ -355,9 +395,9 @@ export async function createProfile({
     async importFile(json) {
       const check = api.checkImport(json);
       if (!check.ok) return check;
-      const { profile, stats, plays, saves } = check.data;
+      const { profile, stats, plays, saves, finished } = check.data;
       try {
-        await write('importAll', { profile, stats, plays, saves });
+        await write('importAll', { profile, stats, plays, saves, finished });
       } catch (err) {
         return {
           ok: false,
@@ -373,6 +413,7 @@ export async function createProfile({
       for (const k of Object.keys(statsMem)) delete statsMem[k];
       playsMem.length = 0;
       loaded.clear();
+      rounds.clear();
       savesDirty.clear();
       stored.clear();
       live.clear();

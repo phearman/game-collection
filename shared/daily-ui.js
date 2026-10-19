@@ -1,4 +1,4 @@
-import { dailyDateLabel, dailyScore, dailyShare, DAILY_LOGIN_NOTICE, DAILY_FIXED_NOTE } from './daily.js?v=ef71b5f';
+import { dailyDateLabel, dailyScore, dailyShare, DAILY_LOGIN_NOTICE, DAILY_FIXED_NOTE } from './daily.js?v=0bbccd3';
 
 export function showDailyBanner(doc, daily, error) {
   const banner = doc.getElementById('daily-banner');
@@ -17,6 +17,9 @@ export function appendDailySummary(doc, mount, daily, marks = []) {
   const share = doc.createElement('a'); share.className = 'btn'; share.textContent = '分享到 LINE';
   share.href = `https://line.me/R/msg/text/?${encodeURIComponent(dailyShare(daily.day, daily.row.game_id, daily.row, marks))}`;
   share.target = '_blank'; share.rel = 'noopener noreferrer'; mount.append(share);
+  // RS78:結算卡加「看今日排行」(遊戲頁在 games/{id}/,排行頁在網站根目錄下 daily-rank/)。
+  const rank = doc.createElement('a'); rank.className = 'btn'; rank.textContent = '🏆 看今日排行';
+  rank.href = '../../daily-rank/'; mount.append(rank);
 }
 export function showDailyClosed(doc, daily, error) {
   showDailyBanner(doc, daily, error);

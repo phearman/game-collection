@@ -5,20 +5,20 @@ import {
   shoot, stepState, nextArrow, simulate, scoreFor, resultFor, detailFor, toSave, fromSave, isValidState,
   completedResult, isPerfectRound, resultOnRestart, initialPause, isPaused, changePause,
   HELP_RULES, demoAims,
-} from './logic.js?v=ef71b5f';
-import { drawScene, readPalette, flashOpacity } from './draw.js?v=ef71b5f';
-import { createProfile } from '../../shared/profile.js?v=ef71b5f';
-import { LocalStore } from '../../shared/stores/local.js?v=ef71b5f';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=ef71b5f';
-import { bindThemeToggle } from '../../shared/theme.js?v=ef71b5f';
-import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=ef71b5f';
-import { skinPalette } from './skins.js?v=ef71b5f';
-import { play, music } from '../../shared/sound.js?v=ef71b5f';
-import { setupHelp } from '../../shared/help.js?v=ef71b5f';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=ef71b5f';
-import { settlePlay } from '../../shared/settle.js?v=ef71b5f';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=ef71b5f';
-import { load, save } from '../../shared/storage.js?v=ef71b5f';
+} from './logic.js?v=0bbccd3';
+import { drawScene, readPalette, flashOpacity } from './draw.js?v=0bbccd3';
+import { createProfile } from '../../shared/profile.js?v=0bbccd3';
+import { LocalStore } from '../../shared/stores/local.js?v=0bbccd3';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=0bbccd3';
+import { bindThemeToggle } from '../../shared/theme.js?v=0bbccd3';
+import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=0bbccd3';
+import { skinPalette } from './skins.js?v=0bbccd3';
+import { play, music } from '../../shared/sound.js?v=0bbccd3';
+import { setupHelp } from '../../shared/help.js?v=0bbccd3';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=0bbccd3';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=0bbccd3';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=0bbccd3';
+import { load, save } from '../../shared/storage.js?v=0bbccd3';
 
 const GAME_ID = 'archery';
 const DIFF_KEY = 'difficulty:archery';
@@ -115,7 +115,7 @@ function finish(result) {
     if (!out) { if (no === gameNo) startNew(); return; } // 結算失敗且選「不存了」:不記錄、開新局(IR6)
     if (out.play.is_best) best = Math.max(best, snap.score);
     if (no !== gameNo) return;
-    ended = { xp: out.xpGained, xpBreakdown: out.xpBreakdown, newAchievements: out.newAchievements,
+    ended = { duplicate: out.duplicate, xp: out.xpGained, xpBreakdown: out.xpBreakdown, newAchievements: out.newAchievements,
       isBest: out.play.is_best, bestBefore, score: snap.score, detail: snap.detail };
     render();
   });
@@ -269,8 +269,9 @@ function renderOverlay() {
     infoLine(`10 箭共 ${score} 分(門檻 ${THRESHOLDS[state.difficulty]})· 命中 ${d.hits} · 靶心 ${d.bullseyes}`);
     if (!ended || ended.pending) infoLine('結算中…');
     else {
+      if (ended.duplicate) infoLine(DUPLICATE_FINISH_TEXT);
       infoLine(`本局 +${ended.xp} XP`, 'overlay-xp');
-      appendXpBreakdown($('overlay-info'), ended.xpBreakdown, document);
+      if (!ended.duplicate) appendXpBreakdown($('overlay-info'), ended.xpBreakdown, document);
       if (ended.newAchievements.length) infoLine(`新成就:${ended.newAchievements.map(achName).join('、')}`);
       const line = bestLine({ ...ended, noun: '紀錄', unit: ' 分' });
       if (line) infoLine(line);

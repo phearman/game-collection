@@ -1,15 +1,16 @@
-import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave } from './logic.js?v=ef71b5f';
-import { createProfile } from '../../shared/profile.js?v=ef71b5f';
-import { LocalStore } from '../../shared/stores/local.js?v=ef71b5f';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=ef71b5f';
-import { bindThemeToggle } from '../../shared/theme.js?v=ef71b5f';
-import { play as playSound, music } from '../../shared/sound.js?v=ef71b5f';
-import { setupHelp } from '../../shared/help.js?v=ef71b5f';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=ef71b5f';
-import { settlePlay } from '../../shared/settle.js?v=ef71b5f';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=ef71b5f';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=ef71b5f';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=ef71b5f';
+import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave, clearBoardState } from './logic.js?v=0bbccd3';
+import { createProfile } from '../../shared/profile.js?v=0bbccd3';
+import { formatDuration } from '../../shared/duration.js?v=0bbccd3';
+import { LocalStore } from '../../shared/stores/local.js?v=0bbccd3';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=0bbccd3';
+import { bindThemeToggle } from '../../shared/theme.js?v=0bbccd3';
+import { play as playSound, music } from '../../shared/sound.js?v=0bbccd3';
+import { setupHelp } from '../../shared/help.js?v=0bbccd3';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=0bbccd3';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=0bbccd3';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=0bbccd3';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=0bbccd3';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=0bbccd3';
 
 const GAME_ID = 'sudoku';
 const $ = (id) => document.getElementById(id);
@@ -99,6 +100,8 @@ function render() {
   $('difficulty').disabled = isDaily || restarting || !!ended;
   $('new').disabled = restarting || !!ended;
   $('undo').disabled = locked || !state.history.length;
+  $('reset').hidden = !isDaily; // RS75:清空重來只在每日挑戰
+  $('reset').disabled = locked;
   $('notes').disabled = locked;
   $('notes').setAttribute('aria-pressed', String(noteMode));
   $('notes').textContent = `✎ 筆記：${noteMode ? '開' : '關'}`;
@@ -126,9 +129,10 @@ function render() {
   };
   if (ended?.dailyRetry) { add('成績尚未送出，請重試'); return; }
   if (!ended?.play) { add('結算中…'); return; }
+  if (ended.duplicate) add(DUPLICATE_FINISH_TEXT);
   add(`本局 +${ended.xpGained} XP`, 'overlay-xp');
-  appendXpBreakdown(info, ended.xpBreakdown, document);
-  add(`${secondsFor(state)} 秒 · ${state.score} 分`);
+  if (!ended.duplicate) appendXpBreakdown(info, ended.xpBreakdown, document);
+  add(`${formatDuration(secondsFor(state))} · ${state.score} 分`);
   if (ended.assist) add('🧩 輔助局:不刷新最佳');
   if (ended.newAchievements.length) add(`新成就：${ended.newAchievements.map((id) => {
     const a = ACHIEVEMENTS.find((item) => item.id === id);
@@ -269,6 +273,21 @@ $('again').addEventListener('click', () => {
   if (ended?.dailyRetry) { ended = null; finish('win'); } else newGame();
 });
 $('undo').addEventListener('click', undo);
+// RS75:每日挑戰清空重來,先確認;計時照算、不送成績。
+$('reset').addEventListener('click', () => {
+  if (!isDaily || ended || restarting || state.result) return;
+  $('reset-dlg').showModal();
+});
+$('reset-dlg').addEventListener('click', (event) => {
+  const act = event.target.closest('[data-act]')?.dataset.act;
+  if (act !== 'reset' && act !== 'cancel') return;
+  $('reset-dlg').close();
+  if (act !== 'reset' || !isDaily || ended || restarting || state.result) return;
+  input();
+  state = clearBoardState(state); activeHint = null; noteMode = false;
+  persist(); render();
+});
+$('reset-dlg').addEventListener('close', () => { cells[cursor].focus(); });
 $('notes').addEventListener('click', toggleNotes);
 $('clear').addEventListener('click', () => play(0));
 $('difficulty').addEventListener('change', () => newGame($('difficulty').value));
@@ -328,11 +347,11 @@ setupHelp({
   gameId: GAME_ID, title: '數獨玩法', mountAfter: document.querySelector('.navigation .btn'),
   rules: `<ol>
     <li>每列、欄、宮 1–9 各一次，給定格不可改。</li>
-    <li>引導學習給定 46、開局有自動候選，學方法；入門給定 56，自己想。</li>
+    <li>引導學習給定 46、有自動候選；入門給定 56，自己想。</li>
     <li>點格／方向鍵選格，1–9 填入，0 清空；N 筆記，可復原。</li>
     <li>填入清除相關筆記，衝突標紅；💡 提示會說明理由。</li>
     <li>引導學習、入門或用提示、候選為輔助局：不刷新最佳、XP 對折。</li>
-    <li>首次輸入計時，重開記退出；填滿無衝突勝，分數=max(1,10000−秒數)。每日挑戰成績從開題起算，含離開時間；本局只計遊玩時間。</li>
+    <li>首次輸入計時，重開記退出；填滿無衝突勝，分數=max(1,10000−秒數)。每日挑戰成績從開題起算，含離開時間；本局只計遊玩時間；每日可清空重來</li>
   </ol>`,
   demo: { steps: demoSteps().map((s, i) => ({ ...s, kind: ['fail', 'fail', undefined, 'ok'][i] })), render: (frame) => {
     const board = frame.board ?? frame;

@@ -2,18 +2,18 @@
 import {
   SIZE, TICK_MS, DIFFICULTIES, initState, turnState, tickState, pauseState, resumeState, overlayFor,
   toSave, fromSave, isValidState,
-} from './logic.js?v=ef71b5f';
-import { createProfile } from '../../shared/profile.js?v=ef71b5f';
-import { LocalStore } from '../../shared/stores/local.js?v=ef71b5f';
-import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js?v=ef71b5f';
-import { bindThemeToggle } from '../../shared/theme.js?v=ef71b5f';
-import { play, music } from '../../shared/sound.js?v=ef71b5f';
-import { setupHelp } from '../../shared/help.js?v=ef71b5f';
-import { swipe, dpad } from '../../shared/touch.js?v=ef71b5f';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=ef71b5f';
-import { settlePlay } from '../../shared/settle.js?v=ef71b5f';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=ef71b5f';
-import { load, save } from '../../shared/storage.js?v=ef71b5f';
+} from './logic.js?v=0bbccd3';
+import { createProfile } from '../../shared/profile.js?v=0bbccd3';
+import { LocalStore } from '../../shared/stores/local.js?v=0bbccd3';
+import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js?v=0bbccd3';
+import { bindThemeToggle } from '../../shared/theme.js?v=0bbccd3';
+import { play, music } from '../../shared/sound.js?v=0bbccd3';
+import { setupHelp } from '../../shared/help.js?v=0bbccd3';
+import { swipe, dpad } from '../../shared/touch.js?v=0bbccd3';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=0bbccd3';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=0bbccd3';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=0bbccd3';
+import { load, save } from '../../shared/storage.js?v=0bbccd3';
 
 const GAME_ID = 'snake';
 const DIFF_KEY = 'difficulty:snake'; // 上次選的難度(開新局用)
@@ -67,7 +67,7 @@ function finish(result) {
     if (out.play.is_best) best = Math.max(best, snap.score);
     if (no !== gameNo) return;
     ended = {
-      xp: out.xpGained,
+      duplicate: out.duplicate, xp: out.xpGained,
       xpBreakdown: out.xpBreakdown,
       newAchievements: out.newAchievements,
       isBest: out.play.is_best,
@@ -205,6 +205,7 @@ const achName = (id) => {
 function infoHtml() {
   if (!ended) return '';
   if (ended.pending) return '<p>結算中…</p>';
+  if (ended.duplicate) return `<p>${DUPLICATE_FINISH_TEXT}</p><p class="overlay-xp">本局 +0 XP</p>`;
   const lines = [`<p class="overlay-xp">本局 +${ended.xp} XP</p>`, xpBreakdownHtml(ended.xpBreakdown)];
   if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
   lines.push(bestLineHtml(ended));
