@@ -1,3 +1,5 @@
+import { seedRng } from '../../shared/seed-rng.js?v=e848582';
+
 // 翻翻樂規則層:純函式,不碰 DOM。牌以一維陣列存,牌號 i = r × cols + c。
 // 規則正典:workbook/plans/memory-match.md「規則(驗收依據)」。
 
@@ -44,6 +46,11 @@ export function initState(difficulty = 'normal', rng = Math.random) {
   const d = DIFFICULTIES[difficulty];
   if (!d) throw new Error(`unknown difficulty: ${difficulty}`);
   return stateWithDeck(difficulty, dealDeck(pairsOf(difficulty), rng));
+}
+
+// 每日困難局從伺服器當日種子發牌;開題後立刻計時。
+export function initDailyState({ day, seed }) {
+  return { ...initState('hard', seedRng(seed)), status: 'playing', daily: day, daily_seed: seed };
 }
 
 // 指定牌序的新局(示範與測試用;發牌規則仍以 dealDeck 為準)。
@@ -142,7 +149,8 @@ export function demoPlan(state) {
 
 export function toSave(state) {
   const { difficulty, cols, rows, deck, matched, open, moves, misses, seconds, status } = state;
-  return { difficulty, cols, rows, deck: deck.slice(), matched: matched.slice(), open: open.slice(), moves, misses, seconds, status };
+  return { difficulty, cols, rows, deck: deck.slice(), matched: matched.slice(), open: open.slice(), moves, misses, seconds, status,
+    ...(state.daily ? { daily: state.daily, daily_seed: state.daily_seed } : {}) };
 }
 
 // 載入:等待蓋回中的兩張一律蓋回(⛔ 靠重新整理偷看)。
@@ -157,6 +165,12 @@ export function isValidState(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return false;
   const d = Object.hasOwn(DIFFICULTIES, s.difficulty) ? DIFFICULTIES[s.difficulty] : null;
   if (!d || s.cols !== d.cols || s.rows !== d.rows) return false;
+  if (s.daily !== undefined || s.daily_seed !== undefined) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s.daily) || !/^[0-9a-f]{16}$/.test(s.daily_seed)
+      || s.difficulty !== 'hard' || s.status === 'ready') return false;
+    const dailyDeck = initDailyState({ day: s.daily, seed: s.daily_seed }).deck;
+    if (!Array.isArray(s.deck) || s.deck.some((v, i) => v !== dailyDeck[i])) return false;
+  }
   const n = d.cols * d.rows;
   const pairs = n / 2;
   if (!STATUSES.includes(s.status) || !isCount(s.moves) || !isCount(s.misses) || !isCount(s.seconds)) return false;
@@ -189,5 +203,5 @@ export function isValidState(s) {
   // 勝負與盤面一致。
   if (s.status === 'ready') return s.moves === 0 && s.seconds === 0 && s.open.length === 0;
   if (s.status === 'win') return matchedPairs === pairs && s.open.length === 0;
-  return matchedPairs < pairs && (s.moves > 0 || s.open.length > 0);
+  return matchedPairs < pairs && (s.moves > 0 || s.open.length > 0 || !!s.daily);
 }

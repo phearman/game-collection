@@ -2,7 +2,10 @@
 .stats { margin-left: auto; }
 .stat { min-width: 60px; }
 .actions, .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.actions .btn, .tools .btn { flex: 1; }
+/* IR52:按鈕不可縮到比文字窄(flex-basis 0 會讓中文字溢出互疊);放不下就換行,同列再平分剩餘寬度 */
+.actions .btn, .tools .btn { flex: 1 0 auto; }
+/* IR52 審查:第二排點擊區至少 44px 高(局部,⛔ 改共用 .btn 的 40px) */
+.actions .btn { min-height: 44px; }
 .difficulty { display: flex; gap: 6px; align-items: center; font-size: 14px; white-space: nowrap; }
 select { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px; min-height: 40px; }
 select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

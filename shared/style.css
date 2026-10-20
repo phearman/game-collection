@@ -1,4 +1,4 @@
-@import url("skins.css?v=0bbccd3");
+@import url("skins.css?v=e848582");
 :root {
   --bg: #f6f5f1;
   --surface: #ffffff;
@@ -194,6 +194,33 @@ a.card:hover { border-color: var(--accent); }
 .lobby-footer a { color: var(--text-sub); }
 .lobby-footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .card-tags { display: flex; gap: 6px; }
+/* RS38 大廳:精選、我的釘選、分類與排序 */
+.lobby-section { margin-bottom: 16px; }
+.lobby-heading { font-size: 16px; margin: 0 0 8px; }
+/* 精選與釘選只有一兩張卡時不撐滿整列,寬度與全部遊戲的卡片一致 */
+#featured-cards, #pinned-cards { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.lobby-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.category-tabs { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.category-btn { min-height: 40px; padding-inline: 10px; }
+.category-btn[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+.lobby-sort { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-size: 14px; }
+.lobby-sort select { min-height: 40px; font: inherit; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 0 6px; }
+.pin-hint { font-size: 13px; color: var(--text-sub); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; }
+/* 滿額提示:浮在視窗底部中央(375px 一欄時點上方精選卡也看得到),aria-live 由 #pin-msg 提供 */
+.pin-msg { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 1001; max-width: calc(100vw - 32px); box-sizing: border-box;
+  margin: 0; padding: 10px 14px; border-radius: var(--radius); background: var(--text); color: var(--surface); font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+.pin-msg:empty { display: none; }
+.card-wrap { position: relative; min-width: 0; }
+.card-wrap > .card { height: 100%; box-sizing: border-box; }
+.card-wrap .card-head { padding-right: 40px; }
+.pin-btn { position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 18px; border: 1px solid transparent; border-radius: 50%; background: transparent; cursor: pointer; filter: grayscale(1); opacity: .45; }
+.pin-btn:hover, .pin-btn:focus-visible { opacity: 1; border-color: var(--border); }
+.pin-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pin-btn[aria-pressed="true"] { filter: none; opacity: 1; background: var(--accent-bg); }
+.card-note { font-size: 13px; font-weight: 600; color: var(--accent); margin: 2px 0 2px; }
+.tag.is-pinned { background: var(--accent-bg); color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .pin-btn { transition: none; } }
 .tag.is-resume { background: var(--accent); color: var(--surface); }
 
 /* 結算遮罩 XP 明細(RS5):小字,可折行 */
@@ -280,3 +307,9 @@ a.card:hover { border-color: var(--accent); }
 .daily-banner { font-size: 14px; margin: 8px 0; overflow-wrap: anywhere; }
 .daily-note { font-size: 13px; color: var(--text-sub); margin: 4px 0 0; }
 .daily-summary { padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); }
+
+/* 翻翻樂同時顯示失誤與時間，窄螢幕另排一行避免長時間成績擠出頁面。 */
+@media (max-width: 600px) {
+  .daily-rank-list li[data-game="memory"] { grid-template-columns: 2.5em 40px minmax(0, 1fr); }
+  .daily-rank-list li[data-game="memory"] .daily-rank-score { grid-column: 2 / -1; white-space: normal; overflow-wrap: anywhere; }
+}

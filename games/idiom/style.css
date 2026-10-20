@@ -1,0 +1,29 @@
+.topbar { gap: 6px; }
+.topbar .btn { white-space: nowrap; padding: 6px 10px; }
+.stats { display: flex; gap: 6px; align-items: stretch; min-width: 0; }
+.stats .stat { min-width: 0; padding: 2px 6px; }
+.stat-value { font-size: 16px; overflow-wrap: anywhere; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actions .btn { flex: 1 1 auto; min-width: 0; }
+progress { display: block; width: 100%; accent-color: var(--accent); margin: 8px 0 16px; }
+#progress-label { margin: 12px 0 0; font-size: 14px; }
+.question-card, .result-card { padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.idiom-cells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.idiom-cell { display: grid; place-items: center; min-width: 0; min-height: 64px; border: 2px solid var(--border); border-radius: 8px; background: var(--surface-sub); font-size: 36px; font-weight: 700; }
+.idiom-cell.active { border-color: var(--accent); background: var(--accent-bg); }
+.idiom-cell.wrong { border-color: #d53d43; color: #b2222a; background: #ffe5e6; }
+:root[data-theme="dark"] .idiom-cell.wrong { color: #ffb3b6; background: #591b22; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .idiom-cell.wrong { color: #ffb3b6; background: #591b22; }
+}
+#status { min-height: 48px; margin: 16px 0 8px; overflow-wrap: anywhere; }
+.choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.choices .btn { min-width: 44px; min-height: 56px; padding: 4px; font-size: 32px; }
+.choices .btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.question-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.question-actions .btn { min-height: 44px; }
+.result-card { margin-top: 16px; overflow-wrap: anywhere; }
+.result-card h1 { font-size: 22px; }
+.hint { font-size: 13px; color: var(--text-sub); text-align: center; }
+.demo { max-width: 320px; margin: auto; }
+[hidden] { display: none !important; }

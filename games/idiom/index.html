@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>成語填空 · 遊戲集錦</title>
+  <link rel="stylesheet" href="../../shared/style.css?v=e848582">
+  <link rel="stylesheet" href="style.css?v=e848582">
+</head>
+<body>
+  <main class="page page-narrow">
+    <header class="topbar">
+      <a class="btn" href="../../" aria-label="回到大廳" title="回到大廳"><span aria-hidden="true">←</span><span class="topbar-label">大廳</span></a>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">時間</div><div class="stat-value" id="seconds">0 秒</div></div>
+        <div class="stat"><div class="stat-label">最佳</div><div class="stat-value" id="best">0</div></div>
+        <button class="btn" id="theme" type="button"></button>
+      </div>
+    </header>
+    <div class="actions">
+      <button class="btn" id="new" type="button">↻ 新遊戲</button>
+      <select class="btn" id="difficulty" aria-label="難度">
+        <option value="easy">入門 · 400 詞</option>
+        <option value="normal">一般 · 1,000 詞</option>
+        <option value="expert">挑戰 · 全部詞表</option>
+      </select>
+    </div>
+    <p id="progress-label"></p>
+    <progress id="progress" max="10" value="0" aria-labelledby="progress-label"></progress>
+    <section class="question-card" aria-label="成語題目">
+      <div class="idiom-cells" id="cells" aria-label="四字成語"></div>
+      <p id="status" role="status" aria-live="polite"></p>
+      <div class="choices" id="choices" aria-label="候選字"></div>
+      <div class="question-actions">
+        <a id="lookup" class="btn" target="_blank" rel="noopener noreferrer" hidden>查看《成語典》</a>
+        <button id="next" class="btn" type="button" hidden>下一題 →</button>
+      </div>
+    </section>
+    <section class="result-card" id="result" aria-labelledby="result-title" hidden>
+      <h1 id="result-title">🎉 完成 10 題!</h1>
+      <div id="result-info" aria-live="polite"></div>
+      <button class="btn" id="again" type="button">再玩一次</button>
+    </section>
+    <p class="hint">點選候選字填入亮框 · 挑戰級依序填兩格</p>
+  </main>
+  <script type="module" src="ui.js?v=e848582"></script>
+</body>
+</html>

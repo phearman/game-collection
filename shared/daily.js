@@ -1,10 +1,12 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=0bbccd3';
-import { formatDuration } from './duration.js?v=0bbccd3';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=e848582';
+import { formatDuration } from './duration.js?v=e848582';
 
-export const DAILY_GAMES = ['sudoku', 'minesweeper'];
-export const DAILY_NAMES = { wordle: 'Wordle', sudoku: '數獨', minesweeper: '踩地雷' };
+export const DAILY_GAMES = ['sudoku', 'minesweeper', 'memory'];
+export const DAILY_NAMES = { wordle: 'Wordle', sudoku: '數獨', minesweeper: '踩地雷', memory: '翻翻樂' };
 export const DAILY_LOGIN_NOTICE = '登入後才能參加每日挑戰';
 export const DAILY_FIXED_NOTE = '遊戲固定、每天換題目';
+// 與 SQL daily_public_eligible / daily_memory_rank_misses 同源；踩地雷、翻翻樂共用 20 秒門檻。
+export const DAILY_FAST_GAME_MIN_SECONDS = 20;
 export const taiwanDay = (stamp) => new Date(Number(stamp) + 8 * 3600000).toISOString().slice(0, 10);
 export const dailyDateLabel = (day) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`;
 export const dailySlot = (game) => `${game}-daily`;
@@ -16,6 +18,7 @@ export function dailyStatus(row) {
   return row?.started_at ? '繼續' : '開始';
 }
 export function dailyScore(row) {
+  if (row.game_id === 'memory') return `失誤 ${row.detail.misses} 次 · ${formatDuration(row.seconds)}`;
   return row.game_id === 'wordle'
     ? `${row.result === 'win' ? row.guesses : 'X'}/6 · ${formatDuration(row.seconds)}`
     : `${row.game_id === 'minesweeper' && row.result === 'lose' ? '💥 踩雷 · ' : ''}${formatDuration(row.seconds)}`;
@@ -23,6 +26,7 @@ export function dailyScore(row) {
 export function dailyShare(day, game, row, marks = []) {
   const squares = { correct: '🟩', present: '🟨', absent: '⬜' };
   const score = game === 'wordle' ? `${row.result === 'win' ? row.guesses : 'X'}/6`
+    : game === 'memory' ? dailyScore(row)
     : game === 'minesweeper' && row.result === 'lose' ? '💥' : formatDuration(row.seconds);
   return `遊戲集錦 ${dailyDateLabel(day)} ${DAILY_NAMES[game]} ${score}`
     + (game === 'wordle' ? `\n${(Array.isArray(marks) ? marks : []).filter(Array.isArray).slice(0, 6)
@@ -30,11 +34,13 @@ export function dailyShare(day, game, row, marks = []) {
 }
 export function dailyRank(rows, game) {
   return rows.filter((r) => r.game_id === game && r.finished_at && !r.cleared
-    && (game === 'wordle' || (r.result === 'win' && r.seconds >= (game === 'minesweeper' ? 20 : 60))))
+    && (game === 'wordle' || (r.result === 'win' && r.seconds >= (['minesweeper', 'memory'].includes(game) ? DAILY_FAST_GAME_MIN_SECONDS : 60))))
+    .filter((r) => game !== 'memory' || (Number.isInteger(r.detail?.misses) && r.detail.misses >= 0))
     .sort((a, b) => game === 'wordle'
       ? Number(b.result === 'win') - Number(a.result === 'win')
         || (a.result === 'win' && b.result === 'win' ? a.guesses - b.guesses : 0) || a.seconds - b.seconds
-      : a.seconds - b.seconds).slice(0, 5);
+      : (game === 'memory' ? a.detail.misses - b.detail.misses : 0) || a.seconds - b.seconds
+        || (game === 'memory' ? Date.parse(a.finished_at) - Date.parse(b.finished_at) : 0)).slice(0, 5);
 }
 
 export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUBLISHABLE_KEY,
@@ -84,16 +90,19 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
 }
 export async function browserDailyClient() {
   if (!cloudEnabled) return createDailyClient();
-  const { auth } = await (await import('./auth.js?v=0bbccd3')).getCloudRuntime();
+  const { auth } = await (await import('./auth.js?v=e848582')).getCloudRuntime();
   return createDailyClient({ auth });
 }
 
 // The server day is authoritative. Completed rows never generate another puzzle.
 export async function prepareDaily(client, game) {
+  const previous = game === 'memory' ? await client.today() : null;
   const seed = await client.seed(game);
   const row = await client.start(game);
   if (row.day !== seed.day) throw new Error('挑戰已換日，請重新整理');
-  return { day: seed.day, seed: seed.seed, row, completed: !!row.finished_at || !!row.cleared };
+  return { day: seed.day, seed: seed.seed, row, completed: !!row.finished_at || !!row.cleared,
+    ...(game === 'memory' ? { resumeRequired: previous?.day === seed.day
+      && previous.results.some((r) => r.game_id === game && r.started_at) } : {}) };
 }
 export function matchesDailySave(saved, daily, valid) {
   return !daily.row?.cleared && !!saved && saved.daily === daily.day && saved.daily_seed === daily.seed && valid(saved);

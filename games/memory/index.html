@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>翻翻樂 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../../shared/style.css?v=0bbccd3">
-  <link rel="stylesheet" href="style.css?v=0bbccd3">
+  <link rel="stylesheet" href="../../shared/style.css?v=e848582">
+  <link rel="stylesheet" href="style.css?v=e848582">
 </head>
 <body>
   <main class="page page-narrow">
@@ -19,12 +19,15 @@
     </header>
     <div class="actions">
       <button class="btn" id="new" type="button">↻ 新遊戲</button>
+      <a class="btn" href="?daily=1">📅 今日挑戰</a>
       <select class="btn" id="difficulty" aria-label="難度">
         <option value="normal">一般 4×4</option>
         <option value="hard">困難 4×6</option>
         <option value="expert">專家 6×6</option>
       </select>
     </div>
+    <p class="status" id="daily-banner" hidden></p>
+    <p class="hint" id="daily-note" hidden></p>
     <p class="status" id="status" aria-live="polite"></p>
     <div class="board-wrap">
       <div class="board" id="board" role="grid" aria-label="翻翻樂牌桌"></div>
@@ -38,6 +41,6 @@
     </div>
     <p class="hint">點牌翻開 · 記住位置配成一對 · 鍵盤:方向鍵移動、Enter / 空白鍵翻牌</p>
   </main>
-  <script type="module" src="ui.js?v=0bbccd3"></script>
+  <script type="module" src="ui.js?v=e848582"></script>
 </body>
 </html>

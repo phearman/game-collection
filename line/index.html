@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="遊戲集錦 LINE 小幫手使用說明：開遊戲、傳回饋、綁定成績、加入群組排行與查天氣的指令及對話範例。">
   <title>LINE 小幫手使用說明 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=0bbccd3">
-  <link rel="stylesheet" href="style.css?v=0bbccd3">
+  <link rel="stylesheet" href="../shared/style.css?v=e848582">
+  <link rel="stylesheet" href="style.css?v=e848582">
 </head>
 <body>
   <main class="page line-guide">
@@ -81,11 +81,11 @@
           <dl class="command-list">
             <div data-command="綁定" data-scopes="user"><dt><code>#綁定</code><span class="command-scope">私訊</span></dt><dd>點綁定按鈕 → 用平常玩遊戲的 Google 或 GitHub 帳號登入 → 網站按「確認綁定」。連結 10 分鐘內有效、只能用一次；不要分享。群組輸入只會提醒改用私訊。</dd></div>
             <div data-command="成績" data-scopes="user group"><dt><code>#成績</code><span class="command-scope">兩者</span></dt><dd>綁定後看自己的等級、XP、總局數與最佳分數。群組查詢會讓該群成員看到你的成績卡。</dd></div>
-            <div data-command="今日挑戰" data-scopes="user group"><dt><code>#今日挑戰 [遊戲]</code><span class="command-scope">兩者</span></dt><dd>每天同題的數獨與踩地雷，需登入網站才能參加，以台灣午夜換日。私訊綁定後可看自己的今日成績；已核准群組只列自行 #加入排行 的成員，不帶參數兩款各前 5 名。輸入 #今日挑戰 數獨、#今日挑戰 sudoku 或 #今日挑戰 G5 看該款今日排名（最多 30 名）；私訊帶遊戲只看自己該款成績，全形英數也可用。數獨少於 60 秒、踩地雷少於 20 秒不列排行；踩雷不列排行。</dd></div>
+            <div data-command="今日挑戰" data-scopes="user group"><dt><code>#今日挑戰 [遊戲]</code><span class="command-scope">兩者</span></dt><dd>每天同題的數獨、踩地雷與翻翻樂，需登入網站才能參加，以台灣午夜換日。私訊綁定後可看自己的今日成績；已核准群組只列自行 #加入排行 的成員，不帶參數三款各前 5 名。輸入 #今日挑戰 數獨、#今日挑戰 sudoku 或 #今日挑戰 G5 看該款今日排名（最多 30 名）；私訊帶遊戲只看自己該款成績，全形英數也可用。數獨少於 60 秒、踩地雷與翻翻樂少於 20 秒不列排行；踩雷不列排行。翻翻樂先比失誤數，再比秒數；例如 #今日挑戰 翻翻樂。</dd></div>
             <div data-command="解除綁定" data-scopes="user"><dt><code>#解除綁定</code><span class="command-scope">私訊</span></dt><dd>解除帳號連結並退出所有群組排行；也可到<a href="../me/">我的紀錄</a>解除 LINE 綁定。</dd></div>
             <div data-command="加入排行" data-scopes="group"><dt><code>#加入排行</code><span class="command-scope">群組</span></dt><dd>先私訊綁定，再在已核准群組自行加入；每個群組都要各自加入。</dd></div>
             <div data-command="排行" data-scopes="group"><dt><code>#排行</code><span class="command-scope">群組</span></dt><dd>看本群近 7 天 XP 前 10 名，依每人最近 50 局計算，可能不涵蓋七天全部遊玩。</dd></div>
-            <div data-command="排行 2048" data-scopes="group"><dt><code>#排行 2048</code><span class="command-scope">群組</span></dt><dd>看指定遊戲的本群歷史最佳前 10 名；可換成其他遊戲名稱、id 或代號，也可用 #排名、#排行榜。數獨與踩地雷卡片下方會提示 #今日挑戰 看今天的排名。沒加入本群排行的人不會列出。</dd></div>
+            <div data-command="排行 2048" data-scopes="group"><dt><code>#排行 2048</code><span class="command-scope">群組</span></dt><dd>看指定遊戲的本群歷史最佳前 10 名；可換成其他遊戲名稱、id 或代號，也可用 #排名、#排行榜。數獨、踩地雷與翻翻樂卡片下方會提示 #今日挑戰 看今天的排名。沒加入本群排行的人不會列出。</dd></div>
             <div data-command="退出排行" data-scopes="group"><dt><code>#退出排行</code><span class="command-scope">群組</span></dt><dd>只退出目前群組，保留綁定與其他群組的排行資格。</dd></div>
           </dl>
           <figure class="example">
@@ -98,7 +98,7 @@
               <li class="player"><div class="bubble"><span class="speaker">小明 · 已核准群組</span>#加入排行</div></li>
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>✅ 小明已加入本群排行</div></li>
               <li class="player"><div class="bubble"><span class="speaker">小明 · 群組</span>#今日挑戰</div></li>
-              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>今日挑戰 · 數獨與踩地雷</strong><p>踩地雷：小明 · 83 秒<br>從開題起算，含離開時間；踩雷即結束，當天不能重玩。分享只含秒數與是否踩雷，不含盤面或答案。</p><span class="sample-action">數獨</span><span class="sample-action">踩地雷</span></div></div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>今日挑戰 · 數獨、踩地雷與翻翻樂</strong><p>踩地雷：小明 · 83 秒<br>從開題起算，含離開時間；踩雷即結束，當天不能重玩。分享只含秒數與是否踩雷，不含盤面或答案。</p><span class="sample-action">數獨</span><span class="sample-action">踩地雷</span><span class="sample-action">翻翻樂</span></div></div></li>
               <li class="player"><div class="bubble"><span class="speaker">小明 · 群組</span>#排行</div></li>
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>本群近 7 天 XP 排行</strong><ol><li>小明 · 120 XP</li><li>小美 · 90 XP</li></ol><p>依最近紀錄計算（每人最近 50 局）</p></div></div></li>
               <li class="player"><div class="bubble"><span class="speaker">小美 · 群組</span>#排行 2048</div></li>
@@ -209,6 +209,6 @@
 
     <footer class="guide-footer"><a href="../privacy/">隱私權政策</a><a href="../">回大廳</a></footer>
   </main>
-  <script type="module" src="ui.js?v=0bbccd3"></script>
+  <script type="module" src="ui.js?v=e848582"></script>
 </body>
 </html>

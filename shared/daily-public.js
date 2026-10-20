@@ -1,7 +1,7 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=0bbccd3';
-import { DAILY_GAMES, DAILY_NAMES, dailyDateLabel } from './daily.js?v=0bbccd3';
-import { formatDuration } from './duration.js?v=0bbccd3';
-import { safeAvatarUrl } from './avatars.js?v=0bbccd3';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=e848582';
+import { DAILY_GAMES, DAILY_NAMES, dailyDateLabel, dailyScore } from './daily.js?v=e848582';
+import { formatDuration } from './duration.js?v=e848582';
+import { safeAvatarUrl } from './avatars.js?v=e848582';
 
 // 網站今日挑戰排行(RS78,自願公開)。暱稱規則與 migration 0036 的 daily_public_nickname_valid 同一組正反例(測試比對)。
 export const PUBLIC_RANK_NOTE = '打開後,你今天起的今日挑戰成績會用這個暱稱和排行頭像,出現在網站的今日排行,所有人都看得到。關閉後立即從排行移除。';
@@ -64,7 +64,7 @@ export function createDailyPublicClient({ auth, url = SUPABASE_URL, key = SUPABA
 }
 export async function browserDailyPublicClient() {
   if (!cloudEnabled) return createDailyPublicClient();
-  const { auth } = await (await import('./auth.js?v=0bbccd3')).getCloudRuntime();
+  const { auth } = await (await import('./auth.js?v=e848582')).getCloudRuntime();
   return createDailyPublicClient({ auth });
 }
 
@@ -89,7 +89,7 @@ export function mountDailyRank({ doc, client, games = DAILY_GAMES, loggedIn = ()
   });
   tabs.replaceChildren(...buttons);
   const row = (r) => {
-    const li = doc.createElement('li');
+    const li = doc.createElement('li'); li.dataset.game = current;
     const place = doc.createElement('span'); place.className = 'daily-rank-place'; place.textContent = `${r.place}`;
     const avatar = doc.createElement('span'); avatar.className = 'daily-rank-avatar';
     const url = safeAvatarUrl(r.avatar?.url);
@@ -101,7 +101,7 @@ export function mountDailyRank({ doc, client, games = DAILY_GAMES, loggedIn = ()
       avatar.append(img);
     } else avatar.textContent = emoji;
     const name = doc.createElement('span'); name.className = 'daily-rank-name'; name.textContent = String(r.nickname ?? '');
-    const score = doc.createElement('span'); score.className = 'daily-rank-score'; score.textContent = formatDuration(r.seconds);
+    const score = doc.createElement('span'); score.className = 'daily-rank-score'; score.textContent = current === 'memory' ? dailyScore({ ...r, game_id: current, detail: { misses: r.misses } }) : formatDuration(r.seconds);
     li.append(place, avatar, name, score);
     return li;
   };

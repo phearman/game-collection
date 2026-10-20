@@ -5,7 +5,7 @@ import {
   FIELD_W, GOAL_HALF_W, GOAL_H, RUNUP_MS, ACTION_MS, keeperPose, saveZone, lastResult, tally,
   ballMotion, flightMs, impactTarget, weatherFor, BOUNCE_AT, LOW_BALL_Y,
   roleOf, kickMotion, kickFlightMs, kickImpact, computerSaveZone, CURVE_NAMES, KICK_PARAMS,
-} from './logic.js?v=0bbccd3';
+} from './logic.js?v=e848582';
 
 export const FIELD_H = 420;
 const CX = FIELD_W / 2;

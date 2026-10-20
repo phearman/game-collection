@@ -4,27 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>遊戲集錦</title>
-  <link rel="stylesheet" href="shared/style.css?v=0bbccd3">
+  <link rel="stylesheet" href="shared/style.css?v=e848582">
   <!-- IR32/IR46:大廳模組一次並行下載,不必等上一層 import 解析完才發現下一層(原本要一層層往返)。
        清單 = 大廳靜態 import 全集 + 登入用的 auth.js;tests/lobby-preload.test.js 會比對,漏列或多列都會失敗。 -->
-  <link rel="modulepreload" href="shared/games.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/profile-core.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/stores/local.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/progress.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/stores/errors.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/settle.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/cloud-status.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/supabase-config.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/theme.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/storage.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/sound.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/skin.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/whats-new.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/changelog.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/daily.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/duration.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/skin-compare.js?v=0bbccd3">
-  <link rel="modulepreload" href="shared/auth.js?v=0bbccd3">
+  <link rel="modulepreload" href="shared/games.js?v=e848582">
+  <link rel="modulepreload" href="shared/profile-core.js?v=e848582">
+  <link rel="modulepreload" href="shared/stores/local.js?v=e848582">
+  <link rel="modulepreload" href="shared/progress.js?v=e848582">
+  <link rel="modulepreload" href="shared/stores/errors.js?v=e848582">
+  <link rel="modulepreload" href="shared/settle.js?v=e848582">
+  <link rel="modulepreload" href="shared/cloud-status.js?v=e848582">
+  <link rel="modulepreload" href="shared/supabase-config.js?v=e848582">
+  <link rel="modulepreload" href="shared/theme.js?v=e848582">
+  <link rel="modulepreload" href="shared/storage.js?v=e848582">
+  <link rel="modulepreload" href="shared/sound.js?v=e848582">
+  <link rel="modulepreload" href="shared/skin.js?v=e848582">
+  <link rel="modulepreload" href="shared/whats-new.js?v=e848582">
+  <link rel="modulepreload" href="shared/changelog.js?v=e848582">
+  <link rel="modulepreload" href="shared/daily.js?v=e848582">
+  <link rel="modulepreload" href="shared/lobby.js?v=e848582">
+  <link rel="modulepreload" href="shared/duration.js?v=e848582">
+  <link rel="modulepreload" href="shared/skin-compare.js?v=e848582">
+  <link rel="modulepreload" href="shared/auth.js?v=e848582">
 </head>
 <body>
   <main class="page">
@@ -44,7 +45,24 @@
       <div id="daily-games" class="daily-games"></div>
       <p class="daily-rank-link"><a href="daily-rank/">🏆 看今日排行</a></p>
     </section>
-    <section class="cards" id="cards" aria-label="遊戲清單"></section>
+    <section class="lobby-section" id="featured" aria-labelledby="featured-title" hidden>
+      <h2 class="lobby-heading" id="featured-title">⭐ 精選</h2>
+      <div class="cards" id="featured-cards"></div>
+    </section>
+    <section class="lobby-section" id="pinned" aria-labelledby="pinned-title" hidden>
+      <h2 class="lobby-heading" id="pinned-title">📌 我的釘選</h2>
+      <div class="cards" id="pinned-cards"></div>
+    </section>
+    <section class="lobby-section" aria-labelledby="all-title">
+      <h2 class="lobby-heading" id="all-title">全部遊戲</h2>
+      <p class="pin-hint" id="pin-hint" hidden><span>點卡片右上角 📌 可以把常玩的放到最上面</span> <button class="btn" id="pin-hint-close" type="button">知道了</button></p>
+      <div class="lobby-controls">
+        <div class="category-tabs" id="category-tabs" role="group" aria-label="分類"></div>
+        <label class="lobby-sort">排序 <select id="sort"></select></label>
+      </div>
+      <p class="pin-msg" id="pin-msg" role="status" aria-live="polite"></p>
+      <div class="cards" id="cards" aria-label="遊戲清單"></div>
+    </section>
     <section class="skin-compare" id="skin-compare" aria-labelledby="skin-compare-title" hidden>
       <h2 id="skin-compare-title">🎨 主題樣板比較</h2>
       <p>目前有 3 款美術風格可以試玩比較,套用在大廳、我的紀錄、2048、下樓梯。點一下就能切換(頂列的 🎨 也可以),深淺色鈕可再各試一次,挑到喜歡的請告訴我們。</p>
@@ -53,58 +71,31 @@
     <footer class="lobby-footer"><a href="changelog/">更新紀錄</a><span aria-hidden="true"> · </span><a href="privacy/">隱私權政策</a><span aria-hidden="true"> · </span><a id="feedback-link" href="me/">意見回饋</a><span aria-hidden="true"> · </span><a href="line/">LINE 小幫手使用說明</a></footer>
   </main>
   <script type="module">
-    import { GAMES } from './shared/games.js?v=0bbccd3';
-    import { createProfile } from './shared/profile-core.js?v=0bbccd3';
-    import { LocalStore } from './shared/stores/local.js?v=0bbccd3';
-    import { bindThemeToggle } from './shared/theme.js?v=0bbccd3';
-    import { cloudEnabled } from './shared/supabase-config.js?v=0bbccd3';
-    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=0bbccd3';
-    import { mountDailyLobby } from './shared/daily.js?v=0bbccd3';
+    import { GAMES } from './shared/games.js?v=e848582';
+    import { createProfile } from './shared/profile-core.js?v=e848582';
+    import { LocalStore } from './shared/stores/local.js?v=e848582';
+    import { bindThemeToggle } from './shared/theme.js?v=e848582';
+    import { cloudEnabled } from './shared/supabase-config.js?v=e848582';
+    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=e848582';
+    import { mountDailyLobby } from './shared/daily.js?v=e848582';
+    import { mountLobby } from './shared/lobby.js?v=e848582';
 
     bindThemeToggle(document.getElementById('theme'));
     document.getElementById('feedback-link').addEventListener('click', async (event) => {
       event.preventDefault();
-      const { openFeedback } = await import('./shared/feedback.js?v=0bbccd3');
+      const { openFeedback } = await import('./shared/feedback.js?v=e848582');
       await openFeedback();
     });
 
     const sum = await (await createProfile({ store: new LocalStore() })).summary();
     document.getElementById('me').textContent = `👤 我的 · Lv ${sum.level}`;
 
-    // 最近活動在前(最後結算與存檔時間較新者,新到舊),其餘照 games.js 原順序。
-    const byId = new Map(sum.games.map((g) => [g.id, g]));
-    const games = sum.recent.map((id) => byId.get(id));
-    const saves = new Set(sum.saves);
-
-    const node = (tag, cls, text) => {
-      const el = document.createElement(tag);
-      el.className = cls;
-      if (text !== undefined) el.textContent = text;
-      return el;
-    };
-    for (const g of games) {
-      const active = g.status === 'active';
-      const best = g.stats?.best_score ?? 0;
-      const card = node('a', `card${active ? ' is-active' : ''}`);
-      card.href = `games/${g.id}/`;
-      const head = node('div', 'card-head');
-      const icon = node('span', 'card-icon', g.icon);
-      icon.setAttribute('aria-hidden', 'true');
-      const tags = node('span', 'card-tags');
-      if (saves.has(g.id)) tags.append(node('span', 'tag is-resume', '繼續'));
-      tags.append(node('span', `tag${active ? ' is-active' : ''}`, active ? '開發中' : '規劃中'));
-      head.append(icon, tags);
-      const title = node('p', 'card-title');
-      if (g.code) title.append(node('span', 'card-code', `${g.code}${g.version ? ` v${g.version}` : ''}`));
-      title.append(document.createTextNode(g.title));
-      card.append(head, title, node('p', 'card-desc', g.desc));
-      if (best) card.append(node('p', 'card-meta', `最佳 ${best.toLocaleString()}`));
-      document.getElementById('cards').append(card);
-    }
+    // RS38:精選、我的釘選、分類與排序(預設「最近玩過」= 現行 recentOrder);只存本機。
+    mountLobby({ doc: document, games: sum.games, recent: sum.recent, saves: new Set(sum.saves), catalog: GAMES });
     setupWhatsNew({ hasHistory: hasPlayHistory(sum) });
     void mountDailyLobby(document).catch(() => {});
     if (cloudEnabled) {
-      const { auth, notice } = await (await import('./shared/auth.js?v=0bbccd3')).getCloudRuntime();
+      const { auth, notice } = await (await import('./shared/auth.js?v=e848582')).getCloudRuntime();
       const icon = document.getElementById('account-link');
       icon.hidden = false;
       const renderAccount = () => {
@@ -123,6 +114,6 @@
       }
     }
   </script>
-  <script type="module" src="shared/skin-compare.js?v=0bbccd3"></script>
+  <script type="module" src="shared/skin-compare.js?v=e848582"></script>
 </body>
 </html>

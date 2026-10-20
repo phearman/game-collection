@@ -1,11 +1,11 @@
-import { createReportsClient, initReportsPanel } from './reports.js?v=0bbccd3';
-import { appendGroupProjectControl, groupModeSelect, GROUP_MODES } from './line.js?v=0bbccd3';
-import { cloudEnabled } from '../shared/supabase-config.js?v=0bbccd3';
-import { GAMES } from '../shared/games.js?v=0bbccd3';
-import { createPendingGroupsClient } from './line.js?v=0bbccd3';
-import { createJokesClient, initJokesPanel } from './jokes.js?v=0bbccd3';
-import { createTipsClient, initTipsPanel } from './tips.js?v=0bbccd3';
-import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=0bbccd3';
+import { createReportsClient, initReportsPanel } from './reports.js?v=e848582';
+import { appendGroupProjectControl, groupModeSelect, GROUP_MODES } from './line.js?v=e848582';
+import { cloudEnabled } from '../shared/supabase-config.js?v=e848582';
+import { GAMES } from '../shared/games.js?v=e848582';
+import { createPendingGroupsClient } from './line.js?v=e848582';
+import { createJokesClient, initJokesPanel } from './jokes.js?v=e848582';
+import { createTipsClient, initTipsPanel } from './tips.js?v=e848582';
+import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=e848582';
 
 // 注入 runtime/client 供測試；未通過管理者檢查不讀取回饋。
 export async function initAdmin({ doc = globalThis.document, view = doc.defaultView ?? globalThis.window,
@@ -58,7 +58,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
       const option = node('option', label); option.value = value; select.append(option);
     }
   };
-  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=0bbccd3')).getCloudRuntime() : null);
+  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=e848582')).getCloudRuntime() : null);
   if (!rt?.auth.session) {
     hideData();
     $('access').textContent = '登入後才能查看回饋後台'; $('login').hidden = false;
@@ -373,7 +373,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
 }
 
 if (typeof document !== 'undefined') {
-  const { bindThemeToggle } = await import('../shared/theme.js?v=0bbccd3');
+  const { bindThemeToggle } = await import('../shared/theme.js?v=e848582');
   bindThemeToggle(document.getElementById('theme'));
   initAdmin().catch(() => {
     for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel', 'tips-panel', 'reports-panel']) document.getElementById(id).hidden = true;

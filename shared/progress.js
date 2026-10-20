@@ -201,14 +201,14 @@ export const WORDLE_RECENT = 10;
 //   wordle:recent 最近 WORDLE_RECENT 局的答案(新到舊,含 quit;出題時避開)
 export function dailyStreak(stats, day) {
   if (typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return 0;
-  const days = new Set(['wordle', 'sudoku', 'minesweeper'].flatMap((id) => stats[id]?.detail?.daily_days ?? []));
+  const days = new Set(['wordle', 'sudoku', 'minesweeper', 'memory'].flatMap((id) => stats[id]?.detail?.daily_days ?? []));
   let stamp = Date.parse(`${day}T00:00:00Z`), count = 0;
   while (Number.isFinite(stamp) && days.has(new Date(stamp).toISOString().slice(0, 10))) { count++; stamp -= 86400000; }
   return count;
 }
 
 function nextDetail(gameId, detail, result, play = {}) {
-  if (['wordle', 'sudoku', 'minesweeper'].includes(gameId) && ['win', 'lose'].includes(result)
+  if (['wordle', 'sudoku', 'minesweeper', 'memory'].includes(gameId) && ['win', 'lose'].includes(result)
     && typeof play.daily === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(play.daily)) {
     detail = { ...detail, daily_days: [...new Set([...(detail.daily_days ?? []), play.daily])].sort().slice(-35) };
   }

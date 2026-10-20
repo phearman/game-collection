@@ -1,5 +1,5 @@
-import { dailyScore } from '../../shared/daily.js?v=0bbccd3';
-import { showDailyBanner, appendDailySummary as appendSharedSummary } from '../../shared/daily-ui.js?v=0bbccd3';
+import { dailyScore } from '../../shared/daily.js?v=e848582';
+import { showDailyBanner, appendDailySummary as appendSharedSummary } from '../../shared/daily-ui.js?v=e848582';
 
 export { showDailyBanner };
 

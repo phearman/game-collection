@@ -1,4 +1,4 @@
-import { dailyDateLabel, dailyScore, dailyShare, DAILY_LOGIN_NOTICE, DAILY_FIXED_NOTE } from './daily.js?v=0bbccd3';
+import { dailyDateLabel, dailyScore, dailyShare, DAILY_LOGIN_NOTICE, DAILY_FIXED_NOTE } from './daily.js?v=e848582';
 
 export function showDailyBanner(doc, daily, error) {
   const banner = doc.getElementById('daily-banner');
@@ -13,7 +13,7 @@ export function showDailyBanner(doc, daily, error) {
 export function appendDailySummary(doc, mount, daily, marks = []) {
   if (!daily?.row?.finished_at || daily.row.cleared) return;
   const p = doc.createElement('p'); p.textContent = `你今天的成績：${dailyScore(daily.row)}`
-    + (daily.row.game_id === 'minesweeper' ? '（從開題起算,含離開時間）' : ''); mount.append(p);
+    + (['minesweeper', 'memory'].includes(daily.row.game_id) ? '（從開題起算,含離開時間）' : ''); mount.append(p);
   const share = doc.createElement('a'); share.className = 'btn'; share.textContent = '分享到 LINE';
   share.href = `https://line.me/R/msg/text/?${encodeURIComponent(dailyShare(daily.day, daily.row.game_id, daily.row, marks))}`;
   share.target = '_blank'; share.rel = 'noopener noreferrer'; mount.append(share);

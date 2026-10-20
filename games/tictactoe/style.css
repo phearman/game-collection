@@ -4,7 +4,8 @@
 .stats { margin-left: auto; }
 .stat { min-width: 60px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.actions .btn { flex: 1; }
+/* IR52:按鈕不可縮到比文字窄,放不下就換行 */
+.actions .btn { flex: 1 0 auto; min-height: 44px; } /* IR52 審查:點擊區至少 44px 高(局部) */
 .difficulty { display: flex; gap: 6px; align-items: center; font-size: 14px; white-space: nowrap; }
 select { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px; }
 select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
