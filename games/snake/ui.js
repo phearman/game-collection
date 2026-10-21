@@ -2,18 +2,18 @@
 import {
   SIZE, TICK_MS, DIFFICULTIES, initState, turnState, tickState, pauseState, resumeState, overlayFor,
   toSave, fromSave, isValidState,
-} from './logic.js?v=821ea37';
-import { createProfile } from '../../shared/profile.js?v=821ea37';
-import { LocalStore } from '../../shared/stores/local.js?v=821ea37';
-import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js?v=821ea37';
-import { bindThemeToggle } from '../../shared/theme.js?v=821ea37';
-import { play, music } from '../../shared/sound.js?v=821ea37';
-import { setupHelp } from '../../shared/help.js?v=821ea37';
-import { swipe, dpad } from '../../shared/touch.js?v=821ea37';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=821ea37';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=821ea37';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=821ea37';
-import { load, save } from '../../shared/storage.js?v=821ea37';
+} from './logic.js?v=a9ad940';
+import { createProfile } from '../../shared/profile.js?v=a9ad940';
+import { LocalStore } from '../../shared/stores/local.js?v=a9ad940';
+import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame } from '../../shared/progress.js?v=a9ad940';
+import { bindThemeToggle } from '../../shared/theme.js?v=a9ad940';
+import { play, music } from '../../shared/sound.js?v=a9ad940';
+import { setupHelp } from '../../shared/help.js?v=a9ad940';
+import { swipe, dpad } from '../../shared/touch.js?v=a9ad940';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=a9ad940';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=a9ad940';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=a9ad940';
+import { load, save } from '../../shared/storage.js?v=a9ad940';
 
 const GAME_ID = 'snake';
 const DIFF_KEY = 'difficulty:snake'; // 上次選的難度(開新局用)

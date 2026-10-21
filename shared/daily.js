@@ -1,5 +1,5 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=821ea37';
-import { formatDuration } from './duration.js?v=821ea37';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=a9ad940';
+import { formatDuration } from './duration.js?v=a9ad940';
 
 export const DAILY_GAMES = ['sudoku', 'minesweeper', 'memory'];
 export const DAILY_NAMES = { wordle: 'Wordle', sudoku: '數獨', minesweeper: '踩地雷', memory: '翻翻樂' };
@@ -90,7 +90,7 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
 }
 export async function browserDailyClient() {
   if (!cloudEnabled) return createDailyClient();
-  const { auth } = await (await import('./auth.js?v=821ea37')).getCloudRuntime();
+  const { auth } = await (await import('./auth.js?v=a9ad940')).getCloudRuntime();
   return createDailyClient({ auth });
 }
 
