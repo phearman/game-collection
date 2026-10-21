@@ -2,7 +2,7 @@
 import {
   W, H, ROAD_LEFT, LANE_WIDTH, DIST_SCALE, RIDER_Y, TRACK_LEN, CAR_HALF_LANE,
   CRASH_SEC, MAX_SPEED, CATCHUP_MAX, DT, playerOf, ranking,
-} from './logic.js?v=b9ada7e';
+} from './logic.js?v=4577fc1';
 
 export const PALETTE_KEYS = ['night', 'grass', 'grass-dark', 'road', 'road-hi', 'road-dark', 'ink', 'shadow',
   'mud', 'mud-hi', 'wood', 'danger', 'ramp', 'skin', 'player', 'blue', 'yellow', 'purple', 'white',
