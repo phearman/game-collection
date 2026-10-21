@@ -4,7 +4,7 @@
 export const GAMES = [
   { id: '2048', code: 'G1', version: '1.5', title: '2048', icon: '🔢', desc: '滑動合併數字方塊', category: 'puzzle', status: 'active' },
   { id: 'minesweeper', code: 'G2', version: '1.1', title: '踩地雷', icon: '💣', desc: '連鎖展開找出地雷', category: 'puzzle', status: 'active' },
-  { id: 'wordle', code: 'G3', version: '1.5', title: 'Wordle', icon: '🔤', desc: '六次內猜中單字', category: 'word', status: 'active' },
+  { id: 'wordle', code: 'G3', version: '1.6', title: 'Wordle', icon: '🔤', desc: '六次內猜中單字', category: 'word', status: 'active' },
   { id: 'tictactoe', code: 'G4', version: '1.2', title: '井字棋', icon: '⭕', desc: '挑戰無敵 AI', category: 'board', status: 'active' },
   { id: 'sudoku', code: 'G5', version: '1.6', title: '數獨', icon: '🧩', desc: '五種難度隨機出題', category: 'puzzle', status: 'active' },
   { id: 'snake', code: 'G6', version: '1.2', title: '貪食蛇', icon: '🐍', desc: '越吃越長別撞牆', category: 'action', status: 'active' },
@@ -17,5 +17,5 @@ export const GAMES = [
   { id: 'bridge', code: 'G13', version: '1.0', title: '小人過橋', icon: '🌉', desc: '按住搭橋,剛好就過', category: 'action', status: 'active' },
   { id: 'archery', code: 'G14', version: '1.1', title: '弓箭射擊', icon: '🏹', desc: '拉弓射靶,看風出手', category: 'sport', status: 'active' },
   { id: 'peg', code: 'G15', version: '1.0', title: '孔明棋', icon: '🔵', desc: '跳子吃子,剩一顆最強', category: 'puzzle', featured: { order: 1, note: '新遊戲' }, status: 'active' },
-  { id: 'idiom', code: 'G16', version: '1.0', title: '成語填空', icon: '📜', desc: '四字成語選字填空', category: 'word', status: 'active' },
+  { id: 'idiom', code: 'G16', version: '1.1', title: '成語填空', icon: '📜', desc: '四字成語選字填空', category: 'word', status: 'active' },
 ];

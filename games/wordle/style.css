@@ -1,7 +1,8 @@
 .stats { display: flex; gap: 8px; align-items: stretch; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .actions .btn { min-width: 70px; }
-.actions .btn { flex: 1; padding-left: 8px; padding-right: 8px; }
+/* IR53:比照 IR52,按鈕不縮到比文字窄(345px 且「💡 提示」顯示時曾少 1~3px);放不下就換行 */
+.actions .btn { flex: 1 0 auto; padding-left: 8px; padding-right: 8px; }
 select.btn { appearance: auto; }
 select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .btn[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }

@@ -1,5 +1,5 @@
 // Pure game rules; no DOM, storage or clock reads. All randomness is injectable.
-import { WORDS } from './words.js?v=e848582';
+import { WORDS, AMBIGUITY_LEXICON } from './words.js?v=821ea37';
 
 export const ROUND_SIZE = 10;
 export const DIFFICULTIES = Object.freeze({
@@ -32,9 +32,10 @@ export const poolFor = (difficulty) => {
 
 // Reject letters that could form ANY alternative word matching the visible cells.
 // This also excludes alternatives requiring changes in both challenge blanks.
-export function distractorsFor(word, blanks, position, lexicon = WORDS) {
+// Alternatives come from `ambiguity` (by default also the curated-out valid headwords, e.g. 順水行舟).
+export function distractorsFor(word, blanks, position, lexicon = WORDS, ambiguity = lexicon === WORDS ? AMBIGUITY_LEXICON : lexicon) {
   const answer = chars(word);
-  const alternatives = lexicon.filter((other) => other !== word && chars(other).every((ch, i) => blanks.includes(i) || ch === answer[i]));
+  const alternatives = ambiguity.filter((other) => other !== word && chars(other).every((ch, i) => blanks.includes(i) || ch === answer[i]));
   const forbidden = new Set([answer[position], ...alternatives.map((other) => chars(other)[position])]);
   return [...new Set(lexicon.filter((other) => other !== word).map((other) => chars(other)[position]))].filter((ch) => !forbidden.has(ch));
 }

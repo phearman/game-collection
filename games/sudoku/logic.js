@@ -1,6 +1,6 @@
 // 數獨規則與狀態轉移：純函式；亂數、時間均由呼叫端注入。
-import { timerInit, timerEvent } from '../../shared/progress.js?v=e848582';
-import { seedRng } from '../../shared/seed-rng.js?v=e848582';
+import { timerInit, timerEvent } from '../../shared/progress.js?v=821ea37';
+import { seedRng } from '../../shared/seed-rng.js?v=821ea37';
 
 export const SIZE = 9;
 // beginner=入門(RS77,給定 56、自己想);easy=引導學習(原入門,給定 46、預設自動候選),內部鍵不改以相容舊存檔與雲端紀錄。

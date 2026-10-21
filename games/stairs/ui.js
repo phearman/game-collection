@@ -3,20 +3,20 @@ import {
   W, H, PLAYER, DT, MAX_LIVES, DIFFICULTIES, initState, stepState, pauseState, resumeState, overlayFor,
   toSave, fromSave, isValidState,
   initAdventure, nextStage, scoreFor, detailFor, resultFor, stageFor, goalText, goalProgress, flipNotice, ridingCloud,
-} from './logic.js?v=e848582';
-import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=e848582';
-import { createProfile } from '../../shared/profile.js?v=e848582';
-import { LocalStore } from '../../shared/stores/local.js?v=e848582';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=e848582';
-import { bindThemeToggle } from '../../shared/theme.js?v=e848582';
-import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=e848582';
-import { skinPalette } from './skins.js?v=e848582';
-import { play, music } from '../../shared/sound.js?v=e848582';
-import { setupHelp } from '../../shared/help.js?v=e848582';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=e848582';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=e848582';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=e848582';
-import { load, save } from '../../shared/storage.js?v=e848582';
+} from './logic.js?v=821ea37';
+import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=821ea37';
+import { createProfile } from '../../shared/profile.js?v=821ea37';
+import { LocalStore } from '../../shared/stores/local.js?v=821ea37';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=821ea37';
+import { bindThemeToggle } from '../../shared/theme.js?v=821ea37';
+import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=821ea37';
+import { skinPalette } from './skins.js?v=821ea37';
+import { play, music } from '../../shared/sound.js?v=821ea37';
+import { setupHelp } from '../../shared/help.js?v=821ea37';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=821ea37';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=821ea37';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=821ea37';
+import { load, save } from '../../shared/storage.js?v=821ea37';
 
 const GAME_ID = 'stairs';
 const DIFF_KEY = 'difficulty:stairs'; // 上次選的難度(開新局用)
