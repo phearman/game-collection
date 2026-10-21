@@ -1,5 +1,11 @@
 export const CHANGELOG = [
   {
+    date: '2026-10-21', title: 'LINE 排行、新聞、揪團名單與群組說明也改成可左右滑的小卡',
+    items: [
+      { scope: '全站', kind: '改善', text: 'LINE 排行、新聞、揪團名單與群組說明也改成可左右滑的小卡' },
+    ],
+  },
+  {
     date: '2026-10-21', title: 'LINE 天氣與今日挑戰改成可左右滑的小卡',
     items: [
       { scope: '全站', kind: '改善', text: 'LINE 天氣與今日挑戰改成可左右滑的小卡' },
