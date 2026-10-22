@@ -4,28 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>遊戲集錦</title>
-  <link rel="stylesheet" href="shared/style.css?v=adb0891">
+  <link rel="stylesheet" href="shared/style.css?v=6053a51">
   <!-- IR32/IR46:大廳模組一次並行下載,不必等上一層 import 解析完才發現下一層(原本要一層層往返)。
        清單 = 大廳靜態 import 全集 + 登入用的 auth.js;tests/lobby-preload.test.js 會比對,漏列或多列都會失敗。 -->
-  <link rel="modulepreload" href="shared/games.js?v=adb0891">
-  <link rel="modulepreload" href="shared/profile-core.js?v=adb0891">
-  <link rel="modulepreload" href="shared/stores/local.js?v=adb0891">
-  <link rel="modulepreload" href="shared/progress.js?v=adb0891">
-  <link rel="modulepreload" href="shared/stores/errors.js?v=adb0891">
-  <link rel="modulepreload" href="shared/settle.js?v=adb0891">
-  <link rel="modulepreload" href="shared/cloud-status.js?v=adb0891">
-  <link rel="modulepreload" href="shared/supabase-config.js?v=adb0891">
-  <link rel="modulepreload" href="shared/theme.js?v=adb0891">
-  <link rel="modulepreload" href="shared/storage.js?v=adb0891">
-  <link rel="modulepreload" href="shared/sound.js?v=adb0891">
-  <link rel="modulepreload" href="shared/skin.js?v=adb0891">
-  <link rel="modulepreload" href="shared/whats-new.js?v=adb0891">
-  <link rel="modulepreload" href="shared/changelog.js?v=adb0891">
-  <link rel="modulepreload" href="shared/daily.js?v=adb0891">
-  <link rel="modulepreload" href="shared/lobby.js?v=adb0891">
-  <link rel="modulepreload" href="shared/duration.js?v=adb0891">
-  <link rel="modulepreload" href="shared/skin-compare.js?v=adb0891">
-  <link rel="modulepreload" href="shared/auth.js?v=adb0891">
+  <link rel="modulepreload" href="shared/games.js?v=6053a51">
+  <link rel="modulepreload" href="shared/profile-core.js?v=6053a51">
+  <link rel="modulepreload" href="shared/stores/local.js?v=6053a51">
+  <link rel="modulepreload" href="shared/progress.js?v=6053a51">
+  <link rel="modulepreload" href="shared/stores/errors.js?v=6053a51">
+  <link rel="modulepreload" href="shared/settle.js?v=6053a51">
+  <link rel="modulepreload" href="shared/cloud-status.js?v=6053a51">
+  <link rel="modulepreload" href="shared/supabase-config.js?v=6053a51">
+  <link rel="modulepreload" href="shared/theme.js?v=6053a51">
+  <link rel="modulepreload" href="shared/storage.js?v=6053a51">
+  <link rel="modulepreload" href="shared/sound.js?v=6053a51">
+  <link rel="modulepreload" href="shared/skin.js?v=6053a51">
+  <link rel="modulepreload" href="shared/whats-new.js?v=6053a51">
+  <link rel="modulepreload" href="shared/changelog.js?v=6053a51">
+  <link rel="modulepreload" href="shared/daily.js?v=6053a51">
+  <link rel="modulepreload" href="shared/lobby.js?v=6053a51">
+  <link rel="modulepreload" href="shared/duration.js?v=6053a51">
+  <link rel="modulepreload" href="shared/skin-compare.js?v=6053a51">
+  <link rel="modulepreload" href="shared/auth.js?v=6053a51">
 </head>
 <body>
   <main class="page">
@@ -43,6 +43,12 @@
       <p id="daily-message" role="status">登入後才能參加每日挑戰</p>
       <p class="daily-note">遊戲固定、每天換題目</p>
       <div id="daily-games" class="daily-games"></div>
+      <details class="daily-practice" id="daily-practice" hidden>
+        <summary>🔁 重玩往日題目</summary>
+        <p class="daily-note">練習:不計排行、不影響今日挑戰</p>
+        <label class="daily-practice-day">日期 <select id="daily-practice-day"></select></label>
+        <div id="daily-practice-games" class="daily-games"></div>
+      </details>
       <p class="daily-rank-link"><a href="daily-rank/">🏆 看今日排行</a></p>
     </section>
     <section class="lobby-section" id="featured" aria-labelledby="featured-title" hidden>
@@ -71,19 +77,19 @@
     <footer class="lobby-footer"><a href="changelog/">更新紀錄</a><span aria-hidden="true"> · </span><a href="privacy/">隱私權政策</a><span aria-hidden="true"> · </span><a id="feedback-link" href="me/">意見回饋</a><span aria-hidden="true"> · </span><a href="line/">LINE 小幫手使用說明</a></footer>
   </main>
   <script type="module">
-    import { GAMES } from './shared/games.js?v=adb0891';
-    import { createProfile } from './shared/profile-core.js?v=adb0891';
-    import { LocalStore } from './shared/stores/local.js?v=adb0891';
-    import { bindThemeToggle } from './shared/theme.js?v=adb0891';
-    import { cloudEnabled } from './shared/supabase-config.js?v=adb0891';
-    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=adb0891';
-    import { mountDailyLobby } from './shared/daily.js?v=adb0891';
-    import { mountLobby } from './shared/lobby.js?v=adb0891';
+    import { GAMES } from './shared/games.js?v=6053a51';
+    import { createProfile } from './shared/profile-core.js?v=6053a51';
+    import { LocalStore } from './shared/stores/local.js?v=6053a51';
+    import { bindThemeToggle } from './shared/theme.js?v=6053a51';
+    import { cloudEnabled } from './shared/supabase-config.js?v=6053a51';
+    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=6053a51';
+    import { mountDailyLobby } from './shared/daily.js?v=6053a51';
+    import { mountLobby } from './shared/lobby.js?v=6053a51';
 
     bindThemeToggle(document.getElementById('theme'));
     document.getElementById('feedback-link').addEventListener('click', async (event) => {
       event.preventDefault();
-      const { openFeedback } = await import('./shared/feedback.js?v=adb0891');
+      const { openFeedback } = await import('./shared/feedback.js?v=6053a51');
       await openFeedback();
     });
 
@@ -95,7 +101,7 @@
     setupWhatsNew({ hasHistory: hasPlayHistory(sum) });
     void mountDailyLobby(document).catch(() => {});
     if (cloudEnabled) {
-      const { auth, notice } = await (await import('./shared/auth.js?v=adb0891')).getCloudRuntime();
+      const { auth, notice } = await (await import('./shared/auth.js?v=6053a51')).getCloudRuntime();
       const icon = document.getElementById('account-link');
       icon.hidden = false;
       const renderAccount = () => {
@@ -114,6 +120,6 @@
       }
     }
   </script>
-  <script type="module" src="shared/skin-compare.js?v=adb0891"></script>
+  <script type="module" src="shared/skin-compare.js?v=6053a51"></script>
 </body>
 </html>

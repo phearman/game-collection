@@ -2,30 +2,33 @@
 import {
   DIFFICULTIES, HIDE_MS, initState, initDailyState, flip, hideState, tickState, scoreFor, resultOf, isOver, isWaiting,
   hasActed, seededRng, demoPlan, remainingPairs, cardView, symbolOf, detailOf, pairsOf, toSave, fromSave, isValidState,
-} from './logic.js?v=adb0891';
-import { createProfile } from '../../shared/profile.js?v=adb0891';
-import { LocalStore } from '../../shared/stores/local.js?v=adb0891';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=adb0891';
-import { bindThemeToggle } from '../../shared/theme.js?v=adb0891';
-import { play, music } from '../../shared/sound.js?v=adb0891';
-import { setupHelp } from '../../shared/help.js?v=adb0891';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=adb0891';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=adb0891';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=adb0891';
+} from './logic.js?v=6053a51';
+import { createProfile } from '../../shared/profile.js?v=6053a51';
+import { LocalStore } from '../../shared/stores/local.js?v=6053a51';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=6053a51';
+import { bindThemeToggle } from '../../shared/theme.js?v=6053a51';
+import { play, music } from '../../shared/sound.js?v=6053a51';
+import { setupHelp } from '../../shared/help.js?v=6053a51';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=6053a51';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=6053a51';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=6053a51';
 
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=adb0891';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=adb0891';
-import { formatDuration } from '../../shared/duration.js?v=adb0891';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT } from '../../shared/daily.js?v=6053a51';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=6053a51';
+import { formatDuration } from '../../shared/duration.js?v=6053a51';
 
 const GAME_ID = 'memory';
 const LABELS = { normal: '一般', hard: '困難', expert: '專家' };
 const $ = (id) => document.getElementById(id);
-const isDaily = dailyRequested(location.search);
-const profile = await createProfile({ store: new LocalStore(), saveSlots: isDaily ? { [GAME_ID]: dailySlot(GAME_ID) } : {} });
+// RS91:?practice=YYYY-MM-DD 重玩往日題目(練習);沿用每日盤面與介面,但⛔ 送每日成績、⛔ 進排行。
+const practiceDay = dailyPracticeRequested(location.search);
+const isDaily = dailyRequested(location.search) || !!practiceDay;
+const profile = await createProfile({ store: new LocalStore(), saveSlots: isDaily ? { [GAME_ID]: practiceDay ? practiceSlot(GAME_ID) : dailySlot(GAME_ID) } : {} });
 let daily = null, dailyClient = null, dailyError = '';
+let dailyExpired = ''; // IR68:伺服器過了收件時間,這局照一般局記錄、不列排行
 if (isDaily) {
   $('new').textContent = '玩一般模式';
-  try { dailyClient = await browserDailyClient(); daily = await prepareDaily(dailyClient, GAME_ID); }
+  try { dailyClient = await browserDailyClient(); daily = practiceDay ? await preparePractice(dailyClient, GAME_ID, practiceDay) : await prepareDaily(dailyClient, GAME_ID); }
   catch (error) { dailyError = error.message; }
 }
 
@@ -91,23 +94,31 @@ function finish(result) {
   render();
   return run(async () => {
     const bestBefore = best;
-    if (isDaily) {
+    if (isDaily && !daily.practice) {
       await profile.saveState(GAME_ID, saved);
       try {
-        daily.row = await dailyClient.finish(GAME_ID, daily.day, result, null, { misses: saved.misses });
-        daily.completed = true;
+        const outcome = await finishDailyOrExpire(dailyClient, daily, GAME_ID, result, null, { misses: saved.misses });
         dailyError = '';
-        result = daily.row.result;
-        snap.detail = { ...snap.detail, seconds: daily.row.seconds, misses: daily.row.detail.misses,
-          daily: daily.day, daily_play_id: daily.row.detail.play_id };
-        snap.score = scoreFor(result, pairsOf(snap.difficulty), snap.detail.misses);
+        if (outcome.expired) {
+          dailyExpired = outcome.expired;
+          snap.detail = { ...snap.detail, ...dailyPlayDetail(daily, dailyExpired) };
+        } else {
+          daily.row = outcome.row;
+          daily.completed = true;
+          result = daily.row.result;
+          snap.detail = { ...snap.detail, seconds: daily.row.seconds, misses: daily.row.detail.misses,
+            ...dailyPlayDetail(daily, '') };
+          snap.score = scoreFor(result, pairsOf(snap.difficulty), snap.detail.misses);
+        }
       } catch (error) {
         dailyError = error.message;
         ended = { dailyRetry: true }; render(); return;
       }
     }
+    if (isDaily && daily.practice) snap.detail = { ...snap.detail, ...dailyPlayDetail(daily, '') };
     const out = await settlePlay(profile, GAME_ID, {
       result, score: snap.score, difficulty: snap.difficulty, detail: snap.detail,
+      assist: isDaily && !!daily.practice, // D56:往日練習一律輔助局
     });
     if (!out) { if (no === gameNo) { if (isDaily) location.href = './'; else startNew(snap.difficulty); } return; } // 結算失敗且選「不存了」:不記錄、開新局(IR6)
     if (out.play.is_best) best = Math.max(best, snap.score);
@@ -121,6 +132,7 @@ function finish(result) {
       bestBefore,
       score: snap.score,
       detail: snap.detail,
+      practice: isDaily && !!daily.practice,
     };
     render();
   });
@@ -206,7 +218,7 @@ function render() {
   $('best').textContent = best.toLocaleString();
   $('difficulty').value = state.difficulty;
   $('difficulty').disabled = isDaily;
-  if (isDaily) showDailyBanner(document, daily, dailyError);
+  if (isDaily) showDailyBanner(document, daily, dailyError || dailyExpired);
   const d = DIFFICULTIES[state.difficulty];
   $('status').textContent = `🃏 剩餘 ${remainingPairs(state)} 對 · 步數 ${state.moves} · 失誤 ${state.misses} · ${LABELS[state.difficulty]} ${d.cols}×${d.rows}`;
   renderOverlay();
@@ -226,12 +238,14 @@ function infoHtml() {
   const { moves, misses, seconds } = ended.detail;
   if (ended.duplicate) return `<p>${DUPLICATE_FINISH_TEXT}</p><p class="overlay-xp">本局 +0 XP</p>`;
   const lines = [
+    ...(dailyExpired ? [`<p>${dailyExpired}</p>`] : []),
     `<p>${isDaily ? `失誤 ${misses} 次 · ${formatDuration(seconds)}` : `${moves} 步 · 失誤 ${misses} · ${seconds.toLocaleString()} 秒`}</p>`,
     `<p>分數 ${ended.score.toLocaleString()}</p>`,
     `<p class="overlay-xp">本局 +${ended.xp} XP</p>`,
     xpBreakdownHtml(ended.xpBreakdown),
   ];
   if (ended.newAchievements.length) lines.push(`<p>新成就:${ended.newAchievements.map(achName).join('、')}</p>`);
+  if (ended.practice) lines.push(`<p>${PRACTICE_ASSIST_TEXT}</p>`);
   lines.push(bestLineHtml(ended));
   return lines.join('');
 }
@@ -338,7 +352,7 @@ if (isDaily && (!daily || daily.row?.cleared || (daily.completed && !matchesDail
         try {
           if (await profile.saveState(GAME_ID, toSave(nextState)) === false) throw new Error('Save failed');
         } catch {
-          showDailyBanner(document, daily, '今日挑戰續玩存檔尚未儲存，請重試儲存後開始');
+          showDailyBanner(document, daily, `${daily.practice ? '練習' : '今日挑戰'}續玩存檔尚未儲存，請重試儲存後開始`);
           const retry = document.createElement('button');
           retry.className = 'btn'; retry.textContent = '重試儲存';
           retry.addEventListener('click', async () => { retry.disabled = true; await openBoard(); });
