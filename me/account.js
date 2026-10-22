@@ -1,11 +1,11 @@
-import { getCloudRuntime } from '../shared/auth.js?v=bb80cea';
-import { isCloudOffline } from '../shared/cloud-status.js?v=bb80cea';
-import { exportData, exportFileName } from '../shared/progress.js?v=bb80cea';
-import { createFeedbackClient, KINDS, playerFeedbackStatus, element, displayName } from '../shared/feedback.js?v=bb80cea';
-import { GAMES } from '../shared/games.js?v=bb80cea';
-import { initLineLinkStatus } from '../shared/line-link.js?v=bb80cea';
-import { initAvatarPicker } from '../shared/avatars.js?v=bb80cea';
-import { initDailyPublic } from '../shared/daily-public.js?v=bb80cea';
+import { getCloudRuntime } from '../shared/auth.js?v=dd499c2';
+import { isCloudOffline } from '../shared/cloud-status.js?v=dd499c2';
+import { exportData, exportFileName } from '../shared/progress.js?v=dd499c2';
+import { createFeedbackClient, KINDS, playerFeedbackStatus, element, displayName } from '../shared/feedback.js?v=dd499c2';
+import { GAMES } from '../shared/games.js?v=dd499c2';
+import { initLineLinkStatus } from '../shared/line-link.js?v=dd499c2';
+import { initAvatarPicker } from '../shared/avatars.js?v=dd499c2';
+import { initDailyPublic } from '../shared/daily-public.js?v=dd499c2';
 
 export function renderMyFeedback(doc, rows) {
   const items = doc.getElementById('feedback-items');

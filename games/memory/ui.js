@@ -2,20 +2,20 @@
 import {
   DIFFICULTIES, HIDE_MS, initState, initDailyState, flip, hideState, tickState, scoreFor, resultOf, isOver, isWaiting,
   hasActed, seededRng, demoPlan, remainingPairs, cardView, symbolOf, detailOf, pairsOf, toSave, fromSave, isValidState,
-} from './logic.js?v=bb80cea';
-import { createProfile } from '../../shared/profile.js?v=bb80cea';
-import { LocalStore } from '../../shared/stores/local.js?v=bb80cea';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=bb80cea';
-import { bindThemeToggle } from '../../shared/theme.js?v=bb80cea';
-import { play, music } from '../../shared/sound.js?v=bb80cea';
-import { setupHelp } from '../../shared/help.js?v=bb80cea';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=bb80cea';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=bb80cea';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=bb80cea';
+} from './logic.js?v=dd499c2';
+import { createProfile } from '../../shared/profile.js?v=dd499c2';
+import { LocalStore } from '../../shared/stores/local.js?v=dd499c2';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=dd499c2';
+import { bindThemeToggle } from '../../shared/theme.js?v=dd499c2';
+import { play, music } from '../../shared/sound.js?v=dd499c2';
+import { setupHelp } from '../../shared/help.js?v=dd499c2';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=dd499c2';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=dd499c2';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=dd499c2';
 
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=bb80cea';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=bb80cea';
-import { formatDuration } from '../../shared/duration.js?v=bb80cea';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=dd499c2';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=dd499c2';
+import { formatDuration } from '../../shared/duration.js?v=dd499c2';
 
 const GAME_ID = 'memory';
 const LABELS = { normal: '一般', hard: '困難', expert: '專家' };
