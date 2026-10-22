@@ -1,5 +1,9 @@
 export const CHANGELOG = [
   {
+    date: '2026-10-22', title: 'LINE 新增 #行事曆:看未來 7 天的約、提醒與交辦',
+    items: [{ scope: '全站', kind: '新增', text: 'LINE 新增 #行事曆:看未來 7 天的約、提醒與交辦' }],
+  },
+  {
     date: '2026-10-21', title: 'LINE #新聞 上線:中央社生活新聞標題與原站連結',
     items: [
       { scope: '全站', kind: '新增', text: 'LINE #新聞 上線:中央社生活新聞標題與原站連結' },

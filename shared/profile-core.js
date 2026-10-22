@@ -1,14 +1,14 @@
 // 個人紀錄 API 核心(RS1):規則一律呼叫 progress.js,這裡只串接 store。
 // 不載入各遊戲的 logic.js(IR46):大廳只讀摘要,直接用本檔;要讀存檔或匯入的頁面用 profile.js(帶各遊戲存檔檢查)。
-import { GAMES } from './games.js?v=4577fc1';
-import { LocalStore, filterImportSaves } from './stores/local.js?v=4577fc1';
-import { failureReason, allInOrder } from './stores/errors.js?v=4577fc1';
-import { showStorageWarning } from './settle.js?v=4577fc1';
-import { cloudEnabled } from './supabase-config.js?v=4577fc1';
+import { GAMES } from './games.js?v=bb80cea';
+import { LocalStore, filterImportSaves } from './stores/local.js?v=bb80cea';
+import { failureReason, allInOrder } from './stores/errors.js?v=bb80cea';
+import { showStorageWarning } from './settle.js?v=bb80cea';
+import { cloudEnabled } from './supabase-config.js?v=bb80cea';
 import {
   emptyProfile, migrateLegacyBest, applyFinish, applyUnlock, levelProgress, ACHIEVEMENTS, ACHIEVEMENT_XP, recentOrder,
   timerInit, timerEvent, timerSeconds, validateImport, isValidGameSave, pushPlay, exportData, exportFileName, iso, PLAYS_LIMIT,
-} from './progress.js?v=4577fc1';
+} from './progress.js?v=bb80cea';
 
 // randomUUID 只在安全來源(https / localhost)可用;其他情況退回 getRandomValues 組 v4 UUID。
 function uuid() {
@@ -39,7 +39,7 @@ export async function createProfile({
     } catch { /* 儲存不可用仍可免登入遊玩 */ }
   }
   if (cloudEnabled && win && store instanceof LocalStore && !store.storage) {
-    const { selectCloudStore, createCloudProfile } = await import('./auth.js?v=4577fc1');
+    const { selectCloudStore, createCloudProfile } = await import('./auth.js?v=bb80cea');
     store = await selectCloudStore(store);
     if (store.cloud) return createCloudProfile({ store, now, gameList, doc, win, stateValidators, saveSlots }, createProfile);
   }

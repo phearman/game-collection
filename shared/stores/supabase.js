@@ -259,10 +259,10 @@ export class SupabaseStore {
   async legacyBest() { return 0; }
 }
 
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=4577fc1';
-import { writeFailure, allInOrder } from './errors.js?v=4577fc1';
-import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=4577fc1';
-import { normalizePlay } from './normalize.js?v=4577fc1';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=bb80cea';
+import { writeFailure, allInOrder } from './errors.js?v=bb80cea';
+import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=bb80cea';
+import { normalizePlay } from './normalize.js?v=bb80cea';
 
 function recalculateFinish(base, stats, play, live) {
   const missing = (live?.achievements ?? []).filter((id) => !base.achievements?.[id]);
