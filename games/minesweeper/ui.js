@@ -2,19 +2,19 @@
 import {
   DIFFICULTIES, initState, initDailyState, stateWithMines, revealState, flagState, tickState, scoreFor, resultOf, isOver,
   remainingMines, cellView, toSave, fromSave, isValidState, confirmModeFor, cellTapAction,
-} from './logic.js?v=dd499c2';
-import { createProfile } from '../../shared/profile.js?v=dd499c2';
-import { LocalStore } from '../../shared/stores/local.js?v=dd499c2';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=dd499c2';
-import { bindThemeToggle } from '../../shared/theme.js?v=dd499c2';
-import { play, music } from '../../shared/sound.js?v=dd499c2';
-import { setupHelp } from '../../shared/help.js?v=dd499c2';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=dd499c2';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=dd499c2';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=dd499c2';
-import { load, save } from '../../shared/storage.js?v=dd499c2';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=dd499c2';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=dd499c2';
+} from './logic.js?v=adb0891';
+import { createProfile } from '../../shared/profile.js?v=adb0891';
+import { LocalStore } from '../../shared/stores/local.js?v=adb0891';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=adb0891';
+import { bindThemeToggle } from '../../shared/theme.js?v=adb0891';
+import { play, music } from '../../shared/sound.js?v=adb0891';
+import { setupHelp } from '../../shared/help.js?v=adb0891';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=adb0891';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=adb0891';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=adb0891';
+import { load, save } from '../../shared/storage.js?v=adb0891';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=adb0891';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=adb0891';
 
 const GAME_ID = 'minesweeper';
 const LONG_PRESS_MS = 400;

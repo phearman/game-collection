@@ -1,16 +1,16 @@
-import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave, clearBoardState } from './logic.js?v=dd499c2';
-import { createProfile } from '../../shared/profile.js?v=dd499c2';
-import { formatDuration } from '../../shared/duration.js?v=dd499c2';
-import { LocalStore } from '../../shared/stores/local.js?v=dd499c2';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=dd499c2';
-import { bindThemeToggle } from '../../shared/theme.js?v=dd499c2';
-import { play as playSound, music } from '../../shared/sound.js?v=dd499c2';
-import { setupHelp } from '../../shared/help.js?v=dd499c2';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=dd499c2';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=dd499c2';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=dd499c2';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=dd499c2';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=dd499c2';
+import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave, clearBoardState } from './logic.js?v=adb0891';
+import { createProfile } from '../../shared/profile.js?v=adb0891';
+import { formatDuration } from '../../shared/duration.js?v=adb0891';
+import { LocalStore } from '../../shared/stores/local.js?v=adb0891';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=adb0891';
+import { bindThemeToggle } from '../../shared/theme.js?v=adb0891';
+import { play as playSound, music } from '../../shared/sound.js?v=adb0891';
+import { setupHelp } from '../../shared/help.js?v=adb0891';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=adb0891';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=adb0891';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=adb0891';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave } from '../../shared/daily.js?v=adb0891';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=adb0891';
 
 const GAME_ID = 'sudoku';
 const $ = (id) => document.getElementById(id);
@@ -30,7 +30,12 @@ let state = isDaily
     : daily.completed ? null : initDailyState(daily)
   : saved && !saved.daily ? resumeState(fromSave(saved), Date.now(), visible()) : initState();
 if (daily?.completed && state && !state.result) state = null;
-let best = await profile.best(GAME_ID);
+async function difficultyBest(difficulty) {
+  if (difficulty === 'easy') return 0;
+  const summary = await profile.summary();
+  return summary.games.find((game) => game.id === GAME_ID)?.stats?.detail?.best_by_difficulty?.[difficulty] ?? 0;
+}
+let best = await difficultyBest(state?.difficulty ?? 'normal');
 let cursor = Math.max(0, state?.puzzle.indexOf(0) ?? 0);
 let noteMode = false;
 let ended = state ? null : { closed: true };
@@ -94,7 +99,7 @@ function render() {
     cell.tabIndex = !locked && i === cursor ? 0 : -1;
   });
   $('score').textContent = state.score;
-  $('best').textContent = state.assist ? best : Math.max(best, state.score);
+  $('best').textContent = state.difficulty === 'easy' ? '—' : best;
   $('clues').textContent = clueCount(state.puzzle);
   $('difficulty').value = state.difficulty;
   $('difficulty').disabled = isDaily || restarting || !!ended;
@@ -170,8 +175,9 @@ function finish(result) {
       if (!restarting) newGame();
       return;
     }
+    // is_best 已是「打破該難度最佳」,不必再讀網路(讀取失敗會卡在結算中,RS86 審查 #1)。
     if (out.play.is_best) best = Math.max(best, snap.score);
-    ended = { ...out, bestBefore, assist: snap.assist }; render();
+    ended ={ ...out, bestBefore, assist: snap.assist }; render();
     if (snap.result && !document.querySelector('dialog[open]')) $('again').focus();
   });
 }
@@ -237,7 +243,7 @@ async function newGame(difficulty = state?.difficulty ?? 'normal') {
   await queue;
   state = initState(difficulty);
   ended = null; noteMode = false; activeHint = null; cursor = Math.max(0, state.puzzle.indexOf(0)); profileStarted = false;
-  best = await profile.best(GAME_ID);
+  best = await difficultyBest(difficulty);
   restarting = false; render(); persist(); cells[cursor].focus();
 }
 
@@ -346,12 +352,12 @@ if (state?.result) finish('win');
 setupHelp({
   gameId: GAME_ID, title: '數獨玩法', mountAfter: document.querySelector('.navigation .btn'),
   rules: `<ol>
-    <li>每列、欄、宮 1–9 各一次，給定格不可改。</li>
-    <li>引導學習給定 46、有自動候選；入門給定 56，自己想。</li>
-    <li>點格／方向鍵選格，1–9 填入，0 清空；N 筆記，可復原。</li>
-    <li>填入清除相關筆記，衝突標紅；💡 提示會說明理由。</li>
-    <li>引導學習、入門或用提示、候選為輔助局：不刷新最佳、XP 對折。</li>
-    <li>首次輸入計時，重開記退出；填滿無衝突勝，分數=max(1,10000−秒數)。每日挑戰成績從開題起算，含離開時間；本局只計遊玩時間；每日可清空重來</li>
+    <li>列欄宮各含1–9，給定格不可改。</li>
+    <li>引導學習給定 46、有自動候選；入門給定 56。</li>
+    <li>點格／方向鍵選格，1–9填入，0清空；N筆記、復原。</li>
+    <li>衝突標紅，填入清相關筆記；💡 提示說明理由。</li>
+    <li>引導學習或用提示、候選為輔助局：不刷新最佳、XP對折。最佳按難度分，入門不列總最佳。</li>
+    <li>首次輸入計時，重開記退出；填滿無衝突勝，分數=max(1,10000−秒)。每日挑戰成績從開題起算，含離開時間；本局只計遊玩時間，可清空重來。</li>
   </ol>`,
   demo: { steps: demoSteps().map((s, i) => ({ ...s, kind: ['fail', 'fail', undefined, 'ok'][i] })), render: (frame) => {
     const board = frame.board ?? frame;

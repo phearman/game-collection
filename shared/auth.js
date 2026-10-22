@@ -1,6 +1,6 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=dd499c2';
-import { levelFor } from './progress.js?v=dd499c2';
-import { markCloudOffline } from './cloud-status.js?v=dd499c2';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=adb0891';
+import { levelFor } from './progress.js?v=adb0891';
+import { markCloudOffline } from './cloud-status.js?v=adb0891';
 
 const AUTH_KEY = 'gc:auth';
 const REFRESH_LOCK_KEY = 'gc:auth-refresh-lock';
@@ -56,7 +56,8 @@ export function deviceId(storage = globalThis.localStorage, crypto = globalThis.
   return id;
 }
 
-// 與 merge_device SQL 相同的規則，供預覽與測試使用；正式合併在伺服器交易內重算。
+// 供本機預覽與測試使用;正式合併在伺服器交易內重算。
+// RS86:本機數獨各難度最佳取大;merge_device SQL 仍採較新整份 detail(PM 接受的限制)。
 export function mergeRecords(local, cloud) {
   if (!cloud.profile) return structuredClone(local);
   const later = (a, b) => !a ? b : !b ? a : a >= b ? a : b;
@@ -76,6 +77,16 @@ export function mergeRecords(local, cloud) {
       plays_count: c.plays_count + s.plays_count, wins_count: c.wins_count + s.wins_count,
       best_score: Math.max(c.best_score, s.best_score), total_sec: c.total_sec + s.total_sec,
       last_played_at: later(c.last_played_at, s.last_played_at) };
+    if (id === 'sudoku' && (s.detail?.best_by_difficulty || c.detail?.best_by_difficulty)) {
+      const best = {};
+      for (const difficulty of ['beginner', 'normal', 'hard', 'expert']) {
+        const a = s.detail?.best_by_difficulty?.[difficulty];
+        const b = c.detail?.best_by_difficulty?.[difficulty];
+        const num = (v) => (Number.isFinite(v) && v > 0 ? v : 0); // 壞值(非數字)⛔ 蓋掉另一側有效值
+        if (a !== undefined || b !== undefined) best[difficulty] = Math.max(num(a), num(b));
+      }
+      stats[id].detail = { ...stats[id].detail, best_by_difficulty: best };
+    }
   }
   const plays = new Map((cloud.plays ?? []).map((p) => [p.id, structuredClone(p)]));
   for (const p of local.plays ?? []) if (!plays.has(p.id)) plays.set(p.id, structuredClone(p));
@@ -494,7 +505,7 @@ export async function selectCloudStore(local) {
   };
   if (!rt.auth.session) { showNotice(); return guarded(local); }
   if (!rt.store) {
-    const { SupabaseStore } = await import('./stores/supabase.js?v=dd499c2');
+    const { SupabaseStore } = await import('./stores/supabase.js?v=adb0891');
     rt.store = new SupabaseStore({ auth: rt.auth });
     try {
       rt.notice = await prepareCloudStore({ auth: rt.auth, local, cloud: rt.store });

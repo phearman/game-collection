@@ -6,7 +6,7 @@ export const GAMES = [
   { id: 'minesweeper', code: 'G2', version: '1.1', title: '踩地雷', icon: '💣', desc: '連鎖展開找出地雷', category: 'puzzle', status: 'active' },
   { id: 'wordle', code: 'G3', version: '1.6', title: 'Wordle', icon: '🔤', desc: '六次內猜中單字', category: 'word', status: 'active' },
   { id: 'tictactoe', code: 'G4', version: '1.2', title: '井字棋', icon: '⭕', desc: '挑戰無敵 AI', category: 'board', status: 'active' },
-  { id: 'sudoku', code: 'G5', version: '1.6', title: '數獨', icon: '🧩', desc: '五種難度隨機出題', category: 'puzzle', status: 'active' },
+  { id: 'sudoku', code: 'G5', version: '1.7', title: '數獨', icon: '🧩', desc: '五種難度隨機出題', category: 'puzzle', status: 'active' },
   { id: 'snake', code: 'G6', version: '1.2', title: '貪食蛇', icon: '🐍', desc: '越吃越長別撞牆', category: 'action', status: 'active' },
   { id: 'stairs', code: 'G7', version: '1.6', title: '下樓梯', icon: '🪜', desc: '一路往下別碰頂刺', category: 'action', status: 'active' },
   { id: 'keeper', code: 'G8', version: '1.3', title: '足球守門員', icon: '🧤', desc: '撲出小朋友的射門', category: 'sport', status: 'active' },

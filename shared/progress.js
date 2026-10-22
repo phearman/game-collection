@@ -207,7 +207,7 @@ export function dailyStreak(stats, day) {
   return count;
 }
 
-function nextDetail(gameId, detail, result, play = {}) {
+function nextDetail(gameId, detail, result, play = {}, { score, difficulty, assist } = {}) {
   if (['wordle', 'sudoku', 'minesweeper', 'memory'].includes(gameId) && ['win', 'lose'].includes(result)
     && typeof play.daily === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(play.daily)) {
     detail = { ...detail, daily_days: [...new Set([...(detail.daily_days ?? []), play.daily])].sort().slice(-35) };
@@ -218,6 +218,11 @@ function nextDetail(gameId, detail, result, play = {}) {
   if (gameId === 'wordle' && typeof play.answer === 'string') {
     const prev = Array.isArray(detail.recent) ? detail.recent.filter((w) => typeof w === 'string') : [];
     return { ...detail, recent: [play.answer, ...prev].slice(0, WORDLE_RECENT) };
+  }
+  if (gameId === 'sudoku' && result !== 'quit' && !assist
+    && ['beginner', 'normal', 'hard', 'expert'].includes(difficulty)) {
+    return { ...detail, best_by_difficulty: { ...detail.best_by_difficulty,
+      [difficulty]: Math.max(detail.best_by_difficulty?.[difficulty] ?? 0, score) } };
   }
   return detail;
 }
@@ -265,22 +270,27 @@ export function recentOrder(gameList, stats, saves) {
 //   xpGained / newAchievements = 本局合計(含 live);profile.xp 只加結算當下的部分。
 export function applyFinish(input) {
   const { gameId, result, score = 0, difficulty = 'normal', startedAt, endedAt, durationSec = 0, id } = input;
-  const assist = input.assist === true;
+  const sudokuDifficulty = gameId === 'sudoku' ? (input.detail?.sudoku_difficulty ?? difficulty) : null;
+  const assist = input.assist === true || sudokuDifficulty === 'easy';
   const detail = assist ? { ...(input.detail ?? {}), assist: true } : (input.detail ?? {});
   const live = { xp: input.live?.xp ?? 0, achievements: input.live?.achievements ?? [] };
   if (!RESULTS.includes(result)) throw new Error(`unknown result: ${result}`);
   const completed = result !== 'quit';
   const prev = input.stats[gameId] ?? emptyStats(gameId);
-  const isBest = completed && !assist && score > (prev.best_score || 0); // 放棄與輔助局不刷新最佳
+  // 數獨按原始難度比較;舊遊戲層最佳不回填到各難度(RS86)。
+  const recordsDifficulty = ['beginner', 'normal', 'hard', 'expert'].includes(sudokuDifficulty);
+  const bestBefore = gameId === 'sudoku' ? (prev.detail?.best_by_difficulty?.[sudokuDifficulty] ?? 0) : (prev.best_score || 0);
+  const isBest = completed && !assist && (gameId !== 'sudoku' || recordsDifficulty) && score > bestBefore;
+  const recordsGameBest = gameId !== 'sudoku' || ['normal', 'hard', 'expert'].includes(sudokuDifficulty);
 
   const gameStats = {
     ...prev,
     plays_count: prev.plays_count + (completed ? 1 : 0),
     wins_count: prev.wins_count + (result === 'win' ? 1 : 0),
-    best_score: !completed || assist ? (prev.best_score || 0) : Math.max(prev.best_score || 0, score),
+    best_score: !completed || assist || !recordsGameBest ? (prev.best_score || 0) : Math.max(prev.best_score || 0, score),
     total_sec: prev.total_sec + durationSec,
     last_played_at: iso(endedAt),
-    detail: nextDetail(gameId, prev.detail ?? {}, result, detail),
+    detail: nextDetail(gameId, prev.detail ?? {}, result, detail, { score, difficulty: sudokuDifficulty, assist }),
   };
   const stats = { ...input.stats, [gameId]: gameStats };
 

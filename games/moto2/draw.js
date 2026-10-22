@@ -1,6 +1,6 @@
 // 側面斜視角 Canvas 與畫面特效;所有物理判定由 logic.js 提供。
 import { W, H, DIST_SCALE, HEIGHT_SCALE, RIDER_X, LANE_Y, LANE_GAP, LANE_SKEW, ROAD_SKEW,
-  PARALLAX, TRACK_LEN, MAX_SPEED, CAR_HALF_LANE, CRASH_SEC, playerOf, terrainAt } from './logic.js?v=dd499c2';
+  PARALLAX, TRACK_LEN, MAX_SPEED, CAR_HALF_LANE, CRASH_SEC, playerOf, terrainAt } from './logic.js?v=adb0891';
 
 export const PALETTE_KEYS = ['night', 'sky', 'mountain', 'grass', 'grass-dark', 'road', 'road-hi', 'road-dark',
   'ink', 'shadow', 'mud', 'mud-hi', 'wood', 'danger', 'ramp', 'skin', 'player', 'blue', 'yellow', 'purple',

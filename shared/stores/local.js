@@ -1,8 +1,8 @@
 // LocalStore:store 介面的 localStorage 實作(第一期)。介面說明見 supabase.js。
 // localStorage 可能不可用(隱私模式、封鎖網站資料、配額滿):讀失敗回空值、寫失敗回傳 { ok:false, reason },遊戲照常可玩。
 // 例外:importAll 要整份覆蓋或完全不動,寫入失敗會還原原資料並丟錯。
-import { PLAYS_LIMIT, pushPlay, mergeFinished } from '../progress.js?v=dd499c2';
-import { writeFailure } from './errors.js?v=dd499c2';
+import { PLAYS_LIMIT, pushPlay, mergeFinished } from '../progress.js?v=adb0891';
+import { writeFailure } from './errors.js?v=adb0891';
 
 const PREFIX = 'game-collection:';
 const V1 = `${PREFIX}v1:`;

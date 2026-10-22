@@ -1,7 +1,7 @@
 // 踩地雷規則層:純函式,不碰 DOM。棋盤以一維陣列存,格子編號 i = r × cols + c。
 // 規則正典:workbook/plans/minesweeper.md「規則(驗收依據)」。
 
-import { seedRng } from '../../shared/seed-rng.js?v=dd499c2';
+import { seedRng } from '../../shared/seed-rng.js?v=adb0891';
 
 export const DIFFICULTIES = {
   normal: { rows: 9, cols: 9, mines: 10 },

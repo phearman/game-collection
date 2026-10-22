@@ -1,14 +1,14 @@
 // 數獨規則與狀態轉移：純函式；亂數、時間均由呼叫端注入。
-import { timerInit, timerEvent } from '../../shared/progress.js?v=dd499c2';
-import { seedRng } from '../../shared/seed-rng.js?v=dd499c2';
+import { timerInit, timerEvent } from '../../shared/progress.js?v=adb0891';
+import { seedRng } from '../../shared/seed-rng.js?v=adb0891';
 
 export const SIZE = 9;
 // beginner=入門(RS77,給定 56、自己想);easy=引導學習(原入門,給定 46、預設自動候選),內部鍵不改以相容舊存檔與雲端紀錄。
 export const DIFFICULTIES = { beginner: 56, easy: 46, normal: 40, hard: 32, expert: 26 };
 // 雲端 plays.difficulty 只收 normal/hard/expert:這兩種送 normal,原始難度放 detail.sudoku_difficulty。
 const EXTRA = new Set(['beginner', 'easy']);
-// 開局即輔助局(不刷新最佳、XP 對折)的難度。最佳紀錄只按遊戲分,入門若不算輔助局會用 56 給定的成績蓋掉一般難度的最佳。
-const ALWAYS_ASSIST = new Set(['beginner', 'easy']);
+// 引導學習開局即輔助局;入門依實際使用提示或自動候選判定(RS86)。
+const ALWAYS_ASSIST = new Set(['easy']);
 const ALL = 0x3fe;
 const indices = Array.from({ length: 81 }, (_, i) => i);
 const rowOf = (i) => Math.floor(i / 9);
@@ -139,7 +139,7 @@ export function nextHint(state) {
 
 export function assistState(state) {
   if (state.daily) return state;
-  return state.result || state.assist ? state : { ...state, assist: true };
+  return state.result || (state.assist && state.assistUsed) ? state : { ...state, assist: true, assistUsed: true };
 }
 
 export function autoCandState(state, on) {
@@ -149,8 +149,13 @@ export function autoCandState(state, on) {
   return next.autoCand === on ? next : { ...next, autoCand: on };
 }
 
-// 舊存檔缺少輔助欄位時補 false，不改動棋盤、筆記與歷史。
-export const fromSave = (state) => ({ ...state, assist: ALWAYS_ASSIST.has(state.difficulty) || (state.assist ?? false), autoCand: state.autoCand ?? false });
+// 舊入門的 assist 可能只是開局預設值,依使用標記/候選重判;新標記保留關閉候選後的輔助狀態。
+// 舊版未保存提示使用紀錄或曾開啟候選的歷史,只有 autoCand=true 可辨識。
+export const fromSave = (state) => ({ ...state,
+  assist: ALWAYS_ASSIST.has(state.difficulty) || (state.difficulty === 'beginner' && !state.result
+    ? state.assistUsed === true || state.autoCand === true : (state.assist ?? false)),
+  assistUsed: state.assistUsed === true || state.autoCand === true,
+  autoCand: state.autoCand ?? false });
 
 // 無法移除的格放回；走完全部格仍達不到目標時保留最接近的唯一解。
 export function carvePuzzle(solution, target, rng = Math.random) {
@@ -205,7 +210,7 @@ export function stateWithPuzzle(puzzle, difficulty = 'normal') {
   if (!Object.hasOwn(DIFFICULTIES, difficulty) || countSolutions(puzzle) !== 1) throw new Error('invalid puzzle');
   const result = hasWon(puzzle) ? 'win' : null;
   return { puzzle: puzzle.slice(), board: puzzle.slice(), notes: indices.map(() => []), history: [],
-    difficulty, assist: ALWAYS_ASSIST.has(difficulty), autoCand: difficulty === 'easy', // 只有引導學習預設自動候選
+    difficulty, assist: ALWAYS_ASSIST.has(difficulty), assistUsed: false, autoCand: difficulty === 'easy', // 只有引導學習預設自動候選
     moves: 0, clock: null, result, score: scoreFor(result, 0) };
 }
 export const initState = (difficulty = 'normal', rng = Math.random) => stateWithPuzzle(generatePuzzle(difficulty, rng), difficulty);
@@ -290,6 +295,8 @@ export function isValidState(s) {
   if (!s || !Object.hasOwn(DIFFICULTIES, s.difficulty) || !isBoard(s.puzzle)
     || clueCount(s.puzzle) < DIFFICULTIES[s.difficulty] || !validSnapshot(s, s.puzzle) || !count(s.moves)) return false;
   if ((s.assist !== undefined && typeof s.assist !== 'boolean')
+    || (s.assistUsed !== undefined && typeof s.assistUsed !== 'boolean')
+    || (s.assistUsed === true && s.assist !== true)
     || (s.autoCand !== undefined && typeof s.autoCand !== 'boolean')
     || (ALWAYS_ASSIST.has(s.difficulty) && s.assist !== true)
     || (s.autoCand === true && s.assist !== true)) return false;

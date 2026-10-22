@@ -1,7 +1,7 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=dd499c2';
-import { DAILY_GAMES, DAILY_NAMES, dailyDateLabel, dailyScore } from './daily.js?v=dd499c2';
-import { formatDuration } from './duration.js?v=dd499c2';
-import { safeAvatarUrl } from './avatars.js?v=dd499c2';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=adb0891';
+import { DAILY_GAMES, DAILY_NAMES, dailyDateLabel, dailyScore } from './daily.js?v=adb0891';
+import { formatDuration } from './duration.js?v=adb0891';
+import { safeAvatarUrl } from './avatars.js?v=adb0891';
 
 // 網站今日挑戰排行(RS78,自願公開)。暱稱規則與 migration 0036 的 daily_public_nickname_valid 同一組正反例(測試比對)。
 export const PUBLIC_RANK_NOTE = '打開後,你今天起的今日挑戰成績會用這個暱稱和排行頭像,出現在網站的今日排行,所有人都看得到。關閉後立即從排行移除。';
@@ -64,7 +64,7 @@ export function createDailyPublicClient({ auth, url = SUPABASE_URL, key = SUPABA
 }
 export async function browserDailyPublicClient() {
   if (!cloudEnabled) return createDailyPublicClient();
-  const { auth } = await (await import('./auth.js?v=dd499c2')).getCloudRuntime();
+  const { auth } = await (await import('./auth.js?v=adb0891')).getCloudRuntime();
   return createDailyPublicClient({ auth });
 }
 
