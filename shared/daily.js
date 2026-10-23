@@ -1,5 +1,5 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=6053a51';
-import { formatDuration } from './duration.js?v=6053a51';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=4067eb9';
+import { formatDuration } from './duration.js?v=4067eb9';
 
 export const DAILY_GAMES = ['sudoku', 'minesweeper', 'memory'];
 export const DAILY_NAMES = { wordle: 'Wordle', sudoku: '數獨', minesweeper: '踩地雷', memory: '翻翻樂' };
@@ -19,6 +19,7 @@ export const dailyExpiredText = (day) =>
   `${dailyDateLabel(day)} 的挑戰只接受到 ${dailyDateLabel(dailyNextDay(day))} 中午 12:00,這局不列入排行`;
 // 局還開著時,那天的紀錄已被清除(或超過保留天數):同樣照一般局記錄,但⛔ 寫期限(期限未必已過)。
 export const dailyGoneText = (day) => `${dailyDateLabel(day)} 的挑戰紀錄已清除,這局不列入排行`;
+export const dailyAbandonedText = (day) => `${dailyDateLabel(day)} 的挑戰已放棄,這局不列入排行也不記錄`;
 // 跨日完成:完成時間的台灣日晚於開始日 ⇒ 文案寫日期、⛔ 寫「今天」,也⛔ 連今日排行(那是另一天)。
 export function dailyFinishedLater(row) {
   const stamp = Date.parse(row?.finished_at);
@@ -30,6 +31,10 @@ export async function finishDailyOrExpire(client, daily, game, result, guesses, 
   catch (error) {
     if (error?.code === 'DAILY_EXPIRED') return { expired: dailyExpiredText(daily.day) };
     if (error?.code === 'DAILY_GONE') return { expired: dailyGoneText(daily.day) };
+    // IR74:往日那局已在別的分頁放棄(伺服器標記為已清除)⇒ 不能送也不能記成一般局(放棄時局號已清掉);
+    // 呼叫端丟掉存檔、關閉這局,⛔ 進「重試送出」迴圈。今天的 DAILY_CLEARED 照舊。
+    if (error?.code === 'DAILY_CLEARED' && (daily.resumed || daily.day < taiwanDay(Date.now())))
+      throw Object.assign(new Error(dailyAbandonedText(daily.day)), { code: 'DAILY_ABANDONED' });
     throw error;
   }
 }
@@ -42,10 +47,16 @@ export const dailyRequested = (search) => new URLSearchParams(search).get('daily
 export const practiceSlot = (game) => `${game}-practice`;
 export const DAILY_PRACTICE_DAYS = 30;
 export const DAILY_PRACTICE_NOTE = '練習:不計排行、不影響今日挑戰';
+// RS91/IR74:那天自己的每日局還在收件中 ⇒ 不發練習題;頁面附「繼續那局/放棄那局」兩鈕解開死結。
+export const DAILY_RESUME_NO_SAVE_TEXT = '找不到那局的續玩存檔(跨日開過今天的挑戰會清掉它),請回原本的裝置或分頁繼續;也可以放棄那局';
+export const DAILY_PAST_OPEN_TEXT ='這天的挑戰你還沒完成、仍在收件中(收到隔天中午 12:00)。可以繼續那局,或放棄那局後改練習';
 // D56(PM 裁 RS91 審查 #2):往日題目答案可查、可重玩 ⇒ 一律當輔助局(XP 打對折、不刷新最佳、不解遊戲專屬成就)。
 export const PRACTICE_ASSIST_TEXT = '🧩 往日練習:不刷新最佳';
-export function dailyPracticeRequested(search) {
-  const day = new URLSearchParams(search).get('practice');
+export function dailyPracticeRequested(search) { return dailyDayParam(search, 'practice'); }
+// IR74:?resume=YYYY-MM-DD 接回自己那天還在收件期限內、未完成的每日局(跨日重新整理後的死結)。
+export function dailyResumeRequested(search) { return dailyDayParam(search, 'resume'); }
+function dailyDayParam(search, name) {
+  const day = new URLSearchParams(search).get(name);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day ?? '')) return null;
   const stamp = Date.parse(`${day}T00:00:00Z`);
   return Number.isFinite(stamp) && new Date(stamp).toISOString().slice(0, 10) === day ? day : null;
@@ -119,8 +130,9 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
         ? '這天的挑戰紀錄已清除,這局不列入排行' : data?.message === 'DAILY_CLEARED'
         ? '今天的挑戰紀錄已清除，請明天再挑戰' : data?.message === 'DAILY_PAST_RANGE'
           ? `只能練習最近 ${DAILY_PRACTICE_DAYS} 天(不含今天)的題目` : data?.message === 'DAILY_PAST_OPEN'
-            ? '這天的挑戰你還沒完成、仍在收件中,請先完成原本那局(收到隔天中午 12:00)' : '每日挑戰暫時無法使用，請稍後重試'),
-    { code: ['DAILY_EXPIRED', 'DAILY_GONE', 'DAILY_CLEARED', 'DAILY_PAST_RANGE', 'DAILY_PAST_OPEN'].includes(data?.message) ? data.message : undefined });
+            ? DAILY_PAST_OPEN_TEXT : data?.message === 'DAILY_RESUME_DENIED'
+              ? '那局已完成、已放棄或已過收件時間,不能再接回' : '每日挑戰暫時無法使用，請稍後重試'),
+    { code: ['DAILY_EXPIRED', 'DAILY_GONE', 'DAILY_CLEARED', 'DAILY_PAST_RANGE', 'DAILY_PAST_OPEN', 'DAILY_RESUME_DENIED'].includes(data?.message) ? data.message : undefined });
     return data;
   }
   const gameCall = (name, game) => {
@@ -136,6 +148,15 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
       if (!DAILY_GAMES.includes(game)) throw new Error('不支援的每日遊戲');
       return call('daily_past_seed', { p_game: game, p_day: day });
     },
+    // IR74:伺服器只對本人、往日、未完成、未放棄且仍在收件期限內的那列發種子/標記放棄。
+    resume: (game, day) => {
+      if (!DAILY_GAMES.includes(game)) throw new Error('不支援的每日遊戲');
+      return call('daily_resume_seed', { p_game: game, p_day: day });
+    },
+    abandon: (game, day) => {
+      if (!DAILY_GAMES.includes(game)) throw new Error('不支援的每日遊戲');
+      return call('abandon_daily', { p_game: game, p_day: day });
+    },
     finish: (game, day, result, guesses, detail = {}) => call('finish_daily', {
       p_game: game, p_result: result, p_guesses: guesses, p_detail: { ...detail, daily: day },
     }),
@@ -144,7 +165,7 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
 }
 export async function browserDailyClient() {
   if (!cloudEnabled) return createDailyClient();
-  const { auth } = await (await import('./auth.js?v=6053a51')).getCloudRuntime();
+  const { auth } = await (await import('./auth.js?v=4067eb9')).getCloudRuntime();
   return createDailyClient({ auth });
 }
 
@@ -163,6 +184,14 @@ export async function preparePractice(client, game, day) {
   const seed = await client.pastSeed(game, day);
   if (seed.day !== day) throw new Error('練習題目日期不符,請重新整理');
   return { day, seed: seed.seed, row: null, completed: false, practice: true };
+}
+// IR74:接回往日那局 = 那天的每日局(⛔ 練習):沿用 {game}-daily 存檔槽與開始時的 play_id,結算照常走
+// finish_daily(伺服器以那列的日期計)。翻翻樂比照 PM 裁定:開過題卻找不到同日存檔就不重新發牌。
+export async function prepareResume(client, game, day) {
+  const resumed = await client.resume(game, day);
+  if (resumed.day !== day || resumed.row?.day !== day) throw new Error('接回的挑戰日期不符,請重新整理');
+  return { day, seed: resumed.seed, row: resumed.row, completed: false, resumed: true,
+    ...(game === 'memory' ? { resumeRequired: true } : {}) };
 }
 export function matchesDailySave(saved, daily, valid) {
   return !daily.row?.cleared && !!saved && saved.daily === daily.day && saved.daily_seed === daily.seed && valid(saved);

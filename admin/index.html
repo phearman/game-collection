@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>意見回饋後台 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=6053a51">
+  <link rel="stylesheet" href="../shared/style.css?v=4067eb9">
   <style>
     .page.admin { max-width: 1280px; }
     .admin-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin: 20px 0; }
@@ -38,6 +38,16 @@
     #jokes-panel details { white-space: normal; }
     #jokes-panel .direct-approve, #tips-panel .direct-approve { display: flex; align-items: center; gap: 8px; }
     .joke-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+    /* IR72:事項補充附圖區塊:與回報篩選分開;圖片限寬、多張自動並排(手機一欄、桌機多欄)。 */
+    /* IR72 審查 F1:label 的上下 margin 會讓 align-items:end 對到外框,輸入框與按鈕錯位約 9px。 */
+    #reports-panel .admin-filters label { margin-block: 0; }
+    .item-images { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .item-images h3 { margin: 0 0 8px; font-size: 16px; }
+    .item-images-result { margin-top: 12px; }
+    .item-images-result p { margin: 0 0 8px; overflow-wrap: anywhere; }
+    .item-images-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+    .item-images-gallery img { display: block; width: 100%; height: auto; max-height: 360px; object-fit: contain;
+      border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-sub); }
     .joke-submitter { overflow-wrap: anywhere; }
     #reports-panel label { display: grid; gap: 4px; margin-block: 10px; }
     #reports-panel input, #reports-panel textarea, #reports-panel select { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }
@@ -201,14 +211,19 @@
         <label>關鍵字<input id="reports-filter-keyword" type="search"></label>
         <button class="btn" id="reports-search" type="button">套用篩選</button>
         <button class="btn" id="reports-reload" type="button">重新載入</button>
-        <h3>事項補充附圖</h3>
-        <label>事項事件碼 <input id="item-images-code" maxlength="40" placeholder="約1017-1"></label>
-        <button class="btn" id="item-images-search" type="button">查看事項附圖</button>
-        <button class="btn" id="item-images-close" type="button">關閉事項圖片</button>
-        <div id="item-images-result" aria-live="polite"></div>
         <button class="btn" id="reports-cleanup-images" type="button">立即清除到期附圖</button>
         <button class="btn" id="reports-export" type="button">匯出全部篩選結果 CSV</button>
       </div>
+      <!-- IR72:事項補充附圖獨立成區塊(標題、查詢列、圖片在下方),不再塞進回報篩選列。 -->
+      <section class="item-images" aria-labelledby="item-images-title">
+        <h3 id="item-images-title">事項補充附圖</h3>
+        <div class="admin-filters item-images-query">
+          <label>事項事件碼 <input id="item-images-code" maxlength="40" placeholder="約1017-1"></label>
+          <button class="btn" id="item-images-search" type="button">查看事項附圖</button>
+          <button class="btn" id="item-images-close" type="button">關閉事項圖片</button>
+        </div>
+        <div id="item-images-result" class="item-images-result" aria-live="polite"></div>
+      </section>
       <p id="reports-status" role="status"></p>
       <p id="reports-page" role="status"></p>
       <button class="btn" id="reports-prev" type="button">上一頁</button>
@@ -225,6 +240,6 @@
       <button class="btn" id="reports-purge" type="button">清空所有測試資料</button>
     </section>
   </main>
-  <script type="module" src="ui.js?v=6053a51"></script>
+  <script type="module" src="ui.js?v=4067eb9"></script>
 </body>
 </html>

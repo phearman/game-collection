@@ -1,30 +1,33 @@
-import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave, clearBoardState } from './logic.js?v=6053a51';
-import { createProfile } from '../../shared/profile.js?v=6053a51';
-import { formatDuration } from '../../shared/duration.js?v=6053a51';
-import { LocalStore } from '../../shared/stores/local.js?v=6053a51';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=6053a51';
-import { bindThemeToggle } from '../../shared/theme.js?v=6053a51';
-import { play as playSound, music } from '../../shared/sound.js?v=6053a51';
-import { setupHelp } from '../../shared/help.js?v=6053a51';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=6053a51';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=6053a51';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=6053a51';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT } from '../../shared/daily.js?v=6053a51';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=6053a51';
+import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave, clearBoardState } from './logic.js?v=4067eb9';
+import { createProfile } from '../../shared/profile.js?v=4067eb9';
+import { formatDuration } from '../../shared/duration.js?v=4067eb9';
+import { LocalStore } from '../../shared/stores/local.js?v=4067eb9';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=4067eb9';
+import { bindThemeToggle } from '../../shared/theme.js?v=4067eb9';
+import { play as playSound, music } from '../../shared/sound.js?v=4067eb9';
+import { setupHelp } from '../../shared/help.js?v=4067eb9';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=4067eb9';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=4067eb9';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=4067eb9';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume } from '../../shared/daily.js?v=4067eb9';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=4067eb9';
 
 const GAME_ID = 'sudoku';
 const $ = (id) => document.getElementById(id);
 const visible = () => document.visibilityState !== 'hidden';
 // RS91:?practice=YYYY-MM-DD 重玩往日題目(練習);沿用每日盤面與介面,但⛔ 送每日成績、⛔ 進排行。
 const practiceDay = dailyPracticeRequested(location.search);
-const isDaily = dailyRequested(location.search) || !!practiceDay;
+// IR74:?resume=YYYY-MM-DD 接回自己那天未完成、仍在收件期限內的每日局(照常計入那天排行)。
+const resumeDay = practiceDay ? null : dailyResumeRequested(location.search);
+const isDaily = dailyRequested(location.search) || !!practiceDay || !!resumeDay;
 const profile = await createProfile({ store: new LocalStore(), saveSlots: isDaily ? { [GAME_ID]: practiceDay ? practiceSlot(GAME_ID) : dailySlot(GAME_ID) } : {} });
 let daily = null;
 let dailyClient = null;
 let dailyError = '';
 let dailyExpired = ''; // IR68:伺服器過了收件時間,這局照一般局記錄、不列排行
 if (isDaily) {
-  try { dailyClient = await browserDailyClient(); daily = practiceDay ? await preparePractice(dailyClient, GAME_ID, practiceDay) : await prepareDaily(dailyClient, GAME_ID); }
+  try { dailyClient = await browserDailyClient(); daily = practiceDay ? await preparePractice(dailyClient, GAME_ID, practiceDay)
+    : resumeDay ? await prepareResume(dailyClient, GAME_ID, resumeDay) : await prepareDaily(dailyClient, GAME_ID); }
   catch (error) { dailyError = error.message; }
 }
 const saved = await profile.loadSave(GAME_ID);
@@ -166,6 +169,10 @@ function finish(result) {
         else { daily.row = outcome.row; daily.completed = true; }
         dailyError = '';
       } catch (error) {
+        if (error.code === 'DAILY_ABANDONED') { // IR74:那局已在別的分頁放棄 ⇒ 丟掉存檔、關閉,⛔ 重試迴圈
+          await profile.discardSave(GAME_ID); dailyError = error.message; ended = { closed: true };
+          showDailyClosed(document, null, dailyError, { game: GAME_ID }); return;
+        }
         // RS73:錯誤狀態保留到重試成功,每次 render 都帶入,說明列才不會在錯誤橫幅下重新出現。
         dailyError = error.message;
         ended = { dailyRetry: true }; render(); return;
@@ -350,7 +357,7 @@ if (isDaily && state) { startProfile(); await persist(); }
 if (isDaily && !state) {
   $('difficulty').disabled = true; $('hint-button').disabled = true; $('auto-cand').disabled = true;
   $('number-pad').hidden = true; $('tools')?.setAttribute('hidden', '');
-  showDailyClosed(document, daily, dailyError);
+  showDailyClosed(document, daily, dailyError, { game: GAME_ID, client: dailyClient });
 }
 render();
 if (state?.result) finish('win');

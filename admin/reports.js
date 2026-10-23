@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=6053a51';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=4067eb9';
 export const REPORT_STATUS = Object.freeze({ draft:'未送出',new:'新的',triage:'評估中',need_info:'需要更多資訊',planned:'已排入處理',released:'已完成',declined:'不處理',duplicate:'重複',cancelled:'回報者已取消' });
 export const REPORT_URGENCY = Object.freeze({ high:'高',mid:'中',low:'低',unsure:'不確定' });
 export const REPORT_CATEGORY = Object.freeze({ issue:'問題',request:'需求',todo:'待辦',query:'查詢',unsure:'不確定' });
@@ -193,7 +193,11 @@ export function initReportsPanel({ doc, auth, client, confirm = globalThis.confi
       if (!current(stamp) || imageStamp!==itemImageEpoch) return;
       const box=$('item-images-result');
       box.append(node('p',result.status==='missing' ? '查不到這個事件碼' : `${result.event_code} · ${result.body} · 附圖 ${result.images.length} 張`));
-      for (const url of result.images) { const img=node('img'); img.referrerPolicy='no-referrer'; img.alt='事項補充附圖'; img.style.maxWidth='100%'; img.src=url; box.append(img); }
+      // IR72:圖片放進圖庫格線(版面由 admin/index.html 的 .item-images-gallery 控制)。
+      const gallery=node('div'); gallery.className='item-images-gallery';
+      const urls=result.images ?? [];
+      urls.forEach((url,i) => { const img=node('img'); img.referrerPolicy='no-referrer'; img.alt=`事項補充附圖 ${i+1}/${urls.length}`; img.loading='lazy'; img.src=url; gallery.append(img); });
+      if (result.images?.length) box.append(gallery);
       itemImageTimer=setTimeout(closeItemImages,60000);
     } catch (err) { error(err,stamp); }
   });

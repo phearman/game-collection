@@ -1,4 +1,29 @@
-import { dailyDateLabel, dailyScore, dailyShare, dailyFinishedLater, DAILY_LOGIN_NOTICE, DAILY_FIXED_NOTE, DAILY_PRACTICE_NOTE, dailyPracticeRequested } from './daily.js?v=6053a51';
+import { dailyDateLabel, dailyScore, dailyShare, dailyFinishedLater, DAILY_LOGIN_NOTICE, DAILY_FIXED_NOTE, DAILY_PRACTICE_NOTE, dailyPracticeRequested, dailyResumeRequested, DAILY_PAST_OPEN_TEXT, DAILY_RESUME_NO_SAVE_TEXT } from './daily.js?v=4067eb9';
+
+// IR74:往日練習被「那天的每日局還在收件中」擋下 ⇒ 給「繼續那局」與「放棄那局」;翻翻樂接回時找不到原存檔
+// ⇒ 只給「放棄那局」(其他接回錯誤如已過期、網路、未登入不給)。放棄由伺服器標記(不列排行、不能再交),
+// 成功後直接改開那天的練習。回傳是否加了按鈕(供測試)。
+export function appendResumeActions(doc, box, error, { game, client, confirm = globalThis.confirm, go = (href) => { globalThis.location.href = href; } } = {}) {
+  const search = globalThis.location?.search ?? '';
+  const practiceDay = dailyPracticeRequested(search), resumeDay = dailyResumeRequested(search);
+  const day = practiceDay ?? resumeDay;
+  if (!day || !game || error !== (practiceDay ? DAILY_PAST_OPEN_TEXT : DAILY_RESUME_NO_SAVE_TEXT)) return false;
+  if (practiceDay) {
+    const resume = doc.createElement('a'); resume.className = 'btn'; resume.href = `./?resume=${day}`;
+    resume.textContent = '繼續那局'; box.append(resume);
+  }
+  if (!client) return !!practiceDay;
+  const abandon = doc.createElement('button'); abandon.type = 'button'; abandon.className = 'btn';
+  abandon.textContent = '放棄那局'; box.append(abandon);
+  const note = doc.createElement('p'); note.hidden = true; box.append(note);
+  abandon.onclick = async () => {
+    if (!confirm(`放棄 ${dailyDateLabel(day)} 的挑戰?這局不列入排行、之後也不能再交,但可以改練習這天的題目。`)) return;
+    abandon.disabled = true;
+    try { await client.abandon(game, day); go(`./?practice=${day}`); }
+    catch (failure) { note.textContent = failure.message; note.hidden = false; abandon.disabled = false; }
+  };
+  return true;
+}
 
 export function showDailyBanner(doc, daily, error) {
   const banner = doc.getElementById('daily-banner');
@@ -25,13 +50,15 @@ export function appendDailySummary(doc, mount, daily, marks = []) {
   const rank = doc.createElement('a'); rank.className = 'btn'; rank.textContent = '🏆 看今日排行';
   rank.href = '../../daily-rank/'; mount.append(rank);
 }
-export function showDailyClosed(doc, daily, error) {
+export function showDailyClosed(doc, daily, error, actions = {}) {
   showDailyBanner(doc, daily, error);
   const wrap = doc.querySelector('.board-wrap'); wrap.hidden = true;
   const box = doc.createElement('section'); box.className = 'daily-summary';
   if (daily?.completed) appendDailySummary(doc, box, daily, daily.row.detail?.marks ?? []);
-  // RS91:練習出錯(日期超出範圍、該日挑戰仍在收件)不是帳號問題 ⇒ 回大廳重選。
-  const practice = daily?.practice || !!dailyPracticeRequested(globalThis.location?.search ?? '');
+  appendResumeActions(doc, box, error, actions);
+  // RS91:練習出錯(日期超出範圍、該日挑戰仍在收件)不是帳號問題 ⇒ 回大廳重選。IR74:接回往日那局出錯亦同。
+  const search = globalThis.location?.search ?? '';
+  const practice = daily?.practice || daily?.resumed || !!dailyPracticeRequested(search) || !!dailyResumeRequested(search);
   const link = doc.createElement('a'); link.className = 'btn';
   link.href = error ? practice ? '../../' : '../../me/' : './';
   link.textContent = error ? practice ? '回大廳' : '前往登入／檢查帳號' : '玩一般模式'; box.append(link); wrap.before(box);

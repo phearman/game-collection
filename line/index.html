@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="遊戲集錦 LINE 小幫手使用說明：開遊戲、傳回饋、綁定成績、加入群組排行與查天氣的指令及對話範例。">
   <title>LINE 小幫手使用說明 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=6053a51">
-  <link rel="stylesheet" href="style.css?v=6053a51">
+  <link rel="stylesheet" href="../shared/style.css?v=4067eb9">
+  <link rel="stylesheet" href="style.css?v=4067eb9">
 </head>
 <body>
   <main class="page line-guide">
@@ -115,6 +115,8 @@
           <h3 id="life-title">☀️ 生活小幫手</h3>
           <dl class="command-list">
             <div data-command="天氣" data-scopes="user group"><dt><code>#天氣 [縣市]</code><span class="command-scope">兩者</span></dt><dd>查今明 36 小時預報，例如 #天氣 高雄。私訊省略縣市沿用上次查詢，首次預設高雄市；群組預設高雄市。新竹、嘉義請寫市或縣。</dd></div>
+            <div data-command="捷運" data-scopes="user group"><dt><code>#捷運 [站名|站號|狀態]</code><span class="command-scope">兩者</span></dt><dd>查高雄捷運與環狀輕軌各方向下一班「約幾分到」，例如 #捷運 美麗島、#捷運 R10；#捷運 狀態 看營運異常。私訊打 #捷運 後按「傳送目前位置」，列附近 1.5 公里內最近 3 站；群組要先打 #捷運 看提醒，2 分鐘內傳的位置才查（位置全群看得到）。位置只用於當次查詢、不保存。即時資料暫缺時顯示表定或首末班。資料來源：交通部 TDX 平臺。目前只支援高雄。</dd></div>
+            <div data-command="輕軌" data-scopes="user group"><dt><code>#輕軌 [站名]</code><span class="command-scope">兩者</span></dt><dd>用法同 #捷運，兩個指令都查得到捷運與輕軌；同名時 #輕軌 先給輕軌站，例如 #輕軌 夢時代。</dd></div>
             <div data-command="早安" data-scopes="user group"><dt><code>#早安</code><span class="command-scope">兩者</span></dt><dd>早安問候、台灣時間與天氣提醒，再附一則「今日小常識」（全站同一則，每天換）。已同意公事時，另附今天的行事曆（私訊列與你相關的，群組列本群的；最多 5 件，沒有就不顯示）。</dd></div>
             <div data-command="午安" data-scopes="user group"><dt><code>#午安</code><span class="command-scope">兩者</span></dt><dd>午安問候、台灣時間與天氣提醒。已同意公事時，另附今天還沒到的與明天的行程（同 #早安 範圍，最多 5 件）。</dd></div>
             <div data-command="晚安" data-scopes="user group"><dt><code>#晚安</code><span class="command-scope">兩者</span></dt><dd>晚安問候、台灣時間與天氣提醒，再附一則「每日一笑」（全站同一則，每天換；純工作群不附）；已同意公事時另附今天還沒到的與明天的行程（同 #早安 範圍）。問候要加 # 或在群組 @ 小幫手才會回應；群組問候使用高雄市天氣。</dd></div>
@@ -133,6 +135,10 @@
             <ol class="chat">
               <li class="player"><div class="bubble"><span class="speaker">小美</span>#天氣 高雄</div></li>
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>高雄市 · 今明 36 小時</strong><p>今天白天：多雲 · 26～30°C · 雨 20% · 舒適<br>今晚：多雲 · 24～27°C · 雨 30% · 舒適<br>明天白天：短暫雨 · 25～29°C · 雨 60% · 舒適</p><p>資料來源：中央氣象署（範例）</p></div><div class="quick-options" aria-label="快速選項示意"><span>高雄</span><span>台北</span><span>台中</span><span>台南</span><span>笑話</span><span>說明</span><span>👋 先這樣</span></div></div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小美</span>#捷運 美麗島</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>🔴🟠 R10/O5 美麗島</strong><p>往 小港 · 約 3 分<br>往 岡山車站 · 進站中<br>🟠 往 西子灣 · 約 6 分<br>🟠 往 大寮 · 約 1 分</p><p>資料來源：交通部 TDX 平臺（範例）</p></div><div class="quick-options" aria-label="快速選項示意"><span>📍 傳送目前位置</span><span>#捷運 狀態</span><span>說明</span><span>👋 先這樣</span></div></div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小美</span>#輕軌 夢時代</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span><div class="sample-card"><strong>🟢 C5 夢時代</strong><p>往 籬仔內 · 約 4 分<br>往 前鎮之星 · 即時資料暫缺</p><p>部分為表定 · 資料來源：交通部 TDX 平臺（範例）</p></div></div></li>
               <li class="player"><div class="bubble"><span class="speaker">小美</span>#早安</div></li>
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>早安！台灣時間 08:00，高雄市多雲。記得吃早餐！（時間、天氣示意）</div></li>
               <li class="player"><div class="bubble"><span class="speaker">小美</span>#午安</div></li>
@@ -210,6 +216,6 @@
 
     <footer class="guide-footer"><a href="../privacy/">隱私權政策</a><a href="../">回大廳</a></footer>
   </main>
-  <script type="module" src="ui.js?v=6053a51"></script>
+  <script type="module" src="ui.js?v=4067eb9"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
-import { dailyScore, dailyDateLabel, dailyFinishedLater, dailyPracticeRequested } from '../../shared/daily.js?v=6053a51';
-import { showDailyBanner, appendDailySummary as appendSharedSummary } from '../../shared/daily-ui.js?v=6053a51';
+import { dailyScore, dailyDateLabel, dailyFinishedLater, dailyPracticeRequested, dailyResumeRequested } from '../../shared/daily.js?v=4067eb9';
+import { showDailyBanner, appendDailySummary as appendSharedSummary, appendResumeActions } from '../../shared/daily-ui.js?v=4067eb9';
 
 export { showDailyBanner };
 
@@ -12,13 +12,15 @@ export function appendDailySummary(doc, mount, daily) {
   }
 }
 
-export function showDailyClosed(doc, daily, error) {
+export function showDailyClosed(doc, daily, error, actions = {}) {
   showDailyBanner(doc, daily, error);
   const wrap = doc.querySelector('.board-wrap'); wrap.hidden = true;
   const box = doc.createElement('section'); box.className = 'daily-summary';
   if (daily?.completed) appendDailySummary(doc, box, daily);
-  // RS91:練習出錯(日期超出範圍、該日挑戰仍在收件)不是帳號問題 ⇒ 回大廳重選。
-  const practice = daily?.practice || !!dailyPracticeRequested(globalThis.location?.search ?? '');
+  appendResumeActions(doc, box, error, actions);
+  // RS91:練習出錯(日期超出範圍、該日挑戰仍在收件)不是帳號問題 ⇒ 回大廳重選。IR74:接回往日那局出錯亦同。
+  const search = globalThis.location?.search ?? '';
+  const practice = daily?.practice || daily?.resumed || !!dailyPracticeRequested(search) || !!dailyResumeRequested(search);
   const link = doc.createElement('a'); link.className = 'btn';
   link.href = error ? practice ? '../../' : '../../me/' : './';
   link.textContent = error ? practice ? '回大廳' : '前往登入／檢查帳號' : '玩一般模式'; box.append(link); wrap.before(box);
