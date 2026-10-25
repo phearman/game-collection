@@ -5,18 +5,18 @@ import {
   tally, movesOf, finishInfo, classifyGesture, normalizeShots, toSave, fromSave, isValidState,
   ROLES, roleOf, kickerTally, aimAt, nudgeAim, chooseCurve, chargeShot, releaseShot, cancelCharge,
   CURVES, CURVE_NAMES, POWER_HALF_MS, kickFlightMs, KICKER_WIN_GOALS,
-} from './logic.js?v=4067eb9';
-import { FIELD_H, aimFromPoint, drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js?v=4067eb9';
-import { createProfile } from '../../shared/profile.js?v=4067eb9';
-import { LocalStore } from '../../shared/stores/local.js?v=4067eb9';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=4067eb9';
-import { bindThemeToggle } from '../../shared/theme.js?v=4067eb9';
-import { play, music } from '../../shared/sound.js?v=4067eb9';
-import { setupHelp } from '../../shared/help.js?v=4067eb9';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=4067eb9';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=4067eb9';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=4067eb9';
-import { load, save } from '../../shared/storage.js?v=4067eb9';
+} from './logic.js?v=3baa66c';
+import { FIELD_H, aimFromPoint, drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js?v=3baa66c';
+import { createProfile } from '../../shared/profile.js?v=3baa66c';
+import { LocalStore } from '../../shared/stores/local.js?v=3baa66c';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=3baa66c';
+import { bindThemeToggle } from '../../shared/theme.js?v=3baa66c';
+import { play, music } from '../../shared/sound.js?v=3baa66c';
+import { setupHelp } from '../../shared/help.js?v=3baa66c';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=3baa66c';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=3baa66c';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=3baa66c';
+import { load, save } from '../../shared/storage.js?v=3baa66c';
 
 const GAME_ID = 'keeper';
 const DIFF_KEY = 'difficulty:keeper'; // 上次選的難度(開新局用)

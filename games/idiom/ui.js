@@ -1,18 +1,18 @@
 import {
   DIFFICULTIES, initState, currentQuestion, questionDone, answerState, nextState, tickState,
   cellsOf, totalErrors, scoreFor, resultOf, hasActed, settlementOf, lookupUrl, toSave, isValidState,
-} from './logic.js?v=4067eb9';
-import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=4067eb9';
-import { createProfile } from '../../shared/profile.js?v=4067eb9';
-import { LocalStore } from '../../shared/stores/local.js?v=4067eb9';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=4067eb9';
-import { bindThemeToggle } from '../../shared/theme.js?v=4067eb9';
-import { play, music } from '../../shared/sound.js?v=4067eb9';
-import { setupHelp } from '../../shared/help.js?v=4067eb9';
-import { formatDuration } from '../../shared/duration.js?v=4067eb9';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=4067eb9';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=4067eb9';
-import { confirmQuitBest } from '../../shared/quit.js?v=4067eb9';
+} from './logic.js?v=3baa66c';
+import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=3baa66c';
+import { createProfile } from '../../shared/profile.js?v=3baa66c';
+import { LocalStore } from '../../shared/stores/local.js?v=3baa66c';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=3baa66c';
+import { bindThemeToggle } from '../../shared/theme.js?v=3baa66c';
+import { play, music } from '../../shared/sound.js?v=3baa66c';
+import { setupHelp } from '../../shared/help.js?v=3baa66c';
+import { formatDuration } from '../../shared/duration.js?v=3baa66c';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=3baa66c';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=3baa66c';
+import { confirmQuitBest } from '../../shared/quit.js?v=3baa66c';
 
 const GAME_ID = 'idiom';
 const $ = (id) => document.getElementById(id);

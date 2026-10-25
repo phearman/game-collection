@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>我的紀錄 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=4067eb9">
+  <link rel="stylesheet" href="../shared/style.css?v=3baa66c">
   <style>
     .me-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; }
     .me-level { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -95,19 +95,20 @@
         </div>
         <div id="avatar-grid" class="avatar-grid" role="radiogroup" aria-label="選擇排行頭像" hidden></div>
         <label class="avatar-login"><input type="checkbox" id="avatar-login"> 使用登入頭像</label>
-        <p class="me-sub">打開後,你在 LINE 群組排行與網站排行會顯示 Google/GitHub 的大頭貼,其他玩家看得到。預設關閉。</p>
+        <p class="me-sub">打開後,你在 LINE 群組排行會顯示 Google/GitHub 的大頭貼,其他玩家看得到。預設關閉。網站今日排行在預設公開時一律使用預設 emoji;你明確打開「公開我的今日挑戰成績」或儲存公開設定後,才套用這裡的頭像設定。</p>
         <p id="avatar-msg" class="me-sub" role="status" aria-live="polite"></p>
       </div>
       <p id="avatar-signed-out" class="me-sub" hidden>登入後可以設定排行頭像</p>
       <div id="daily-public-box" class="avatar-box" hidden>
         <p class="avatar-title">今日挑戰排行</p>
+        <div class="daily-public-notice" id="daily-public-notice" role="status" hidden></div>
         <label class="avatar-login"><input type="checkbox" id="daily-public-on"> 公開我的今日挑戰成績</label>
         <div class="account-row">
           <label for="daily-public-name">排行暱稱</label>
           <input id="daily-public-name" class="daily-public-name" type="text" maxlength="20" autocomplete="off" placeholder="1~10 字">
           <button class="btn" id="daily-public-save" type="button">儲存</button>
         </div>
-        <p class="me-sub">打開後,你今天起的今日挑戰成績會用這個暱稱和排行頭像,出現在網站的今日排行,所有人都看得到。關閉後立即從排行移除。</p>
+        <p class="me-sub">預設公開;你的今日挑戰成績會用這個暱稱和排行頭像出現在網站今日排行,所有人都看得到。關閉後立即從排行移除。</p>
         <p id="daily-public-msg" class="me-sub" role="status" aria-live="polite"></p>
         <p class="me-sub"><a href="../daily-rank/">看今日排行</a></p>
       </div>
@@ -172,6 +173,6 @@
       <button class="btn" type="button" data-act="confirm">確認覆蓋</button>
     </div>
   </dialog>
-  <script type="module" src="ui.js?v=4067eb9"></script>
+  <script type="module" src="ui.js?v=3baa66c"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>今日排行 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=4067eb9">
+  <link rel="stylesheet" href="../shared/style.css?v=3baa66c">
 </head>
 <body>
   <main class="page daily-rank">
@@ -13,7 +13,8 @@
       <button class="btn" id="theme" type="button"></button>
     </header>
     <h1 class="brand">🏆 今日排行</h1>
-    <p class="me-sub" id="day-label">只列出自己在「我的紀錄」打開公開的玩家,每款最多 50 名。</p>
+    <div class="daily-public-notice" id="daily-public-notice" role="status" hidden></div>
+    <p class="me-sub" id="day-label">成績預設公開,可在「我的紀錄」關閉,每款最多 50 名。</p>
     <div class="daily-rank-tabs" id="tabs" role="tablist" aria-label="今日挑戰遊戲"></div>
     <section id="panel" role="tabpanel" aria-labelledby="">
       <p class="daily-rank-me" id="me" role="status" aria-live="polite"></p>
@@ -21,6 +22,6 @@
       <p class="me-sub" id="empty" hidden></p>
     </section>
   </main>
-  <script type="module" src="ui.js?v=4067eb9"></script>
+  <script type="module" src="ui.js?v=3baa66c"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-@import url("skins.css?v=4067eb9");
+@import url("skins.css?v=3baa66c");
 :root {
   --bg: #f6f5f1;
   --surface: #ffffff;
@@ -317,3 +317,7 @@ a.card:hover { border-color: var(--accent); }
   .daily-rank-list li[data-game="memory"] { grid-template-columns: 2.5em 40px minmax(0, 1fr); }
   .daily-rank-list li[data-game="memory"] .daily-rank-score { grid-column: 2 / -1; white-space: normal; overflow-wrap: anywhere; }
 }
+.daily-public-notice { padding: 12px; margin: 12px 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); overflow-wrap: anywhere; }
+.daily-public-notice p { margin: 0 0 8px; }
+.daily-public-notice a { color: var(--accent); }
+.daily-public-notice .btn { margin-left: 8px; white-space: normal; }
