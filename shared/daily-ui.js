@@ -1,4 +1,4 @@
-import { dailyDateLabel, dailyScore, dailyShare, dailyFinishedLater, DAILY_LOGIN_NOTICE, DAILY_FIXED_NOTE, DAILY_PRACTICE_NOTE, dailyPracticeRequested, dailyResumeRequested, DAILY_PAST_OPEN_TEXT, DAILY_RESUME_NO_SAVE_TEXT } from './daily.js?v=3baa66c';
+import { dailyDateLabel, dailyScore, dailyShare, dailyFinishedLater, dailyAbandonConfirm, DAILY_LOGIN_NOTICE, DAILY_FIXED_NOTE, DAILY_PRACTICE_NOTE, dailyPracticeRequested, dailyResumeRequested, DAILY_PAST_OPEN_TEXT, DAILY_RESUME_NO_SAVE_TEXT } from './daily.js?v=e2da0a7';
 
 // IR74:往日練習被「那天的每日局還在收件中」擋下 ⇒ 給「繼續那局」與「放棄那局」;翻翻樂接回時找不到原存檔
 // ⇒ 只給「放棄那局」(其他接回錯誤如已過期、網路、未登入不給)。放棄由伺服器標記(不列排行、不能再交),
@@ -17,7 +17,7 @@ export function appendResumeActions(doc, box, error, { game, client, confirm = g
   abandon.textContent = '放棄那局'; box.append(abandon);
   const note = doc.createElement('p'); note.hidden = true; box.append(note);
   abandon.onclick = async () => {
-    if (!confirm(`放棄 ${dailyDateLabel(day)} 的挑戰?這局不列入排行、之後也不能再交,但可以改練習這天的題目。`)) return;
+    if (!confirm(dailyAbandonConfirm(day))) return;
     abandon.disabled = true;
     try { await client.abandon(game, day); go(`./?practice=${day}`); }
     catch (failure) { note.textContent = failure.message; note.hidden = false; abandon.disabled = false; }

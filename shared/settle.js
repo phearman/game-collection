@@ -2,8 +2,8 @@
 // profile.finishPlay 是一次提交:失敗會把已寫的紀錄整批還原再丟錯。這裡接住錯誤,跳出共用對話框
 // 「重試 / 不存了,再玩一次」,不讓畫面停在「結算中」。重試 = 從目前的資料重新算一次;不存了 = 什麼都不記、開新局。
 
-import { isCloudOffline, OFFLINE_FINISH_TEXT } from './cloud-status.js?v=3baa66c';
-import { failureReason } from './stores/errors.js?v=3baa66c';
+import { isCloudOffline, OFFLINE_FINISH_TEXT } from './cloud-status.js?v=e2da0a7';
+import { failureReason } from './stores/errors.js?v=e2da0a7';
 
 export const DUPLICATE_FINISH_TEXT = '這一局已經在其他分頁結算過了';
 
@@ -48,6 +48,7 @@ export function showOfflineFinish(doc = globalThis.document) {
 
 export const FAIL_TEXT ='紀錄沒存成功(可能是儲存空間已滿或被瀏覽器封鎖)';
 export const CLOUD_FAIL_TEXT = '紀錄沒同步到雲端,請確認連線後再試一次';
+export const STALE_PROFILE_TEXT = '紀錄已過期:別的分頁有較新紀錄,請重新整理這一頁再玩';
 export const ROLLBACK_TEXT = '紀錄沒存成功,原本的紀錄也還沒還原完成。請先再試一次還原;一直失敗時,請到「我的紀錄」匯出備份';
 
 // 只顯示標準錯誤類別及有限的代碼,不可把 message、路徑或使用者識別碼帶到畫面。
@@ -57,11 +58,13 @@ const ERROR_NAMES = new Set(['Error', 'TypeError', 'RangeError', 'ReferenceError
 export function settleErrorCode(error) {
   const source = error?.rollbackFailed ? error.cause ?? error : error;
   const name = ERROR_NAMES.has(source?.name) ? source.name : 'Error';
+  const status = source?.status;
+  const safeStatus = Number.isInteger(status) && status >= 100 && status <= 599 ? ` / ${status}` : '';
   const code = source?.code;
   let safeCode = '';
   if (Number.isSafeInteger(code) && code >= 0 && code <= 99999) safeCode = String(code);
   else if (code === 'LOCAL_DATA_LIMIT' || (typeof code === 'string' && /^(?:[0-9]{5}|[0-9]{2}[A-Z][0-9]{2}|P[0-9]{4})$/.test(code))) safeCode = code;
-  return `錯誤代碼:${name}${safeCode ? ` / ${safeCode}` : ''}${error?.rollbackFailed ? ' / rollbackFailed' : ''}`;
+  return `錯誤代碼:${name}${safeStatus}${safeCode ? ` / ${safeCode}` : ''}${error?.rollbackFailed ? ' / rollbackFailed' : ''}`;
 }
 
 // → finishPlay 的結果;使用者選「不存了」⇒ null(呼叫端開新局)。
@@ -124,7 +127,7 @@ export function askRestoreOnly(error) {
 
 function show(text, restoreOnly, error) {
   const d = dialog();
-  d.querySelector('#settle-fail-text').textContent = text;
+  d.querySelector('#settle-fail-text').textContent = !restoreOnly && (error?.stale === true || error?.cause?.stale === true) ? STALE_PROFILE_TEXT : text;
   d.querySelector('#settle-fail-code').textContent = settleErrorCode(error);
   d.querySelector('[data-act="abandon"]').hidden = restoreOnly;
   d.querySelector('[data-act="retry"]').textContent = restoreOnly ? '再試一次還原' : '重試';

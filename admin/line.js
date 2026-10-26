@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=3baa66c';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=e2da0a7';
 export const GROUP_MODES = Object.freeze({ leisure:'休閒群',work_leisure:'工作群(含休閒)',work_only:'純工作群' });
 export function groupModeSelect(doc, selected = 'leisure') {
   const select=doc.createElement('select'); select.setAttribute('aria-label','群組模式');

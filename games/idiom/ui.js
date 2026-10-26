@@ -1,21 +1,69 @@
 import {
   DIFFICULTIES, initState, currentQuestion, questionDone, answerState, nextState, tickState,
   cellsOf, totalErrors, scoreFor, resultOf, hasActed, settlementOf, lookupUrl, toSave, isValidState,
-} from './logic.js?v=3baa66c';
-import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=3baa66c';
-import { createProfile } from '../../shared/profile.js?v=3baa66c';
-import { LocalStore } from '../../shared/stores/local.js?v=3baa66c';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=3baa66c';
-import { bindThemeToggle } from '../../shared/theme.js?v=3baa66c';
-import { play, music } from '../../shared/sound.js?v=3baa66c';
-import { setupHelp } from '../../shared/help.js?v=3baa66c';
-import { formatDuration } from '../../shared/duration.js?v=3baa66c';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=3baa66c';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=3baa66c';
-import { confirmQuitBest } from '../../shared/quit.js?v=3baa66c';
+  isComicList, comicFor, comicUrl,
+} from './logic.js?v=e2da0a7';
+import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=e2da0a7';
+import { createProfile } from '../../shared/profile.js?v=e2da0a7';
+import { LocalStore } from '../../shared/stores/local.js?v=e2da0a7';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=e2da0a7';
+import { bindThemeToggle } from '../../shared/theme.js?v=e2da0a7';
+import { play, music } from '../../shared/sound.js?v=e2da0a7';
+import { setupHelp } from '../../shared/help.js?v=e2da0a7';
+import { formatDuration } from '../../shared/duration.js?v=e2da0a7';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=e2da0a7';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=e2da0a7';
+import { confirmQuitBest } from '../../shared/quit.js?v=e2da0a7';
+
+// One promise per page, including failures and timeouts. Importing never blocks render().
+export function createComicsLoader() {
+  let cached;
+  return function loadComics({
+    importer = () => import('https://phearman.github.io/classical-chinese-kids-site/idioms/comics.js'),
+    timeoutMs = 3000,
+  } = {}) {
+    if (!cached) cached = (async () => {
+      let timer;
+      try {
+        const module = await Promise.race([
+          Promise.resolve().then(importer),
+          new Promise((resolve) => { timer = setTimeout(() => resolve(null), timeoutMs); }),
+        ]);
+        // Keep array entries; comicFor ignores placeholders and invalid entries individually.
+        return isComicList(module?.COMICS) ? module.COMICS : [];
+      } catch {
+        return [];
+      } finally {
+        clearTimeout(timer);
+      }
+    })();
+    return cached;
+  };
+}
+
+export const loadComics = createComicsLoader();
+
+// Each render invalidates older requests, even if a new round repeats the same word.
+export function createComicLink({ link, load = loadComics }) {
+  let revision = 0;
+  return async (question, done) => {
+    const request = ++revision;
+    link.hidden = true;
+    link.removeAttribute('href');
+    if (!done) return;
+    const comics = await load();
+    if (request !== revision) return;
+    const href = comicUrl(comicFor(comics, question.word));
+    if (href) {
+      link.href = href;
+      link.hidden = false;
+    }
+  };
+}
 
 const GAME_ID = 'idiom';
 const $ = (id) => document.getElementById(id);
+const renderComicLink = createComicLink({ link: $('comic') });
 // Scoped validator injection keeps this game's save/load on the common profile API.
 const profile = await createProfile({ store: new LocalStore() });
 let state;
@@ -105,6 +153,7 @@ function render() {
   $('lookup').hidden = !done;
   if (done) $('lookup').href = lookupUrl(q.word);
   else $('lookup').removeAttribute('href');
+  void renderComicLink(q, done);
   $('next').hidden = !done || state.status === 'win';
   $('next').disabled = !!ended;
   $('result').hidden = !ended || ended.result === 'quit';

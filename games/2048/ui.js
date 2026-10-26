@@ -2,19 +2,19 @@
 import {
   move, initState, stepState, undoState, continueState, settleState, canUndo, isInvalidMove, shownBest,
   toSave, fromSave, maxTile, overlayFor, isValidState, suggestMove,
-} from './logic.js?v=3baa66c';
-import { createProfile } from '../../shared/profile.js?v=3baa66c';
-import { LocalStore } from '../../shared/stores/local.js?v=3baa66c';
-import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js?v=3baa66c';
-import { bindThemeToggle } from '../../shared/theme.js?v=3baa66c';
-import { play, music } from '../../shared/sound.js?v=3baa66c';
-import { setupHelp } from '../../shared/help.js?v=3baa66c';
-import { swipe } from '../../shared/touch.js?v=3baa66c';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=3baa66c';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=3baa66c';
-import { quitBestNote } from '../../shared/quit.js?v=3baa66c';
-import { DEMO_STUCK_LEFT, DEMO_FULL } from './demo.js?v=3baa66c';
-import { load, save } from '../../shared/storage.js?v=3baa66c';
+} from './logic.js?v=e2da0a7';
+import { createProfile } from '../../shared/profile.js?v=e2da0a7';
+import { LocalStore } from '../../shared/stores/local.js?v=e2da0a7';
+import { ACHIEVEMENTS, resultOnGameOver, resultOnNewGame, needsQuitConfirm } from '../../shared/progress.js?v=e2da0a7';
+import { bindThemeToggle } from '../../shared/theme.js?v=e2da0a7';
+import { play, music } from '../../shared/sound.js?v=e2da0a7';
+import { setupHelp } from '../../shared/help.js?v=e2da0a7';
+import { swipe } from '../../shared/touch.js?v=e2da0a7';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=e2da0a7';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=e2da0a7';
+import { quitBestNote } from '../../shared/quit.js?v=e2da0a7';
+import { DEMO_STUCK_LEFT, DEMO_FULL } from './demo.js?v=e2da0a7';
+import { load, save } from '../../shared/storage.js?v=e2da0a7';
 
 const GAME_ID = '2048';
 const MODE_KEY = 'mode:2048'; // 上次選的模式:normal / kids(RS6 小朋友模式 = 輔助局)

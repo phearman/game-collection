@@ -1,0 +1,9 @@
+.ledger-page { max-width: 48rem; min-width: 0; }
+.ledger-page *, .ledger-page *::before, .ledger-page *::after { box-sizing: border-box; }
+.ledger-page h1, .ledger-page h2, .ledger-page p, .ledger-page li { overflow-wrap: anywhere; min-width: 0; }
+.ledger-page ul, .ledger-page ol { padding-inline-start: 1.3rem; }
+.ledger-page li { margin-block: .65rem; }
+.ledger-entries { list-style: none; padding: 0 !important; display: grid; gap: .6rem; }
+.ledger-entries li { border: 1px solid var(--border); border-radius: .6rem; padding: .8rem; margin: 0; }
+.ledger-entries span { display: block; }
+.ledger-page button { max-width: 100%; white-space: normal; min-height: 44px; }

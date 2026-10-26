@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>帳本明細 · 遊戲集錦</title>
+  <link rel="stylesheet" href="../shared/style.css?v=e2da0a7">
+  <link rel="stylesheet" href="style.css?v=e2da0a7">
+</head>
+<body>
+  <main class="page ledger-page">
+    <header class="topbar"><a class="btn" href="../">← 大廳</a><button class="btn" id="theme" type="button"></button></header>
+    <h1 id="name">帳本明細</h1>
+    <p id="notice" role="status" aria-live="polite">讀取中…</p>
+    <section id="detail" hidden>
+      <p id="meta"></p>
+      <p id="retention"></p>
+      <h2>統計</h2><p id="total"></p><p id="remainder"></p>
+      <ul id="people"></ul>
+      <h2>建議轉帳</h2><ul id="transfers"></ul>
+      <h2>每筆明細</h2><ol id="entries" class="ledger-entries"></ol>
+      <button id="csv" class="btn" type="button">下載 CSV</button>
+      <p>在 Google 試算表用 檔案 → 匯入 打開</p>
+    </section>
+  </main>
+  <script type="module" src="ui.js?v=e2da0a7"></script>
+</body>
+</html>

@@ -4,28 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>遊戲集錦</title>
-  <link rel="stylesheet" href="shared/style.css?v=3baa66c">
+  <link rel="stylesheet" href="shared/style.css?v=e2da0a7">
   <!-- IR32/IR46:大廳模組一次並行下載,不必等上一層 import 解析完才發現下一層(原本要一層層往返)。
        清單 = 大廳靜態 import 全集 + 登入用的 auth.js;tests/lobby-preload.test.js 會比對,漏列或多列都會失敗。 -->
-  <link rel="modulepreload" href="shared/games.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/profile-core.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/stores/local.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/progress.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/stores/errors.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/settle.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/cloud-status.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/supabase-config.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/theme.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/storage.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/sound.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/skin.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/whats-new.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/changelog.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/daily.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/lobby.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/duration.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/skin-compare.js?v=3baa66c">
-  <link rel="modulepreload" href="shared/auth.js?v=3baa66c">
+  <link rel="modulepreload" href="shared/games.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/profile-core.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/stores/local.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/progress.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/stores/errors.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/settle.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/cloud-status.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/supabase-config.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/theme.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/storage.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/sound.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/skin.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/whats-new.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/changelog.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/daily.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/lobby.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/duration.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/skin-compare.js?v=e2da0a7">
+  <link rel="modulepreload" href="shared/auth.js?v=e2da0a7">
 </head>
 <body>
   <main class="page">
@@ -43,6 +43,7 @@
       <div class="daily-public-notice" id="daily-public-notice" role="status" hidden></div>
       <p id="daily-message" role="status">登入後才能參加每日挑戰</p>
       <p class="daily-note">遊戲固定、每天換題目</p>
+      <div id="daily-open-past" hidden></div>
       <div id="daily-games" class="daily-games"></div>
       <details class="daily-practice" id="daily-practice" hidden>
         <summary>🔁 重玩往日題目</summary>
@@ -78,19 +79,19 @@
     <footer class="lobby-footer"><a href="changelog/">更新紀錄</a><span aria-hidden="true"> · </span><a href="privacy/">隱私權政策</a><span aria-hidden="true"> · </span><a id="feedback-link" href="me/">意見回饋</a><span aria-hidden="true"> · </span><a href="line/">LINE 小幫手使用說明</a></footer>
   </main>
   <script type="module">
-    import { GAMES } from './shared/games.js?v=3baa66c';
-    import { createProfile } from './shared/profile-core.js?v=3baa66c';
-    import { LocalStore } from './shared/stores/local.js?v=3baa66c';
-    import { bindThemeToggle } from './shared/theme.js?v=3baa66c';
-    import { cloudEnabled } from './shared/supabase-config.js?v=3baa66c';
-    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=3baa66c';
-    import { mountDailyLobby } from './shared/daily.js?v=3baa66c';
-    import { mountLobby } from './shared/lobby.js?v=3baa66c';
+    import { GAMES } from './shared/games.js?v=e2da0a7';
+    import { createProfile } from './shared/profile-core.js?v=e2da0a7';
+    import { LocalStore } from './shared/stores/local.js?v=e2da0a7';
+    import { bindThemeToggle } from './shared/theme.js?v=e2da0a7';
+    import { cloudEnabled } from './shared/supabase-config.js?v=e2da0a7';
+    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=e2da0a7';
+    import { mountDailyLobby } from './shared/daily.js?v=e2da0a7';
+    import { mountLobby } from './shared/lobby.js?v=e2da0a7';
 
     bindThemeToggle(document.getElementById('theme'));
     document.getElementById('feedback-link').addEventListener('click', async (event) => {
       event.preventDefault();
-      const { openFeedback } = await import('./shared/feedback.js?v=3baa66c');
+      const { openFeedback } = await import('./shared/feedback.js?v=e2da0a7');
       await openFeedback();
     });
 
@@ -102,8 +103,8 @@
     setupWhatsNew({ hasHistory: hasPlayHistory(sum) });
     void mountDailyLobby(document).catch(() => {});
     if (cloudEnabled) {
-      const { auth, notice } = await (await import('./shared/auth.js?v=3baa66c')).getCloudRuntime();
-      const { initDailyPublicNotice } = await import('./shared/daily-public.js?v=3baa66c');
+      const { auth, notice } = await (await import('./shared/auth.js?v=e2da0a7')).getCloudRuntime();
+      const { initDailyPublicNotice } = await import('./shared/daily-public.js?v=e2da0a7');
       initDailyPublicNotice({ doc: document, auth, meLink: 'me/' });
       const icon = document.getElementById('account-link');
       icon.hidden = false;
@@ -123,6 +124,6 @@
       }
     }
   </script>
-  <script type="module" src="shared/skin-compare.js?v=3baa66c"></script>
+  <script type="module" src="shared/skin-compare.js?v=e2da0a7"></script>
 </body>
 </html>

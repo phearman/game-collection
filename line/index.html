@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="遊戲集錦 LINE 小幫手使用說明：開遊戲、傳回饋、綁定成績、加入群組排行與查天氣的指令及對話範例。">
   <title>LINE 小幫手使用說明 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=3baa66c">
-  <link rel="stylesheet" href="style.css?v=3baa66c">
+  <link rel="stylesheet" href="../shared/style.css?v=e2da0a7">
+  <link rel="stylesheet" href="style.css?v=e2da0a7">
 </head>
 <body>
   <main class="page line-guide">
@@ -125,7 +125,7 @@
             <div data-command="急轉彎" data-scopes="user group"><dt><code>#急轉彎</code><span class="command-scope">兩者</span></dt><dd>先抽機智問答題目，按「看答案」才揭曉答案並評分；也可用 #笑話 急轉彎。看答案只限自己抽到的題目。抽題計生活次數，看答案不另計次。資料庫失效時暫停新分類與急轉彎出題，原五類仍有備援但不能評分。</dd></div>
             <div data-command="笑話排行" data-scopes="user group"><dt><code>#笑話排行</code><span class="command-scope">兩者</span></dt><dd>近 30 天至少 3 人評分的前五名，顯示平均分、評分人數與出處；急轉彎只顯示題目。</dd></div>
             <div data-command="投稿" data-scopes="user group"><dt><code>#投稿 內容</code><span class="command-scope">兩者</span></dt><dd>投稿 10～200 字笑話，不含網址、電話或 email。每人每天最多 3 則，預設生活分類，管理者審核後才上架。</dd></div>
-            <div data-command="新聞" data-scopes="user group"><dt><code>#新聞</code><span class="command-scope">兩者</span></dt><dd>中央通訊社生活新聞，每頁 5 則標題與原站連結，不轉載內文。</dd></div>
+            <div data-command="新聞" data-scopes="user group"><dt><code>#新聞</code><span class="command-scope">兩者</span></dt><dd>中央通訊社生活新聞，每頁 5 則標題與原站連結，不轉載內文。加關鍵字可只看標題含該詞的新聞，例如 #新聞 颱風。關鍵字後的數字仍屬關鍵字，例如 #新聞 iPhone 17；翻頁請按「再來 5 則」或輸入 #新聞 iPhone 17 第2頁。</dd></div>
             <div data-command="行事曆" data-scopes="user group"><dt><code>#行事曆 [下週|本月|M/D]</code><span class="command-scope">兩者</span></dt><dd>看未來 7 天的約、提醒與交辦；私訊須公事同意，群組只列本群並附揪團報名截止，休閒群也可用。最多 15 件、群組最多 7 天，不計公事查詢次數。</dd></div>
           </dl>
           <p class="guide-note">生活指令（含新聞）每人每天共 30 次，私訊與群組合計，台灣午夜重算；失敗也計次。不主動推播。</p>
@@ -214,8 +214,24 @@
       <details><summary>天氣怎麼一直是高雄？新聞為什麼只有標題？</summary><p>第一次查天氣或在群組省略縣市時預設高雄市。可傳 #天氣 台北 指定縣市，私訊下次會沿用；群組不改私人偏好。新聞來源為中央通訊社生活新聞，只列標題與原站連結，不轉載內文；請點原站連結閱讀完整報導。</p></details>
     </section>
 
+    <section class="guide-panel" aria-labelledby="ledger-heading">
+      <h2 id="ledger-heading">📒 主題帳本與分帳</h2>
+      <p>每個主題開一本帳；群組與私訊都可用，首次使用須同意公事資料記錄。</p>
+      <dl class="command-list">
+        <div data-command="帳本" data-scopes="user group"><dt><code>#帳本 台南兩天一夜</code><span class="command-scope">私訊 / 群組</span></dt><dd>名稱 1～20 字。群組建立人自動參加，其他人按「🙋 加入分帳」；私訊開個人帳本，只有你看得到。</dd></div>
+        <div data-command="記帳" data-scopes="user group"><dt><code>#記帳 晚餐 1200</code><span class="command-scope">私訊 / 群組</span></dt><dd>一本直接記，多本先問，2 分鐘內按了才記。可指定「#記帳 帳1025-1 晚餐 1,200元」；在群組替別人記請 @一人。只接受正整數，私訊付款人是自己。私訊記進你參加的群組帳本不會通知群組。</dd></div>
+        <div data-command="帳目" data-scopes="user group"><dt><code>#帳目</code><span class="command-scope">私訊 / 群組</span></dt><dd>查看每人已付、應攤和建議轉帳。平均分攤，零頭由建立人吸收。私訊只列個人與自己參加的群組帳本，讀群組帳本前會驗證成員身分。明細連結私訊給按的人，7 天有效、最多讀取 20 次，請勿分享。</dd></div>
+        <div data-command="結帳" data-scopes="user group"><dt><code>#結帳 帳1025-1</code><span class="command-scope">私訊 / 群組</span></dt><dd>只有建立人能確認；群組帳本結算一律發佈到群組，發佈失敗仍未結帳。結帳後不能再記、刪或改記。結帳後保存 180 天；未結帳且 180 天沒有新帳目會清除。請在明細頁下載 CSV 留存，再用 Google 試算表「檔案 → 匯入」打開。</dd></div>
+      </dl>
+      <ol class="chat" aria-label="帳務指令範例">
+        <li class="player"><div class="bubble">#帳本 台南兩天一夜</div></li>
+        <li class="player"><div class="bubble">#記帳 晚餐 1200</div></li>
+        <li class="player"><div class="bubble">#帳目</div></li>
+        <li class="player"><div class="bubble">#結帳 帳1025-1</div></li>
+      </ol>
+    </section>
     <footer class="guide-footer"><a href="../privacy/">隱私權政策</a><a href="../">回大廳</a></footer>
   </main>
-  <script type="module" src="ui.js?v=3baa66c"></script>
+  <script type="module" src="ui.js?v=e2da0a7"></script>
 </body>
 </html>

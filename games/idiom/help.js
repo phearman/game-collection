@@ -1,9 +1,9 @@
-import { initState, answerState, currentQuestion, cellsOf, questionScore } from './logic.js?v=3baa66c';
+import { initState, answerState, currentQuestion, cellsOf, questionScore } from './logic.js?v=e2da0a7';
 
 export const HELP_RULES = [
   '一局 10 題,從 6 個候選字中選字填空。',
   '入門、一般挖 1 字;挑戰挖 2 字,依亮框由左至右填。',
-  '答錯會標紅,可再選;全題答對後可查看《成語典》。',
+  '答錯會標紅,可再選;全題答對後可查看《成語典》。有典故漫畫的成語另有「📖 看漫畫」。',
   '每題 100 分,每錯一次扣 30 分,最低 10 分;時間另記。',
   '填完 10 題即勝利,結算分數、錯誤數與時間。',
 ];

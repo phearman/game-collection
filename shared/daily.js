@@ -1,5 +1,5 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=3baa66c';
-import { formatDuration } from './duration.js?v=3baa66c';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=e2da0a7';
+import { formatDuration } from './duration.js?v=e2da0a7';
 
 export const DAILY_GAMES = ['sudoku', 'minesweeper', 'memory'];
 export const DAILY_NAMES = { wordle: 'Wordle', sudoku: '數獨', minesweeper: '踩地雷', memory: '翻翻樂' };
@@ -9,6 +9,7 @@ export const DAILY_FIXED_NOTE = '遊戲固定、每天換題目';
 export const DAILY_FAST_GAME_MIN_SECONDS = 20;
 export const taiwanDay = (stamp) => new Date(Number(stamp) + 8 * 3600000).toISOString().slice(0, 10);
 export const dailyDateLabel = (day) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`;
+export const dailyAbandonConfirm = (day) => `放棄 ${dailyDateLabel(day)} 的挑戰?這局不列入排行、之後也不能再交,但可以改練習這天的題目。`;
 export const dailySlot = (game) => `${game}-daily`;
 // IR68:D 日開始的挑戰收到 D+1 台灣中午 12:00,仍計入 D 日。期限只由伺服器(SQL daily_deadline)判定;
 // 這兩個常數是它的鏡像,只給文案與測試用,改期限時兩邊一起改。
@@ -104,10 +105,14 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
   fetch: request = globalThis.fetch } = {}) {
   let epoch = 0;
   let identity = auth?.session?.user.id;
+  const identityListeners = new Set();
   const unsubscribe = auth?.subscribe(() => {
-    if (identity !== auth.session?.user.id) { identity = auth.session?.user.id; epoch++; }
+    if (identity !== auth.session?.user.id) {
+      identity = auth.session?.user.id; epoch++;
+      for (const listener of identityListeners) listener();
+    }
   });
-  async function call(name, body = {}) {
+  async function requestDaily(path, body) {
     const owner = auth?.session?.user.id;
     const version = epoch;
     const check = () => {
@@ -118,9 +123,9 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
     if (!token) throw new Error(DAILY_LOGIN_NOTICE);
     let response;
     try {
-      response = await request(`${url.replace(/\/$/, '')}/rest/v1/rpc/${name}`, {
-        method: 'POST', headers: { apikey: key, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body), signal: AbortSignal.timeout(10000), referrerPolicy: 'no-referrer',
+      response = await request(`${url.replace(/\/$/, '')}/rest/v1/${path}`, {
+        method: body === undefined ? 'GET' : 'POST', headers: { apikey: key, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(10000), referrerPolicy: 'no-referrer',
       });
     } catch { check(); throw new Error('每日挑戰連線失敗，請稍後重試'); }
     check();
@@ -135,15 +140,21 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
     { code: ['DAILY_EXPIRED', 'DAILY_GONE', 'DAILY_CLEARED', 'DAILY_PAST_RANGE', 'DAILY_PAST_OPEN', 'DAILY_RESUME_DENIED'].includes(data?.message) ? data.message : undefined });
     return data;
   }
+  const call = (name, body = {}) => requestDaily(`rpc/${name}`, body);
   const gameCall = (name, game) => {
     if (!DAILY_GAMES.includes(game)) throw new Error('不支援的每日遊戲');
     return call(name, { p_game: game });
   };
   return {
     get userId() { return auth?.session?.user.id; },
+    onIdentityChange(listener) { identityListeners.add(listener); return () => identityListeners.delete(listener); },
     seed: (game) => gameCall('daily_seed', game),
     start: (game) => gameCall('start_daily', game),
     today: () => call('my_daily_today'),
+    // IR76:daily_results_self RLS 只准本人 select;started_at 為 NOT NULL,有列即已開始。
+    openPast: (day) => requestDaily(`daily_results?${new URLSearchParams({
+      select: 'game_id,day', day: `eq.${day}`, finished_at: 'is.null', cleared: 'is.false',
+    })}`),
     pastSeed: (game, day) => {
       if (!DAILY_GAMES.includes(game)) throw new Error('不支援的每日遊戲');
       return call('daily_past_seed', { p_game: game, p_day: day });
@@ -160,12 +171,12 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
     finish: (game, day, result, guesses, detail = {}) => call('finish_daily', {
       p_game: game, p_result: result, p_guesses: guesses, p_detail: { ...detail, daily: day },
     }),
-    dispose: () => unsubscribe?.(),
+    dispose: () => { unsubscribe?.(); identityListeners.clear(); },
   };
 }
 export async function browserDailyClient() {
   if (!cloudEnabled) return createDailyClient();
-  const { auth } = await (await import('./auth.js?v=3baa66c')).getCloudRuntime();
+  const { auth } = await (await import('./auth.js?v=e2da0a7')).getCloudRuntime();
   return createDailyClient({ auth });
 }
 
@@ -220,14 +231,34 @@ export function mountDailyPractice(doc, today) {
   select.onchange = draw; draw();
   practice.hidden = false;
 }
-export async function mountDailyLobby(doc, client, createClient = browserDailyClient) {
+export async function mountDailyLobby(doc, client, createClient = browserDailyClient,
+  { now = Date.now, confirm = globalThis.confirm,
+    setTimeout = globalThis.setTimeout, clearTimeout = globalThis.clearTimeout } = {}) {
   const list = doc.getElementById('daily-games');
   const message = doc.getElementById('daily-message');
+  const openPast = doc.getElementById('daily-open-past');
+  let version = 0;
+  let identitySubscribed = false, deadlineTimer;
+  // 以身分/遊戲/日期保存請求狀態,重繪後的新入口仍共用同一筆進行中的放棄。
+  const pendingAbandons = new Set();
+  const visibleActions = new Map();
+  const hideOpenPast = () => { if (openPast) { openPast.hidden = true; openPast.replaceChildren(); } };
   const render = async () => {
+    const rendering = ++version;
+    clearTimeout(deadlineTimer); deadlineTimer = undefined;
+    visibleActions.clear();
+    hideOpenPast();
     list.replaceChildren();
     try {
       client ??= await createClient();
+      if (!identitySubscribed) {
+        client.onIdentityChange?.(() => { void render(); });
+        identitySubscribed = true;
+      }
+      const owner = client.userId;
+      const current = () => rendering === version && owner === client.userId;
       const today = await client.today();
+      if (!current()) return;
       message.textContent = `📅 ${dailyDateLabel(today.day)} 挑戰 · 每人每款一天一次`;
       for (const game of DAILY_GAMES) {
         const row = today.results.find((r) => r.game_id === game);
@@ -237,7 +268,59 @@ export async function mountDailyLobby(doc, client, createClient = browserDailyCl
         list.append(link);
       }
       mountDailyPractice(doc, today.day);
+      const yesterday = dailyPracticeDays(today.day, 1)[0];
+      if (!openPast || now() >= dailyDeadline(yesterday)) return;
+      // 提示是額外唯讀查詢;失敗不能影響今日按鈕與往日練習。
+      let rows;
+      try { rows = await client.openPast(yesterday); } catch { return; }
+      if (!current() || now() >= dailyDeadline(yesterday) || !Array.isArray(rows)) return;
+      for (const game of DAILY_GAMES) {
+        if (!rows.some((row) => row.game_id === game && row.day === yesterday)) continue;
+        const row = doc.createElement('div'); row.className = 'daily-open-past-row';
+        const text = doc.createElement('p');
+        text.textContent = `⏳ ${dailyDateLabel(yesterday)} 的${DAILY_NAMES[game]}挑戰還沒完成,收到今天中午 12:00`;
+        const actions = doc.createElement('div'); actions.className = 'daily-games';
+        const resume = doc.createElement('a'); resume.className = 'btn';
+        resume.href = `games/${game}/?resume=${yesterday}`; resume.textContent = '繼續那局';
+        const abandon = doc.createElement('button'); abandon.type = 'button'; abandon.className = 'btn';
+        abandon.textContent = '放棄那局';
+        const note = doc.createElement('p'); note.hidden = true; note.setAttribute('role', 'status');
+        const operation = JSON.stringify([owner, game, yesterday]);
+        const updateActions = (failure) => {
+          if (!current()) return;
+          const pending = pendingAbandons.has(operation);
+          abandon.disabled = pending; resume.setAttribute('aria-disabled', String(pending)); resume.tabIndex = pending ? -1 : 0;
+          note.hidden = !failure;
+          if (failure) note.textContent = failure.message;
+        };
+        visibleActions.set(operation, updateActions); updateActions();
+        resume.onclick = (event) => { if (abandon.disabled) event.preventDefault(); };
+        abandon.onclick = async () => {
+          if (!current() || pendingAbandons.has(operation) || !confirm(dailyAbandonConfirm(yesterday))) return;
+          pendingAbandons.add(operation); updateActions();
+          try {
+            await client.abandon(game, yesterday);
+            pendingAbandons.delete(operation);
+            if (owner === client.userId) await render();
+          }
+          catch (failure) {
+            pendingAbandons.delete(operation);
+            if (owner === client.userId) visibleActions.get(operation)?.(failure);
+          }
+        };
+        actions.append(resume, abandon); row.append(text, actions, note); openPast.append(row);
+      }
+      openPast.hidden = openPast.children.length === 0;
+      if (!openPast.hidden) {
+        deadlineTimer = setTimeout(() => {
+          if (!current()) return;
+          ++version; hideOpenPast(); visibleActions.clear(); deadlineTimer = undefined;
+        }, Math.max(0, dailyDeadline(yesterday) - now()));
+        deadlineTimer?.unref?.();
+      }
     } catch {
+      if (rendering !== version) return;
+      hideOpenPast();
       const practice = doc.getElementById('daily-practice');
       if (practice?.tagName === 'DETAILS') practice.hidden = true;
       message.textContent = DAILY_LOGIN_NOTICE;

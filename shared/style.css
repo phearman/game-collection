@@ -1,4 +1,4 @@
-@import url("skins.css?v=3baa66c");
+@import url("skins.css?v=e2da0a7");
 :root {
   --bg: #f6f5f1;
   --surface: #ffffff;
@@ -290,6 +290,10 @@ a.card:hover { border-color: var(--accent); }
 .daily-card h2 { font-size: 18px; margin: 0; }
 .daily-games { display: flex; flex-wrap: wrap; gap: 8px; }
 .daily-games .btn { flex: 1 1 140px; white-space: normal; overflow-wrap: anywhere; }
+.daily-open-past-row { margin-bottom: 12px; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); overflow-wrap: anywhere; }
+.daily-open-past-row p { margin: 0 0 8px; }
+.daily-open-past-row .btn { min-width: 0; }
+.daily-open-past-row [aria-disabled="true"] { opacity: 0.5; cursor: default; }
 .daily-rank-link { margin: 8px 0 0; }
 .daily-practice { margin-top: 8px; }
 .daily-practice summary { display: list-item; min-height: 44px; padding: 10px 0; box-sizing: border-box; cursor: pointer; }

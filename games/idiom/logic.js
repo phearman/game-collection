@@ -1,5 +1,5 @@
 // Pure game rules; no DOM, storage or clock reads. All randomness is injectable.
-import { WORDS, AMBIGUITY_LEXICON } from './words.js?v=3baa66c';
+import { WORDS, AMBIGUITY_LEXICON } from './words.js?v=e2da0a7';
 
 export const ROUND_SIZE = 10;
 export const DIFFICULTIES = Object.freeze({
@@ -97,6 +97,20 @@ export function cellsOf(s) {
 }
 
 export const lookupUrl = (word) => `https://dict.idioms.moe.edu.tw/idiomList.jsp?webMd=2&la=0&idiom=${encodeURIComponent(word)}`;
+
+const validComicSlug = (slug) => typeof slug === 'string' && /^[a-z0-9-]{1,80}$/.test(slug);
+export const isComicList = (comics) => Array.isArray(comics);
+
+export function comicFor(comics, word) {
+  if (typeof word !== 'string' || !isComicList(comics)) return null;
+  return comics.find((comic) => comic !== null && typeof comic === 'object' && !Array.isArray(comic)
+    && typeof comic.word === 'string' && comic.ready === true && validComicSlug(comic.slug)
+    && comic.word === word)?.slug ?? null;
+}
+
+export const comicUrl = (slug) => validComicSlug(slug)
+  ? `https://phearman.github.io/classical-chinese-kids-site/idioms/comic.html?id=${encodeURIComponent(slug)}` : null;
+
 export const detailOf = (s) => ({ questions: s.index + (questionDone(s) ? 1 : 0), errors: totalErrors(s), seconds: s.seconds });
 export const settlementOf = (s, result = resultOf(s)) => ({ result, score: result === 'win' ? scoreFor(s) : 0, difficulty: s.difficulty, detail: detailOf(s) });
 export const toSave = (s) => structuredClone(s);
