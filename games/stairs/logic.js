@@ -1,7 +1,7 @@
 // 下樓梯規則層:純函式,不碰 DOM。座標單位 = 場地單位,x 往右、y 往下(0 在畫面頂端)。
 // 規則正典:workbook/plans/stairs.md「規則(驗收依據)」。
-import { STAGES, ADVENTURE, stageFor, directionFor, stageComplete } from './stages.js?v=e2da0a7';
-export { STAGES, ADVENTURE, stageFor, directionFor, flipNotice, goalText, goalProgress, stageComplete } from './stages.js?v=e2da0a7';
+import { STAGES, ADVENTURE, stageFor, directionFor, stageComplete } from './stages.js?v=37f6877';
+export { STAGES, ADVENTURE, stageFor, directionFor, flipNotice, goalText, goalProgress, stageComplete } from './stages.js?v=37f6877';
 
 export const W = 9; // 場地寬
 export const H = 16; // 場地高

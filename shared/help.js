@@ -1,8 +1,8 @@
 // 共用「? 玩法」說明與示範(RS3)。每款遊戲提供規則文字與示範步驟,
 // 第一次進入該遊戲自動開啟一次;之後由頂列的「? 玩法」按鈕開啟。
-import { load, save } from './storage.js?v=e2da0a7';
-import { GAMES } from './games.js?v=e2da0a7';
-import { SONGS, GAME_MUSIC, DEFAULT_SONG, musicChoice, setMusicChoice, globalMusicChoice, setGlobalMusicChoice } from './sound.js?v=e2da0a7';
+import { load, save } from './storage.js?v=37f6877';
+import { GAMES } from './games.js?v=37f6877';
+import { SONGS, GAME_MUSIC, DEFAULT_SONG, musicChoice, setMusicChoice, globalMusicChoice, setGlobalMusicChoice } from './sound.js?v=37f6877';
 
 // 依遊戲 id 取編號(DV11;code 依 games.js 順序固定 G1 起、新遊戲往後編、不重排)。沒有 code 或查無此遊戲回 null。
 export function gameCode(id) {
@@ -133,7 +133,7 @@ export function setupHelp({ gameId, title, rules, demo, mountAfter, onClose }) {
   dlg.addEventListener('click', async (e) => {
     if (e.target.closest('[data-feedback]')) {
       close();
-      const { openFeedback } = await import('./feedback.js?v=e2da0a7');
+      const { openFeedback } = await import('./feedback.js?v=37f6877');
       await openFeedback({ gameId, meHref: '../../me/' });
       return;
     }
