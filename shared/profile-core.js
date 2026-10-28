@@ -1,14 +1,15 @@
+import { parseDailySlot } from './daily-slots.js?v=be1ebb6';
 // 個人紀錄 API 核心(RS1):規則一律呼叫 progress.js,這裡只串接 store。
 // 不載入各遊戲的 logic.js(IR46):大廳只讀摘要,直接用本檔;要讀存檔或匯入的頁面用 profile.js(帶各遊戲存檔檢查)。
-import { GAMES } from './games.js?v=37f6877';
-import { LocalStore, filterImportSaves } from './stores/local.js?v=37f6877';
-import { failureReason, allInOrder } from './stores/errors.js?v=37f6877';
-import { showStorageWarning } from './settle.js?v=37f6877';
-import { cloudEnabled } from './supabase-config.js?v=37f6877';
+import { GAMES } from './games.js?v=be1ebb6';
+import { LocalStore, filterImportSaves } from './stores/local.js?v=be1ebb6';
+import { failureReason, allInOrder } from './stores/errors.js?v=be1ebb6';
+import { showStorageWarning } from './settle.js?v=be1ebb6';
+import { cloudEnabled } from './supabase-config.js?v=be1ebb6';
 import {
   emptyProfile, migrateLegacyBest, applyFinish, applyUnlock, levelProgress, ACHIEVEMENTS, ACHIEVEMENT_XP, recentOrder,
   timerInit, timerEvent, timerSeconds, validateImport, isValidGameSave, pushPlay, exportData, exportFileName, iso, PLAYS_LIMIT,
-} from './progress.js?v=37f6877';
+} from './progress.js?v=be1ebb6';
 
 // randomUUID 只在安全來源(https / localhost)可用;其他情況退回 getRandomValues 組 v4 UUID。
 function uuid() {
@@ -38,8 +39,14 @@ export async function createProfile({
       if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(storage.getItem('gc:device') ?? '')) storage.setItem('gc:device', uuid());
     } catch { /* 儲存不可用仍可免登入遊玩 */ }
   }
+  // Clean device slots before a possible cloud merge as well as in the local load path.
+  // Base day = latest server-confirmed slot day; the device clock is never used for deletion (IR81 L2).
+  const slotDays = Object.values(saveSlots).map((slot) => parseDailySlot(slot)?.day).filter(Boolean).sort();
+  if (store instanceof LocalStore && slotDays.length) {
+    await store.cleanupDailySlots(slotDays.at(-1));
+  }
   if (cloudEnabled && win && store instanceof LocalStore && !store.storage) {
-    const { selectCloudStore, createCloudProfile } = await import('./auth.js?v=37f6877');
+    const { selectCloudStore, createCloudProfile } = await import('./auth.js?v=be1ebb6');
     store = await selectCloudStore(store);
     if (store.cloud) return createCloudProfile({ store, now, gameList, doc, win, stateValidators, saveSlots }, createProfile);
   }
@@ -205,7 +212,9 @@ export async function createProfile({
   const api = {
     async loadSave(gameId) {
       const load = async () => {
-        const save = await store.getSave(saveKey(gameId));
+        const prepared = await store.prepareDailySlot?.(saveKey(gameId));
+        if (prepared?.failure) warnStorage(prepared.failure);
+        const save = prepared?.save ?? await store.getSave(saveKey(gameId));
         // 沒有、壞掉、或 game_id 與請求不符的存檔 ⇒ 開新局,且不建立 loaded/live 快取(IR3)
         if (save?.game_id !== saveKey(gameId) || !isValidGameSave(save, stateValidators)) return null;
         if (!save.round_id) {
@@ -215,7 +224,8 @@ export async function createProfile({
         rounds.set(gameId, save.round_id);
         loaded.set(gameId, save);
         live.set(gameId, save.live ?? noLive());
-        stored.add(gameId);
+        if (prepared?.persisted === false) { savesDirty.add(gameId); stored.delete(gameId); }
+        else stored.add(gameId);
         return save.state;
       };
       return store.withFinishLock ? store.withFinishLock(load) : load();

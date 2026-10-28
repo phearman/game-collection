@@ -1,8 +1,9 @@
+import { parseDailySlot, legacyDailySlot, validDailyDay, dailySlotDeadline, migrateDailySlot } from '../daily-slots.js?v=be1ebb6';
 // LocalStore:store 介面的 localStorage 實作(第一期)。介面說明見 supabase.js。
 // localStorage 可能不可用(隱私模式、封鎖網站資料、配額滿):讀失敗回空值、寫失敗回傳 { ok:false, reason },遊戲照常可玩。
 // 例外:importAll 要整份覆蓋或完全不動,寫入失敗會還原原資料並丟錯。
-import { PLAYS_LIMIT, pushPlay, mergeFinished } from '../progress.js?v=37f6877';
-import { writeFailure } from './errors.js?v=37f6877';
+import { PLAYS_LIMIT, pushPlay, mergeFinished } from '../progress.js?v=be1ebb6';
+import { writeFailure } from './errors.js?v=be1ebb6';
 
 const PREFIX = 'game-collection:';
 const V1 = `${PREFIX}v1:`;
@@ -131,9 +132,43 @@ export class LocalStore {
   async getProfile() { return this.read(KEY.profile, null); }
   async putProfile(profile) { return this.write(KEY.profile, profile); }
 
+  // serverDay = a day confirmed by start_daily / resume (the slot's own day). The device clock is never used:
+  // without a server day nothing is deleted. Cutoff = start of serverDay, so only days whose deadline passed
+  // before that day began (serverDay-2 and older) are removed; the server clears the rest.
+  async cleanupDailySlots(serverDay) {
+    if (!validDailyDay(serverDay)) return;
+    const stamp = Date.parse(`${serverDay}T00:00:00+08:00`);
+    for (const save of await this.listSaves()) {
+      const dated = parseDailySlot(save.game_id);
+      const legacy = /^(sudoku|minesweeper|memory)-daily$/.test(save.game_id);
+      const day = dated?.day ?? (legacy ? save.state?.daily : null);
+      if ((dated || legacy) && (!validDailyDay(day) || dailySlotDeadline(day) <= stamp)) {
+        const result = await this.deleteSave(save.game_id);
+        if (result?.ok === false) return result;
+      }
+    }
+  }
+  async prepareDailySlot(slot) {
+    const parsed = parseDailySlot(slot);
+    if (!parsed) return;
+    // Cleanup is best effort when storage is unavailable; it must not hide an existing board.
+    await this.cleanupDailySlots(parsed.day);
+    return migrateDailySlot(this, slot);
+  }
+
   async getSave(gameId) { return this.read(KEY.save(gameId), null); }
   async putSave(save) { return this.write(KEY.save(save.game_id), save); }
-  async deleteSave(gameId) { return this.remove(KEY.save(gameId)); }
+  async deleteSave(gameId) {
+    const dated = parseDailySlot(gameId);
+    if (dated) {
+      const legacy = legacyDailySlot(dated.game);
+      if ((await this.getSave(legacy))?.state?.daily === dated.day) {
+        const result = this.remove(KEY.save(legacy));
+        if (result?.ok === false) return result;
+      }
+    }
+    return this.remove(KEY.save(gameId));
+  }
   async listSaves() {
     return this.keys().filter((k) => k.startsWith(KEY.save(''))).map((k) => this.read(k, null)).filter(Boolean);
   }
@@ -198,7 +233,10 @@ export class LocalStore {
   async commitFinish(input) { return this.withFinishLock(() => this.commitUnlocked(input)); }
   commitUnlocked({ gameId, saveId = gameId, profile, stats, play, prepare }) {
     const ls = this.ls(); // 不可用就直接丟錯,什麼都還沒動
-    const keys = [KEY.save(saveId), KEY.profile, KEY.stats, KEY.plays, KEY.finished];
+    const dated = parseDailySlot(saveId);
+    const legacyKey = dated ? KEY.save(legacyDailySlot(dated.game)) : null;
+    const removeLegacy = legacyKey && this.read(legacyKey, null)?.state?.daily === dated.day;
+    const keys = [KEY.save(saveId), KEY.profile, KEY.stats, KEY.plays, KEY.finished, ...(removeLegacy ? [legacyKey] : [])];
     const backup = new Map(keys.map((k) => [k, ls.getItem(k)]));
     const parse = (raw, fallback) => {
       try { return raw === null ? fallback : JSON.parse(raw); } catch { return fallback; }
@@ -208,7 +246,11 @@ export class LocalStore {
     const plays = parse(backup.get(KEY.plays), []);
     const finished = mergeFinished(parse(backup.get(KEY.finished), []), [], this.now());
     if (finished.some((r) => r.id === play.id)) {
-      ls.removeItem(KEY.save(saveId));
+      const touched = [];
+      try {
+        ls.removeItem(KEY.save(saveId)); touched.push(KEY.save(saveId));
+        if (removeLegacy) { ls.removeItem(legacyKey); touched.push(legacyKey); }
+      } catch (err) { throw rollback(ls, touched, backup, err, 'finish'); }
       return { duplicate: true, profile: parse(backup.get(KEY.profile), null) };
     }
     const out = prepare?.(parse(backup.get(KEY.profile), null), allStats);
@@ -219,6 +261,7 @@ export class LocalStore {
     }
     const writes = [
       [KEY.save(saveId), null],
+      ...(removeLegacy ? [[legacyKey, null]] : []),
       [KEY.profile, encode(KEY.profile, profile)],
       [KEY.stats, encode(KEY.stats, { ...(allStats && typeof allStats === 'object' && !Array.isArray(allStats) ? allStats : {}), [stats.game_id]: stats })],
       [KEY.plays, encode(KEY.plays, pushPlay(Array.isArray(plays) ? plays : [], play))],

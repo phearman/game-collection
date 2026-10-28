@@ -1,5 +1,6 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=37f6877';
-import { formatDuration } from './duration.js?v=37f6877';
+import { DAILY_GRACE_HOURS, dailySlotDeadline } from './daily-slots.js?v=be1ebb6';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=be1ebb6';
+import { formatDuration } from './duration.js?v=be1ebb6';
 
 export const DAILY_GAMES = ['sudoku', 'minesweeper', 'memory'];
 export const DAILY_NAMES = { wordle: 'Wordle', sudoku: '數獨', minesweeper: '踩地雷', memory: '翻翻樂' };
@@ -10,11 +11,11 @@ export const DAILY_FAST_GAME_MIN_SECONDS = 20;
 export const taiwanDay = (stamp) => new Date(Number(stamp) + 8 * 3600000).toISOString().slice(0, 10);
 export const dailyDateLabel = (day) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`;
 export const dailyAbandonConfirm = (day) => `放棄 ${dailyDateLabel(day)} 的挑戰?這局不列入排行、之後也不能再交,但可以改練習這天的題目。`;
-export const dailySlot = (game) => `${game}-daily`;
+export { dailySlot, legacyDailySlot } from './daily-slots.js?v=be1ebb6';
 // IR68:D 日開始的挑戰收到 D+1 台灣中午 12:00,仍計入 D 日。期限只由伺服器(SQL daily_deadline)判定;
 // 這兩個常數是它的鏡像,只給文案與測試用,改期限時兩邊一起改。
-export const DAILY_GRACE_HOURS = 36;
-export const dailyDeadline = (day) => Date.parse(`${day}T00:00:00+08:00`) + DAILY_GRACE_HOURS * 3600000;
+export { DAILY_GRACE_HOURS };
+export const dailyDeadline = dailySlotDeadline;
 export const dailyNextDay = (day) => new Date(Date.parse(`${day}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
 export const dailyExpiredText = (day) =>
   `${dailyDateLabel(day)} 的挑戰只接受到 ${dailyDateLabel(dailyNextDay(day))} 中午 12:00,這局不列入排行`;
@@ -49,7 +50,7 @@ export const practiceSlot = (game) => `${game}-practice`;
 export const DAILY_PRACTICE_DAYS = 30;
 export const DAILY_PRACTICE_NOTE = '練習:不計排行、不影響今日挑戰';
 // RS91/IR74:那天自己的每日局還在收件中 ⇒ 不發練習題;頁面附「繼續那局/放棄那局」兩鈕解開死結。
-export const DAILY_RESUME_NO_SAVE_TEXT = '找不到那局的續玩存檔(跨日開過今天的挑戰會清掉它),請回原本的裝置或分頁繼續;也可以放棄那局';
+export const DAILY_RESUME_NO_SAVE_TEXT = '找不到那局的續玩存檔,請回原本的裝置或分頁繼續;也可以放棄那局';
 export const DAILY_PAST_OPEN_TEXT ='這天的挑戰你還沒完成、仍在收件中(收到隔天中午 12:00)。可以繼續那局,或放棄那局後改練習';
 // D56(PM 裁 RS91 審查 #2):往日題目答案可查、可重玩 ⇒ 一律當輔助局(XP 打對折、不刷新最佳、不解遊戲專屬成就)。
 export const PRACTICE_ASSIST_TEXT = '🧩 往日練習:不刷新最佳';
@@ -176,7 +177,7 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
 }
 export async function browserDailyClient() {
   if (!cloudEnabled) return createDailyClient();
-  const { auth } = await (await import('./auth.js?v=37f6877')).getCloudRuntime();
+  const { auth } = await (await import('./auth.js?v=be1ebb6')).getCloudRuntime();
   return createDailyClient({ auth });
 }
 
@@ -196,7 +197,7 @@ export async function preparePractice(client, game, day) {
   if (seed.day !== day) throw new Error('練習題目日期不符,請重新整理');
   return { day, seed: seed.seed, row: null, completed: false, practice: true };
 }
-// IR74:接回往日那局 = 那天的每日局(⛔ 練習):沿用 {game}-daily 存檔槽與開始時的 play_id,結算照常走
+// IR74:接回往日那局 = 那天的每日局(⛔ 練習):使用 {game}-daily-{day} 存檔槽與開始時的 play_id,結算照常走
 // finish_daily(伺服器以那列的日期計)。翻翻樂比照 PM 裁定:開過題卻找不到同日存檔就不重新發牌。
 export async function prepareResume(client, game, day) {
   const resumed = await client.resume(game, day);

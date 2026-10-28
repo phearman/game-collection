@@ -1,6 +1,6 @@
 // 大廳釘選、精選、分類與排序(RS38 第一期,純前端)。規則見 workbook/plans/rs38-lobby-pin.md §2。
 // 動態內容一律 textContent/屬性;偏好與釘選只存本機(R15;雲端同步列第二期)。
-import { CHANGELOG } from './changelog.js?v=37f6877';
+import { CHANGELOG } from './changelog.js?v=be1ebb6';
 
 export const CATEGORIES = [
   { id: 'puzzle', label: '益智' },

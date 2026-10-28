@@ -1,16 +1,16 @@
-import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave, clearBoardState } from './logic.js?v=37f6877';
-import { createProfile } from '../../shared/profile.js?v=37f6877';
-import { formatDuration } from '../../shared/duration.js?v=37f6877';
-import { LocalStore } from '../../shared/stores/local.js?v=37f6877';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=37f6877';
-import { bindThemeToggle } from '../../shared/theme.js?v=37f6877';
-import { play as playSound, music } from '../../shared/sound.js?v=37f6877';
-import { setupHelp } from '../../shared/help.js?v=37f6877';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=37f6877';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=37f6877';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=37f6877';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume } from '../../shared/daily.js?v=37f6877';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=37f6877';
+import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave, clearBoardState } from './logic.js?v=be1ebb6';
+import { createProfile } from '../../shared/profile.js?v=be1ebb6';
+import { formatDuration } from '../../shared/duration.js?v=be1ebb6';
+import { LocalStore } from '../../shared/stores/local.js?v=be1ebb6';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=be1ebb6';
+import { bindThemeToggle } from '../../shared/theme.js?v=be1ebb6';
+import { play as playSound, music } from '../../shared/sound.js?v=be1ebb6';
+import { setupHelp } from '../../shared/help.js?v=be1ebb6';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=be1ebb6';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=be1ebb6';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=be1ebb6';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume } from '../../shared/daily.js?v=be1ebb6';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=be1ebb6';
 
 const GAME_ID = 'sudoku';
 const $ = (id) => document.getElementById(id);
@@ -20,7 +20,6 @@ const practiceDay = dailyPracticeRequested(location.search);
 // IR74:?resume=YYYY-MM-DD 接回自己那天未完成、仍在收件期限內的每日局(照常計入那天排行)。
 const resumeDay = practiceDay ? null : dailyResumeRequested(location.search);
 const isDaily = dailyRequested(location.search) || !!practiceDay || !!resumeDay;
-const profile = await createProfile({ store: new LocalStore(), saveSlots: isDaily ? { [GAME_ID]: practiceDay ? practiceSlot(GAME_ID) : dailySlot(GAME_ID) } : {} });
 let daily = null;
 let dailyClient = null;
 let dailyError = '';
@@ -30,7 +29,10 @@ if (isDaily) {
     : resumeDay ? await prepareResume(dailyClient, GAME_ID, resumeDay) : await prepareDaily(dailyClient, GAME_ID); }
   catch (error) { dailyError = error.message; }
 }
-const saved = await profile.loadSave(GAME_ID);
+// Select the slot only after the server has confirmed the challenge day.
+const profile = await createProfile({ store: new LocalStore(), saveSlots: daily ? { [GAME_ID]: practiceDay ? practiceSlot(GAME_ID) : dailySlot(GAME_ID, daily.day) } : {} });
+
+const saved = isDaily && !daily ? null : await profile.loadSave(GAME_ID);
 let state = isDaily
   ? !daily || daily.row?.cleared ? null : matchesDailySave(saved, daily, isValidState) ? resumeState(fromSave(saved), Date.now(), visible())
     : daily.completed ? null : initDailyState(daily)

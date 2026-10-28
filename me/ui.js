@@ -1,14 +1,14 @@
 // 畫面 C「我的」:等級、成就、各遊戲統計、最近 50 局、匯出/匯入。只顯示 profile.summary(),不寫規則。
-import { createProfile } from '../shared/profile.js?v=37f6877';
-import { LocalStore } from '../shared/stores/local.js?v=37f6877';
-import { bindThemeToggle } from '../shared/theme.js?v=37f6877';
-import { ACHIEVEMENTS, xpBreakdown } from '../shared/progress.js?v=37f6877';
-import { XP_EXAMPLES, signedXp } from '../shared/xp-explain.js?v=37f6877';
-import { cloudEnabled } from '../shared/supabase-config.js?v=37f6877';
-import { bindGlobalMusicSelect } from '../shared/help.js?v=37f6877';
+import { createProfile } from '../shared/profile.js?v=be1ebb6';
+import { LocalStore } from '../shared/stores/local.js?v=be1ebb6';
+import { bindThemeToggle } from '../shared/theme.js?v=be1ebb6';
+import { ACHIEVEMENTS, xpBreakdown } from '../shared/progress.js?v=be1ebb6';
+import { XP_EXAMPLES, signedXp } from '../shared/xp-explain.js?v=be1ebb6';
+import { cloudEnabled } from '../shared/supabase-config.js?v=be1ebb6';
+import { bindGlobalMusicSelect } from '../shared/help.js?v=be1ebb6';
 
 const $ = (id) => document.getElementById(id);
-const accountReady = cloudEnabled ? await (await import('./account.js?v=37f6877')).initAccount() : null;
+const accountReady = cloudEnabled ? await (await import('./account.js?v=be1ebb6')).initAccount() : null;
 const profile = await createProfile({ store: new LocalStore() });
 accountReady?.();
 const RESULT = { win: '勝', lose: '敗', quit: '放棄' };

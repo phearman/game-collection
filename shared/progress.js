@@ -1,3 +1,4 @@
+import { parseDailySlot } from './daily-slots.js?v=be1ebb6';
 // 個人紀錄規則層(RS1):XP、等級、成就、連續天數、遊戲時間、匯入檔驗證。
 // 純函式:不碰 DOM、不碰 localStorage,時間一律由呼叫端傳入(毫秒)。
 // 第二期要搬成伺服器端觸發器,所以規則只能寫在這裡;profile.js 只負責串接。
@@ -435,6 +436,8 @@ function checkPlays(plays) {
 // 存檔外層(§3);live 為本局即時獎勵明細(選填)。
 export function isValidSave(s) {
   if (!isObj(s) || !isGameId(s.game_id) || !isObj(s.state)) return false;
+  const dated = parseDailySlot(s.game_id);
+  if (s.game_id.includes('-daily-') && (!dated || s.state.daily !== dated.day)) return false;
   if (!isNum(s.active_sec) || s.active_sec < 0 || !isNum(s.version)) return false;
   if (!isTime(s.started_at) || !isTime(s.updated_at)) return false;
   if (s.round_id !== undefined && !(isStr(s.round_id) && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(s.round_id))) return false;
@@ -446,7 +449,9 @@ export function isValidSave(s) {
 
 // stateValidators:{ [game_id]: (state) => boolean },各遊戲提供自己 state 的檢查。只取自有屬性的函式。
 export function stateValidatorFor(stateValidators, gameId) {
-  const valid = Object.hasOwn(stateValidators, gameId) ? stateValidators[gameId] : undefined;
+  const dated = parseDailySlot(gameId);
+  const key = !Object.hasOwn(stateValidators, gameId) && dated ? `${dated.game}-daily` : gameId;
+  const valid = Object.hasOwn(stateValidators, key) ? stateValidators[key] : undefined;
   return typeof valid === 'function' ? valid : null;
 }
 

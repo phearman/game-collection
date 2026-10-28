@@ -1,7 +1,7 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=37f6877';
-import { DAILY_GAMES, DAILY_NAMES, dailyDateLabel, dailyScore } from './daily.js?v=37f6877';
-import { formatDuration } from './duration.js?v=37f6877';
-import { safeAvatarUrl } from './avatars.js?v=37f6877';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=be1ebb6';
+import { DAILY_GAMES, DAILY_NAMES, dailyDateLabel, dailyScore } from './daily.js?v=be1ebb6';
+import { formatDuration } from './duration.js?v=be1ebb6';
+import { safeAvatarUrl } from './avatars.js?v=be1ebb6';
 
 // 網站今日挑戰排行(RS98 預設公開)。暱稱仍沿用 RS78 R3。
 export const PUBLIC_RANK_NOTE = '預設公開;你的今日挑戰成績會用這個暱稱和排行頭像出現在網站今日排行,所有人都看得到。關閉後立即從排行移除。';
@@ -104,7 +104,7 @@ export function createDailyPublicClient({ auth, url = SUPABASE_URL, key = SUPABA
 }
 export async function browserDailyPublicClient() {
   if (!cloudEnabled) return createDailyPublicClient();
-  const { auth } = await (await import('./auth.js?v=37f6877')).getCloudRuntime();
+  const { auth } = await (await import('./auth.js?v=be1ebb6')).getCloudRuntime();
   return createDailyPublicClient({ auth });
 }
 

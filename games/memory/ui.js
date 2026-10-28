@@ -2,20 +2,20 @@
 import {
   DIFFICULTIES, HIDE_MS, initState, initDailyState, flip, hideState, tickState, scoreFor, resultOf, isOver, isWaiting,
   hasActed, seededRng, demoPlan, remainingPairs, cardView, symbolOf, detailOf, pairsOf, toSave, fromSave, isValidState,
-} from './logic.js?v=37f6877';
-import { createProfile } from '../../shared/profile.js?v=37f6877';
-import { LocalStore } from '../../shared/stores/local.js?v=37f6877';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=37f6877';
-import { bindThemeToggle } from '../../shared/theme.js?v=37f6877';
-import { play, music } from '../../shared/sound.js?v=37f6877';
-import { setupHelp } from '../../shared/help.js?v=37f6877';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=37f6877';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=37f6877';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=37f6877';
+} from './logic.js?v=be1ebb6';
+import { createProfile } from '../../shared/profile.js?v=be1ebb6';
+import { LocalStore } from '../../shared/stores/local.js?v=be1ebb6';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=be1ebb6';
+import { bindThemeToggle } from '../../shared/theme.js?v=be1ebb6';
+import { play, music } from '../../shared/sound.js?v=be1ebb6';
+import { setupHelp } from '../../shared/help.js?v=be1ebb6';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=be1ebb6';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=be1ebb6';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=be1ebb6';
 
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume, DAILY_RESUME_NO_SAVE_TEXT } from '../../shared/daily.js?v=37f6877';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=37f6877';
-import { formatDuration } from '../../shared/duration.js?v=37f6877';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume, DAILY_RESUME_NO_SAVE_TEXT } from '../../shared/daily.js?v=be1ebb6';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=be1ebb6';
+import { formatDuration } from '../../shared/duration.js?v=be1ebb6';
 
 const GAME_ID = 'memory';
 const LABELS = { normal: '一般', hard: '困難', expert: '專家' };
@@ -25,7 +25,6 @@ const practiceDay = dailyPracticeRequested(location.search);
 // IR74:?resume=YYYY-MM-DD 接回自己那天未完成、仍在收件期限內的每日局(照常計入那天排行)。
 const resumeDay = practiceDay ? null : dailyResumeRequested(location.search);
 const isDaily = dailyRequested(location.search) || !!practiceDay || !!resumeDay;
-const profile = await createProfile({ store: new LocalStore(), saveSlots: isDaily ? { [GAME_ID]: practiceDay ? practiceSlot(GAME_ID) : dailySlot(GAME_ID) } : {} });
 let daily = null, dailyClient = null, dailyError = '';
 let dailyExpired = ''; // IR68:伺服器過了收件時間,這局照一般局記錄、不列排行
 if (isDaily) {
@@ -34,6 +33,9 @@ if (isDaily) {
     : resumeDay ? await prepareResume(dailyClient, GAME_ID, resumeDay) : await prepareDaily(dailyClient, GAME_ID); }
   catch (error) { dailyError = error.message; }
 }
+// Select the slot only after the server has confirmed the challenge day.
+const profile = await createProfile({ store: new LocalStore(), saveSlots: daily ? { [GAME_ID]: practiceDay ? practiceSlot(GAME_ID) : dailySlot(GAME_ID, daily.day) } : {} });
+
 
 let state;
 let best = 0; // 本局開始前的最佳分數(profile 管)
@@ -334,7 +336,7 @@ window.addEventListener('pagehide', flushSeconds);
 bindThemeToggle($('theme'));
 
 // 載入:有存檔就自動還原(§4.1);等待蓋回中的兩張在 fromSave 已蓋回。否則開新局。
-const saved = await profile.loadSave(GAME_ID);
+const saved = isDaily && !daily ? null : await profile.loadSave(GAME_ID);
 // PM 裁定:開過題卻找不到同日存檔時一律不重新發牌。
 if (isDaily && daily?.resumeRequired && !daily.completed && !matchesDailySave(saved, daily, isValidState)) {
   dailyError = daily.resumed ? DAILY_RESUME_NO_SAVE_TEXT

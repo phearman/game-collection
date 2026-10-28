@@ -1,3 +1,4 @@
+import { parseDailySlot, legacyDailySlot, migrateDailySlot } from '../daily-slots.js?v=be1ebb6';
 // SupabaseStore:只用 fetch 呼叫 PostgREST，交易由 RPC 執行。
 //
 // store 介面(MemoryStore / LocalStore / SupabaseStore 共同遵守;所有方法回傳 Promise;
@@ -149,13 +150,34 @@ export class SupabaseStore {
     return (await this.read('profiles?select=*&limit=1'))[0] ?? null;
   }
   putProfile(profile) { return this.write('profiles', profile, 'user_id'); }
+  prepareDailySlot(slot) { return migrateDailySlot(this, slot); }
   async getSave(gameId) { return (await this.read(`saves?select=*&${this.filter(gameId)}&limit=1`))[0] ?? null; }
   putSave(save) { return this.write('saves', save, 'user_id,game_id'); }
+  async putSaveIfMissing(save) {
+    // A concurrent dated save wins too; never upsert legacy over it.
+    const rows = await this.request('saves?on_conflict=user_id,game_id', { method: 'POST',
+      body: { ...pick('saves', save), user_id: this.userId }, prefer: 'resolution=ignore-duplicates,return=representation' });
+    if (rows?.[0]) this.updateCache('saves', pick('saves', save));
+    return true;
+  }
+  clearLegacyCache(game, day) {
+    const legacy = legacyDailySlot(game);
+    for (const [path, rows] of this.cache) {
+      if (path.startsWith('saves?')) this.cache.set(path, rows.filter((s) => s.game_id !== legacy || s.state?.daily !== day));
+    }
+  }
+  async deleteLegacyDailySlot(game, day) {
+    await this.request(`saves?${this.filter(legacyDailySlot(game))}&state->>daily=eq.${day}`, { method: 'DELETE', prefer: 'return=minimal' });
+    this.clearLegacyCache(game, day);
+    return true;
+  }
   async deleteSave(gameId) {
-    // IR6 放棄結算時取消待重試交易。
+    // Pending transactions use the full slot, so cancelling yesterday cannot cancel today.
     this.pending.delete(gameId);
     const dirty = `saves:${gameId}`;
     try {
+      const dated = parseDailySlot(gameId);
+      if (dated) await this.deleteLegacyDailySlot(dated.game, dated.day);
       await this.request(`saves?${this.filter(gameId)}`, { method: 'DELETE', prefer: 'return=minimal' });
       this.updateCache('saves', null, gameId); this.dirty.delete(dirty); this.emit(); return true;
     } catch (err) { this.dirty.add(dirty); this.emit(); return writeFailure(err); }
@@ -222,20 +244,22 @@ export class SupabaseStore {
     this.updateCache('profiles', pending.body.profile);
     this.updateCache('stats', pending.body.stats);
     this.updateCache('saves', null, pending.saveId ?? pending.body.game_id);
+    const dated = parseDailySlot(pending.saveId);
+    if (dated) this.clearLegacyCache(dated.game, dated.day);
     this.dirty.delete('profiles:');
     this.dirty.delete(`stats:${pending.body.game_id}`);
     this.dirty.delete(`saves:${pending.saveId ?? pending.body.game_id}`);
     this.emit();
   }
   async commitFinish({ gameId, saveId = gameId, profile, stats, play, recompute }) {
-    let pending = this.pending.get(gameId);
+    let pending = this.pending.get(saveId);
     if (!pending) {
       const profileRows = this.cache.get('profiles?select=*&limit=1');
       const statsRows = this.cache.get('stats?select=*');
       pending = { daily: saveId !== gameId, saveId, body: { game_id: gameId, profile: pick('profiles', profile), stats: pick('stats', stats), play: pick('plays', play) },
         baseline: { profile: profileRows?.[0] ?? null, stats: Object.fromEntries((statsRows ?? []).map((s) => [s.game_id, s])) },
         recompute: recompute ?? ((base, stats, play) => recalculateFinish(base, stats, play, this.finishRewards?.(gameId))), done: false };
-      this.pending.set(gameId, pending);
+      this.pending.set(saveId, pending);
     }
     if (!pending.done) {
       pending.sending ??= this.sendFinish(pending).finally(() => { pending.sending = null; });
@@ -244,8 +268,8 @@ export class SupabaseStore {
     Object.assign(profile, structuredClone(pending.body.profile));
     Object.assign(stats, structuredClone(pending.body.stats));
     Object.assign(play, structuredClone(pending.body.play));
-    this.lastFinish.set(gameId, { recomputed: pending.recomputed, level: pending.body.profile.level, duplicate: pending.duplicate });
-    this.pending.delete(gameId);
+    this.lastFinish.set(saveId, { recomputed: pending.recomputed, level: pending.body.profile.level, duplicate: pending.duplicate });
+    this.pending.delete(saveId);
     return { duplicate: pending.duplicate, profile: pending.body.profile };
   }
   async retryPending() {
@@ -259,10 +283,10 @@ export class SupabaseStore {
   async legacyBest() { return 0; }
 }
 
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=37f6877';
-import { writeFailure, allInOrder } from './errors.js?v=37f6877';
-import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=37f6877';
-import { normalizePlay } from './normalize.js?v=37f6877';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=be1ebb6';
+import { writeFailure, allInOrder } from './errors.js?v=be1ebb6';
+import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=be1ebb6';
+import { normalizePlay } from './normalize.js?v=be1ebb6';
 
 function recalculateFinish(base, stats, play, live) {
   const missing = (live?.achievements ?? []).filter((id) => !base.achievements?.[id]);
