@@ -1,4 +1,4 @@
-import { parseDailySlot } from './daily-slots.js?v=678a533';
+import { parseDailySlot } from './daily-slots.js?v=09d8276';
 // 個人紀錄規則層(RS1):XP、等級、成就、連續天數、遊戲時間、匯入檔驗證。
 // 純函式:不碰 DOM、不碰 localStorage,時間一律由呼叫端傳入(毫秒)。
 // 第二期要搬成伺服器端觸發器,所以規則只能寫在這裡;profile.js 只負責串接。

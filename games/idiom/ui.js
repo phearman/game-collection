@@ -2,18 +2,18 @@ import {
   DIFFICULTIES, initState, currentQuestion, questionDone, answerState, nextState, tickState,
   cellsOf, totalErrors, scoreFor, resultOf, hasActed, settlementOf, lookupUrl, toSave, isValidState,
   isComicList, comicFor, comicUrl,
-} from './logic.js?v=678a533';
-import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=678a533';
-import { createProfile } from '../../shared/profile.js?v=678a533';
-import { LocalStore } from '../../shared/stores/local.js?v=678a533';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=678a533';
-import { bindThemeToggle } from '../../shared/theme.js?v=678a533';
-import { play, music } from '../../shared/sound.js?v=678a533';
-import { setupHelp } from '../../shared/help.js?v=678a533';
-import { formatDuration } from '../../shared/duration.js?v=678a533';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=678a533';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=678a533';
-import { confirmQuitBest } from '../../shared/quit.js?v=678a533';
+} from './logic.js?v=09d8276';
+import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=09d8276';
+import { createProfile } from '../../shared/profile.js?v=09d8276';
+import { LocalStore } from '../../shared/stores/local.js?v=09d8276';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=09d8276';
+import { bindThemeToggle } from '../../shared/theme.js?v=09d8276';
+import { play, music } from '../../shared/sound.js?v=09d8276';
+import { setupHelp } from '../../shared/help.js?v=09d8276';
+import { formatDuration } from '../../shared/duration.js?v=09d8276';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=09d8276';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=09d8276';
+import { confirmQuitBest } from '../../shared/quit.js?v=09d8276';
 
 // One promise per page, including failures and timeouts. Importing never blocks render().
 export function createComicsLoader() {
