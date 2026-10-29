@@ -4,29 +4,29 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>遊戲集錦</title>
-  <link rel="stylesheet" href="shared/style.css?v=be1ebb6">
+  <link rel="stylesheet" href="shared/style.css?v=678a533">
   <!-- IR32/IR46:大廳模組一次並行下載,不必等上一層 import 解析完才發現下一層(原本要一層層往返)。
        清單 = 大廳靜態 import 全集 + 登入用的 auth.js;tests/lobby-preload.test.js 會比對,漏列或多列都會失敗。 -->
-  <link rel="modulepreload" href="shared/games.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/profile-core.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/stores/local.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/progress.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/stores/errors.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/settle.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/cloud-status.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/supabase-config.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/theme.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/storage.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/sound.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/skin.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/whats-new.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/changelog.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/daily.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/daily-slots.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/lobby.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/duration.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/skin-compare.js?v=be1ebb6">
-  <link rel="modulepreload" href="shared/auth.js?v=be1ebb6">
+  <link rel="modulepreload" href="shared/games.js?v=678a533">
+  <link rel="modulepreload" href="shared/profile-core.js?v=678a533">
+  <link rel="modulepreload" href="shared/stores/local.js?v=678a533">
+  <link rel="modulepreload" href="shared/progress.js?v=678a533">
+  <link rel="modulepreload" href="shared/stores/errors.js?v=678a533">
+  <link rel="modulepreload" href="shared/settle.js?v=678a533">
+  <link rel="modulepreload" href="shared/cloud-status.js?v=678a533">
+  <link rel="modulepreload" href="shared/supabase-config.js?v=678a533">
+  <link rel="modulepreload" href="shared/theme.js?v=678a533">
+  <link rel="modulepreload" href="shared/storage.js?v=678a533">
+  <link rel="modulepreload" href="shared/sound.js?v=678a533">
+  <link rel="modulepreload" href="shared/skin.js?v=678a533">
+  <link rel="modulepreload" href="shared/whats-new.js?v=678a533">
+  <link rel="modulepreload" href="shared/changelog.js?v=678a533">
+  <link rel="modulepreload" href="shared/daily.js?v=678a533">
+  <link rel="modulepreload" href="shared/daily-slots.js?v=678a533">
+  <link rel="modulepreload" href="shared/lobby.js?v=678a533">
+  <link rel="modulepreload" href="shared/duration.js?v=678a533">
+  <link rel="modulepreload" href="shared/skin-compare.js?v=678a533">
+  <link rel="modulepreload" href="shared/auth.js?v=678a533">
 </head>
 <body>
   <main class="page">
@@ -80,19 +80,19 @@
     <footer class="lobby-footer"><a href="changelog/">更新紀錄</a><span aria-hidden="true"> · </span><a href="privacy/">隱私權政策</a><span aria-hidden="true"> · </span><a id="feedback-link" href="me/">意見回饋</a><span aria-hidden="true"> · </span><a href="line/">LINE 小幫手使用說明</a></footer>
   </main>
   <script type="module">
-    import { GAMES } from './shared/games.js?v=be1ebb6';
-    import { createProfile } from './shared/profile-core.js?v=be1ebb6';
-    import { LocalStore } from './shared/stores/local.js?v=be1ebb6';
-    import { bindThemeToggle } from './shared/theme.js?v=be1ebb6';
-    import { cloudEnabled } from './shared/supabase-config.js?v=be1ebb6';
-    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=be1ebb6';
-    import { mountDailyLobby } from './shared/daily.js?v=be1ebb6';
-    import { mountLobby } from './shared/lobby.js?v=be1ebb6';
+    import { GAMES } from './shared/games.js?v=678a533';
+    import { createProfile } from './shared/profile-core.js?v=678a533';
+    import { LocalStore } from './shared/stores/local.js?v=678a533';
+    import { bindThemeToggle } from './shared/theme.js?v=678a533';
+    import { cloudEnabled } from './shared/supabase-config.js?v=678a533';
+    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=678a533';
+    import { mountDailyLobby } from './shared/daily.js?v=678a533';
+    import { mountLobby } from './shared/lobby.js?v=678a533';
 
     bindThemeToggle(document.getElementById('theme'));
     document.getElementById('feedback-link').addEventListener('click', async (event) => {
       event.preventDefault();
-      const { openFeedback } = await import('./shared/feedback.js?v=be1ebb6');
+      const { openFeedback } = await import('./shared/feedback.js?v=678a533');
       await openFeedback();
     });
 
@@ -104,8 +104,8 @@
     setupWhatsNew({ hasHistory: hasPlayHistory(sum) });
     void mountDailyLobby(document).catch(() => {});
     if (cloudEnabled) {
-      const { auth, notice } = await (await import('./shared/auth.js?v=be1ebb6')).getCloudRuntime();
-      const { initDailyPublicNotice } = await import('./shared/daily-public.js?v=be1ebb6');
+      const { auth, notice } = await (await import('./shared/auth.js?v=678a533')).getCloudRuntime();
+      const { initDailyPublicNotice } = await import('./shared/daily-public.js?v=678a533');
       initDailyPublicNotice({ doc: document, auth, meLink: 'me/' });
       const icon = document.getElementById('account-link');
       icon.hidden = false;
@@ -125,6 +125,6 @@
       }
     }
   </script>
-  <script type="module" src="shared/skin-compare.js?v=be1ebb6"></script>
+  <script type="module" src="shared/skin-compare.js?v=678a533"></script>
 </body>
 </html>

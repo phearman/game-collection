@@ -1,7 +1,7 @@
 // 下樓梯繪圖模組(RS11):只負責畫面與特效,⛔ 不改 state、不含規則。
 // 座標單位 = 場地單位(logic.js 的 W × H,x 往右、y 往下);呼叫端先把 ctx 縮放到場地單位。
 // 美術正典:workbook/plans/rs11-stairs-art.md「RS11 美術要求」;第 1 輪退回(PR #20 A1~A3)後改為「高塔內部」世界觀。
-import { W, H, PLAYER, CEIL, FLIP_DELAY, MAX_LIVES, HURT_SEC, heartBox, enemyBox, scrolledBy, canonicalState, directionFor, stageFor } from './logic.js?v=be1ebb6';
+import { W, H, PLAYER, CEIL, FLIP_DELAY, MAX_LIVES, HURT_SEC, heartBox, enemyBox, scrolledBy, canonicalState, directionFor, stageFor } from './logic.js?v=678a533';
 
 export const THICK = 0.3; // 平台畫面厚度(碰撞只看上緣)
 export const END_SEC = 0.8; // 結束動畫長度(≤ 1 秒),播完才顯示結算遮罩
