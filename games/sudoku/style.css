@@ -43,7 +43,7 @@ button:disabled { opacity: 0.55; cursor: default; }
 .assist-tools { margin-top: 8px; font-size: 14px; }
 .assist-tools label { display: flex; align-items: center; gap: 4px; min-height: 40px; }
 .assist-tools input { accent-color: var(--accent); }
-#assist-label { color: var(--text-sub); font-size: 12px; }
+#assist-label, #assist-rank-note { color: var(--text-sub); font-size: 12px; }
 .hint-message { padding: 8px; margin-top: 8px; background: var(--accent-bg); border-radius: var(--radius); }
 .hint-message[hidden] { display: none; }
 .hint-message p { font-size: 13px; line-height: 1.4; margin: 0 0 6px; overflow-wrap: anywhere; }

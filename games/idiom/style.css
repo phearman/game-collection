@@ -27,3 +27,4 @@ progress { display: block; width: 100%; accent-color: var(--accent); margin: 8px
 .hint { font-size: 13px; color: var(--text-sub); text-align: center; }
 .demo { max-width: 320px; margin: auto; }
 [hidden] { display: none !important; }
+.set-notice { margin: 12px 0 0; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent-bg); overflow-wrap: anywhere; }

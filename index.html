@@ -4,29 +4,29 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>遊戲集錦</title>
-  <link rel="stylesheet" href="shared/style.css?v=09d8276">
+  <link rel="stylesheet" href="shared/style.css?v=32c428b">
   <!-- IR32/IR46:大廳模組一次並行下載,不必等上一層 import 解析完才發現下一層(原本要一層層往返)。
        清單 = 大廳靜態 import 全集 + 登入用的 auth.js;tests/lobby-preload.test.js 會比對,漏列或多列都會失敗。 -->
-  <link rel="modulepreload" href="shared/games.js?v=09d8276">
-  <link rel="modulepreload" href="shared/profile-core.js?v=09d8276">
-  <link rel="modulepreload" href="shared/stores/local.js?v=09d8276">
-  <link rel="modulepreload" href="shared/progress.js?v=09d8276">
-  <link rel="modulepreload" href="shared/stores/errors.js?v=09d8276">
-  <link rel="modulepreload" href="shared/settle.js?v=09d8276">
-  <link rel="modulepreload" href="shared/cloud-status.js?v=09d8276">
-  <link rel="modulepreload" href="shared/supabase-config.js?v=09d8276">
-  <link rel="modulepreload" href="shared/theme.js?v=09d8276">
-  <link rel="modulepreload" href="shared/storage.js?v=09d8276">
-  <link rel="modulepreload" href="shared/sound.js?v=09d8276">
-  <link rel="modulepreload" href="shared/skin.js?v=09d8276">
-  <link rel="modulepreload" href="shared/whats-new.js?v=09d8276">
-  <link rel="modulepreload" href="shared/changelog.js?v=09d8276">
-  <link rel="modulepreload" href="shared/daily.js?v=09d8276">
-  <link rel="modulepreload" href="shared/daily-slots.js?v=09d8276">
-  <link rel="modulepreload" href="shared/lobby.js?v=09d8276">
-  <link rel="modulepreload" href="shared/duration.js?v=09d8276">
-  <link rel="modulepreload" href="shared/skin-compare.js?v=09d8276">
-  <link rel="modulepreload" href="shared/auth.js?v=09d8276">
+  <link rel="modulepreload" href="shared/games.js?v=32c428b">
+  <link rel="modulepreload" href="shared/profile-core.js?v=32c428b">
+  <link rel="modulepreload" href="shared/stores/local.js?v=32c428b">
+  <link rel="modulepreload" href="shared/progress.js?v=32c428b">
+  <link rel="modulepreload" href="shared/stores/errors.js?v=32c428b">
+  <link rel="modulepreload" href="shared/settle.js?v=32c428b">
+  <link rel="modulepreload" href="shared/cloud-status.js?v=32c428b">
+  <link rel="modulepreload" href="shared/supabase-config.js?v=32c428b">
+  <link rel="modulepreload" href="shared/theme.js?v=32c428b">
+  <link rel="modulepreload" href="shared/storage.js?v=32c428b">
+  <link rel="modulepreload" href="shared/sound.js?v=32c428b">
+  <link rel="modulepreload" href="shared/skin.js?v=32c428b">
+  <link rel="modulepreload" href="shared/whats-new.js?v=32c428b">
+  <link rel="modulepreload" href="shared/changelog.js?v=32c428b">
+  <link rel="modulepreload" href="shared/daily.js?v=32c428b">
+  <link rel="modulepreload" href="shared/daily-slots.js?v=32c428b">
+  <link rel="modulepreload" href="shared/lobby.js?v=32c428b">
+  <link rel="modulepreload" href="shared/duration.js?v=32c428b">
+  <link rel="modulepreload" href="shared/skin-compare.js?v=32c428b">
+  <link rel="modulepreload" href="shared/auth.js?v=32c428b">
 </head>
 <body>
   <main class="page">
@@ -58,6 +58,21 @@
       <h2 class="lobby-heading" id="featured-title">⭐ 精選</h2>
       <div class="cards" id="featured-cards"></div>
     </section>
+    <section class="lobby-section" id="shortcuts" aria-labelledby="shortcuts-title" hidden>
+      <h2 class="lobby-heading" id="shortcuts-title">🎯 主題挑戰</h2>
+      <div class="cards" id="shortcut-cards"></div>
+    </section>
+    <section class="lobby-section" id="partner-sites" aria-labelledby="partner-title">
+      <h2 class="lobby-heading" id="partner-title">🔗 姊妹網站</h2>
+      <div class="cards">
+        <!-- RS109:is-active 只借用卡片外框樣式(與主題挑戰卡一致),不是遊戲狀態 -->
+        <div class="card-wrap"><a class="card is-active external-card" id="classical-card" href="https://phearman.github.io/classical-chinese-kids-site/" target="_blank" rel="noopener">
+          <div class="card-head"><span class="card-icon" aria-hidden="true">📜</span><span class="card-tags"><span class="tag is-external">另開文言文網站 <span aria-hidden="true">↗</span></span></span></div>
+          <p class="card-title">文言文小幫手</p>
+          <p class="card-desc">國中文言文讀本:故事動畫、白話翻譯、逐詞解釋、成語漫畫</p>
+        </a></div>
+      </div>
+    </section>
     <section class="lobby-section" id="pinned" aria-labelledby="pinned-title" hidden>
       <h2 class="lobby-heading" id="pinned-title">📌 我的釘選</h2>
       <div class="cards" id="pinned-cards"></div>
@@ -80,19 +95,19 @@
     <footer class="lobby-footer"><a href="changelog/">更新紀錄</a><span aria-hidden="true"> · </span><a href="privacy/">隱私權政策</a><span aria-hidden="true"> · </span><a id="feedback-link" href="me/">意見回饋</a><span aria-hidden="true"> · </span><a href="line/">LINE 小幫手使用說明</a></footer>
   </main>
   <script type="module">
-    import { GAMES } from './shared/games.js?v=09d8276';
-    import { createProfile } from './shared/profile-core.js?v=09d8276';
-    import { LocalStore } from './shared/stores/local.js?v=09d8276';
-    import { bindThemeToggle } from './shared/theme.js?v=09d8276';
-    import { cloudEnabled } from './shared/supabase-config.js?v=09d8276';
-    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=09d8276';
-    import { mountDailyLobby } from './shared/daily.js?v=09d8276';
-    import { mountLobby } from './shared/lobby.js?v=09d8276';
+    import { GAMES } from './shared/games.js?v=32c428b';
+    import { createProfile } from './shared/profile-core.js?v=32c428b';
+    import { LocalStore } from './shared/stores/local.js?v=32c428b';
+    import { bindThemeToggle } from './shared/theme.js?v=32c428b';
+    import { cloudEnabled } from './shared/supabase-config.js?v=32c428b';
+    import { hasPlayHistory, setupWhatsNew } from './shared/whats-new.js?v=32c428b';
+    import { mountDailyLobby } from './shared/daily.js?v=32c428b';
+    import { mountLobby } from './shared/lobby.js?v=32c428b';
 
     bindThemeToggle(document.getElementById('theme'));
     document.getElementById('feedback-link').addEventListener('click', async (event) => {
       event.preventDefault();
-      const { openFeedback } = await import('./shared/feedback.js?v=09d8276');
+      const { openFeedback } = await import('./shared/feedback.js?v=32c428b');
       await openFeedback();
     });
 
@@ -104,8 +119,8 @@
     setupWhatsNew({ hasHistory: hasPlayHistory(sum) });
     void mountDailyLobby(document).catch(() => {});
     if (cloudEnabled) {
-      const { auth, notice } = await (await import('./shared/auth.js?v=09d8276')).getCloudRuntime();
-      const { initDailyPublicNotice } = await import('./shared/daily-public.js?v=09d8276');
+      const { auth, notice } = await (await import('./shared/auth.js?v=32c428b')).getCloudRuntime();
+      const { initDailyPublicNotice } = await import('./shared/daily-public.js?v=32c428b');
       initDailyPublicNotice({ doc: document, auth, meLink: 'me/' });
       const icon = document.getElementById('account-link');
       icon.hidden = false;
@@ -125,6 +140,6 @@
       }
     }
   </script>
-  <script type="module" src="shared/skin-compare.js?v=09d8276"></script>
+  <script type="module" src="shared/skin-compare.js?v=32c428b"></script>
 </body>
 </html>

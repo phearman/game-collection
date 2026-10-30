@@ -1,6 +1,6 @@
-import { DAILY_GRACE_HOURS, dailySlotDeadline } from './daily-slots.js?v=09d8276';
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=09d8276';
-import { formatDuration } from './duration.js?v=09d8276';
+import { DAILY_GRACE_HOURS, dailySlotDeadline } from './daily-slots.js?v=32c428b';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=32c428b';
+import { formatDuration } from './duration.js?v=32c428b';
 
 export const DAILY_GAMES = ['sudoku', 'minesweeper', 'memory'];
 export const DAILY_NAMES = { wordle: 'Wordle', sudoku: '數獨', minesweeper: '踩地雷', memory: '翻翻樂' };
@@ -11,7 +11,7 @@ export const DAILY_FAST_GAME_MIN_SECONDS = 20;
 export const taiwanDay = (stamp) => new Date(Number(stamp) + 8 * 3600000).toISOString().slice(0, 10);
 export const dailyDateLabel = (day) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`;
 export const dailyAbandonConfirm = (day) => `放棄 ${dailyDateLabel(day)} 的挑戰?這局不列入排行、之後也不能再交,但可以改練習這天的題目。`;
-export { dailySlot, legacyDailySlot } from './daily-slots.js?v=09d8276';
+export { dailySlot, legacyDailySlot } from './daily-slots.js?v=32c428b';
 // IR68:D 日開始的挑戰收到 D+1 台灣中午 12:00,仍計入 D 日。期限只由伺服器(SQL daily_deadline)判定;
 // 這兩個常數是它的鏡像,只給文案與測試用,改期限時兩邊一起改。
 export { DAILY_GRACE_HOURS };
@@ -53,6 +53,7 @@ export const DAILY_PRACTICE_NOTE = '練習:不計排行、不影響今日挑戰'
 export const DAILY_RESUME_NO_SAVE_TEXT = '找不到那局的續玩存檔,請回原本的裝置或分頁繼續;也可以放棄那局';
 export const DAILY_PAST_OPEN_TEXT ='這天的挑戰你還沒完成、仍在收件中(收到隔天中午 12:00)。可以繼續那局,或放棄那局後改練習';
 // D56(PM 裁 RS91 審查 #2):往日題目答案可查、可重玩 ⇒ 一律當輔助局(XP 打對折、不刷新最佳、不解遊戲專屬成就)。
+export const DAILY_ASSISTED_TEXT = '🧩 輔助局:用了提示,這局不列今日排行';
 export const PRACTICE_ASSIST_TEXT = '🧩 往日練習:不刷新最佳';
 export function dailyPracticeRequested(search) { return dailyDayParam(search, 'practice'); }
 // IR74:?resume=YYYY-MM-DD 接回自己那天還在收件期限內、未完成的每日局(跨日重新整理後的死結)。
@@ -92,7 +93,8 @@ export function dailyShare(day, game, row, marks = []) {
       .map((m) => m.slice(0, 5).map((c) => squares[c] ?? '⬜').join('')).join('\n')}` : '');
 }
 export function dailyRank(rows, game) {
-  return rows.filter((r) => r.game_id === game && r.finished_at && !r.cleared
+  // RS108:用過提示的今日挑戰(detail.assisted)不列排行。
+  return rows.filter((r) => r.game_id === game && r.finished_at && !r.cleared && r.detail?.assisted !== true
     && (game === 'wordle' || (r.result === 'win' && r.seconds >= (['minesweeper', 'memory'].includes(game) ? DAILY_FAST_GAME_MIN_SECONDS : 60))))
     .filter((r) => game !== 'memory' || (Number.isInteger(r.detail?.misses) && r.detail.misses >= 0))
     .sort((a, b) => game === 'wordle'
@@ -169,6 +171,10 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
       if (!DAILY_GAMES.includes(game)) throw new Error('不支援的每日遊戲');
       return call('abandon_daily', { p_game: game, p_day: day });
     },
+    markAssisted: (game, day) => {
+      if (!DAILY_GAMES.includes(game)) throw new Error('不支援的每日遊戲');
+      return call('mark_daily_assisted', { p_game: game, p_day: day });
+    },
     finish: (game, day, result, guesses, detail = {}) => call('finish_daily', {
       p_game: game, p_result: result, p_guesses: guesses, p_detail: { ...detail, daily: day },
     }),
@@ -177,7 +183,7 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
 }
 export async function browserDailyClient() {
   if (!cloudEnabled) return createDailyClient();
-  const { auth } = await (await import('./auth.js?v=09d8276')).getCloudRuntime();
+  const { auth } = await (await import('./auth.js?v=32c428b')).getCloudRuntime();
   return createDailyClient({ auth });
 }
 

@@ -1,18 +1,20 @@
-import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave, clearBoardState } from './logic.js?v=09d8276';
-import { createProfile } from '../../shared/profile.js?v=09d8276';
-import { formatDuration } from '../../shared/duration.js?v=09d8276';
-import { LocalStore } from '../../shared/stores/local.js?v=09d8276';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=09d8276';
-import { bindThemeToggle } from '../../shared/theme.js?v=09d8276';
-import { play as playSound, music } from '../../shared/sound.js?v=09d8276';
-import { setupHelp } from '../../shared/help.js?v=09d8276';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=09d8276';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=09d8276';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=09d8276';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume } from '../../shared/daily.js?v=09d8276';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=09d8276';
+import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave, clearBoardState } from './logic.js?v=32c428b';
+import { createProfile } from '../../shared/profile.js?v=32c428b';
+import { formatDuration } from '../../shared/duration.js?v=32c428b';
+import { LocalStore } from '../../shared/stores/local.js?v=32c428b';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=32c428b';
+import { bindThemeToggle } from '../../shared/theme.js?v=32c428b';
+import { play as playSound, music } from '../../shared/sound.js?v=32c428b';
+import { setupHelp } from '../../shared/help.js?v=32c428b';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=32c428b';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=32c428b';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=32c428b';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume } from '../../shared/daily.js?v=32c428b';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=32c428b';
 
 const GAME_ID = 'sudoku';
+const ASSIST_TEXT = '使用提示後本局變成輔助局:不刷新最佳、XP 打對折。要繼續嗎?';
+const ASSIST_DAILY_TEXT = '使用提示或自動候選後,這局今日挑戰變成輔助局:不列今日排行、不刷新最佳、XP 打對折(連續天數照算)。要繼續嗎?';
 const $ = (id) => document.getElementById(id);
 const visible = () => document.visibilityState !== 'hidden';
 // RS91:?practice=YYYY-MM-DD 重玩往日題目(練習);沿用每日盤面與介面,但⛔ 送每日成績、⛔ 進排行。
@@ -119,8 +121,10 @@ function render() {
   $('notes').setAttribute('aria-pressed', String(noteMode));
   $('notes').textContent = `✎ 筆記：${noteMode ? '開' : '關'}`;
   $('clear').disabled = locked || !!state.puzzle[cursor];
-  $('hint-button').disabled = isDaily || locked;
-  $('auto-cand').disabled = isDaily || locked;
+  // RS108:今日挑戰也開放提示與自動候選;用過即輔助局、不列今日排行。
+  $('hint-button').disabled = locked;
+  $('auto-cand').disabled = locked;
+  $('assist-rank-note').hidden = !rankedDaily();
   $('auto-cand').checked = state.autoCand;
   $('assist-label').hidden = !state.assist;
   $('hint-message').hidden = !activeHint;
@@ -157,6 +161,8 @@ function render() {
   if (isDaily) appendDailySummary(document, info, daily);
 }
 
+// RS108:今日挑戰(含接回往日那局;⛔ 練習、⛔ 已過收件時間)才有排行可失去。
+function rankedDaily() { return isDaily && !!daily && !daily.practice && !dailyExpired; }
 function finish(result) {
   if (ended) return queue;
   const snap = structuredClone(state);
@@ -166,9 +172,12 @@ function finish(result) {
     if (isDaily && !daily.practice) {
       await profile.saveState(GAME_ID, snap);
       try {
-        const outcome = await finishDailyOrExpire(dailyClient, daily, GAME_ID, result, null);
+        const outcome = await finishDailyOrExpire(dailyClient, daily, GAME_ID, result, null, snap.assist ? { assisted: true } : {});
         if (outcome.expired) dailyExpired = outcome.expired;
-        else { daily.row = outcome.row; daily.completed = true; }
+        else {
+          daily.row = outcome.row; daily.completed = true;
+          if (outcome.row.detail?.assisted === true) { snap.assist = true; state.assist = true; }
+        }
         dailyError = '';
       } catch (error) {
         if (error.code === 'DAILY_ABANDONED') { // IR74:那局已在別的分頁放棄 ⇒ 丟掉存檔、關閉,⛔ 重試迴圈
@@ -224,16 +233,22 @@ function toggleNotes() {
 function useAssist(kind) {
   if (ended || restarting || state.result) return;
   input();
+  const firstAssist = !state.assist;
   state = assistState(state);
+  if (firstAssist && rankedDaily()) {
+    // Background only: even a synchronous client failure must never block a hint.
+    try { Promise.resolve(dailyClient.markAssisted(GAME_ID, daily.day)).catch(() => {}); } catch {}
+  }
   if (kind === 'hint') activeHint = nextHint(state);
   else state = autoCandState(state, true);
   persist(); render();
 }
 function requestAssist(kind) {
-  if (isDaily || ended || restarting || state.result) return;
+  if (ended || restarting || state.result) return;
   if (kind === 'hint' && activeHint) { activeHint = null; render(); return; }
   if (state.assist) { useAssist(kind); return; }
   pendingAssist = kind;
+  $('assist-text').textContent = rankedDaily() ? ASSIST_DAILY_TEXT : ASSIST_TEXT;
   $('assist-dlg').showModal();
 }
 let confirmingQuit = false;
@@ -368,9 +383,9 @@ setupHelp({
   rules: `<ol>
     <li>列欄宮各含1–9，給定格不可改。</li>
     <li>引導學習給定 46、有自動候選；入門給定 56。</li>
-    <li>點格／方向鍵選格，1–9填入，0清空；N筆記、復原。</li>
-    <li>衝突標紅，填入清相關筆記；💡 提示說明理由。</li>
-    <li>引導學習或用提示、候選為輔助局：不刷新最佳、XP對折。最佳按難度分，入門不列總最佳。</li>
+    <li>點格／方向鍵選格，1–9填入，0清空；N筆記。</li>
+    <li>衝突標紅，填入清相關筆記；💡 提示附理由。</li>
+    <li>引導學習或用提示、候選為輔助局：不刷新最佳、XP對折、不列今日榜。最佳分難度，入門不列總最佳。</li>
     <li>首次輸入計時，重開記退出；填滿無衝突勝，分數=max(1,10000−秒)。每日挑戰成績從開題起算，含離開時間；本局只計遊玩時間，可清空重來。</li>
   </ol>`,
   demo: { steps: demoSteps().map((s, i) => ({ ...s, kind: ['fail', 'fail', undefined, 'ok'][i] })), render: (frame) => {

@@ -1,6 +1,6 @@
 // 數獨規則與狀態轉移：純函式；亂數、時間均由呼叫端注入。
-import { timerInit, timerEvent } from '../../shared/progress.js?v=09d8276';
-import { seedRng } from '../../shared/seed-rng.js?v=09d8276';
+import { timerInit, timerEvent } from '../../shared/progress.js?v=32c428b';
+import { seedRng } from '../../shared/seed-rng.js?v=32c428b';
 
 export const SIZE = 9;
 // beginner=入門(RS77,給定 56、自己想);easy=引導學習(原入門,給定 46、預設自動候選),內部鍵不改以相容舊存檔與雲端紀錄。
@@ -138,12 +138,11 @@ export function nextHint(state) {
 }
 
 export function assistState(state) {
-  if (state.daily) return state;
+  // RS108:今日挑戰也可用輔助(用了即輔助局,不列今日排行)。
   return state.result || (state.assist && state.assistUsed) ? state : { ...state, assist: true, assistUsed: true };
 }
 
 export function autoCandState(state, on) {
-  if (state.daily && on) return state;
   if (state.result || typeof on !== 'boolean') return state;
   const next = on ? assistState(state) : state;
   return next.autoCand === on ? next : { ...next, autoCand: on };
@@ -291,7 +290,7 @@ export function inClueRange(clues, difficulty) {
 
 export function isValidState(s) {
   if (s?.daily !== undefined && (typeof s.daily !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s.daily)
-    || !/^[0-9a-f]{16}$/.test(s.daily_seed) || s.difficulty !== 'normal' || s.assist || s.autoCand)) return false;
+    || !/^[0-9a-f]{16}$/.test(s.daily_seed) || s.difficulty !== 'normal')) return false;
   if (!s || !Object.hasOwn(DIFFICULTIES, s.difficulty) || !isBoard(s.puzzle)
     || clueCount(s.puzzle) < DIFFICULTIES[s.difficulty] || !validSnapshot(s, s.puzzle) || !count(s.moves)) return false;
   if ((s.assist !== undefined && typeof s.assist !== 'boolean')

@@ -1,19 +1,19 @@
 import {
   DIFFICULTIES, initState, currentQuestion, questionDone, answerState, nextState, tickState,
   cellsOf, totalErrors, scoreFor, resultOf, hasActed, settlementOf, lookupUrl, toSave, isValidState,
-  isComicList, comicFor, comicUrl,
-} from './logic.js?v=09d8276';
-import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=09d8276';
-import { createProfile } from '../../shared/profile.js?v=09d8276';
-import { LocalStore } from '../../shared/stores/local.js?v=09d8276';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=09d8276';
-import { bindThemeToggle } from '../../shared/theme.js?v=09d8276';
-import { play, music } from '../../shared/sound.js?v=09d8276';
-import { setupHelp } from '../../shared/help.js?v=09d8276';
-import { formatDuration } from '../../shared/duration.js?v=09d8276';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=09d8276';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=09d8276';
-import { confirmQuitBest } from '../../shared/quit.js?v=09d8276';
+  isComicList, comicFor, comicUrl, roundSize, comicPool, setFromSearch, COMICS_SET, COMICS_UNAVAILABLE, SET_PARAM,
+} from './logic.js?v=32c428b';
+import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=32c428b';
+import { createProfile } from '../../shared/profile.js?v=32c428b';
+import { LocalStore } from '../../shared/stores/local.js?v=32c428b';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=32c428b';
+import { bindThemeToggle } from '../../shared/theme.js?v=32c428b';
+import { play, music } from '../../shared/sound.js?v=32c428b';
+import { setupHelp } from '../../shared/help.js?v=32c428b';
+import { formatDuration } from '../../shared/duration.js?v=32c428b';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=32c428b';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=32c428b';
+import { confirmQuitBest } from '../../shared/quit.js?v=32c428b';
 
 // One promise per page, including failures and timeouts. Importing never blocks render().
 export function createComicsLoader() {
@@ -72,11 +72,36 @@ let ended = null;
 let busy = true;
 let queue = Promise.resolve();
 const run = (fn) => { queue = queue.then(fn).catch((error) => console.error(error)); return queue; };
+// RS106:大廳捷徑 games/idiom/?set=comics 直接選定典故漫畫題組。
+const requestedSet = setFromSearch(typeof location === 'undefined' ? '' : location.search);
+const showNotice = (text) => { $('set-notice').textContent = text; $('set-notice').hidden = !text; };
 const esc = (value) => String(value).replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
 
-async function startNew(difficulty = 'easy') {
+// 典故漫畫題組先讀清單;讀不到或沒有可出的題就提示,⛔ 退回出一般題。
+// current():這次選擇是否仍是最後一次;被後來的選擇取代就不動提示區。
+async function comicsFor(difficulty, current = () => true) {
+  if (difficulty !== COMICS_SET) { showNotice(''); return { ok: true }; }
+  showNotice('載入漫畫清單中…');
+  const comics = await loadComics();
+  if (!current()) return { ok: false, stale: true };
+  if (!comicPool(comics).length) { showNotice(COMICS_UNAVAILABLE); return { ok: false }; }
+  showNotice('');
+  return { ok: true, comics };
+}
+
+// 沒有進行中的局(例:從大廳捷徑進來但清單讀不到):只留提示與題組選單。
+function showUnavailable(difficulty) {
+  $('difficulty').value = difficulty;
+  $('question').hidden = true;
+  $('progress-label').textContent = '';
+  $('progress').hidden = true;
+  $('new').disabled = true;
+}
+
+async function startNew(difficulty = 'easy', comics) {
   await profile.discardSave(GAME_ID);
-  state = initState(difficulty);
+  showNotice('');
+  state = initState(difficulty, { comics });
   ended = null;
   best = await profile.best(GAME_ID);
   profile.startTimer(GAME_ID);
@@ -90,23 +115,52 @@ async function finish(result) {
   ended = { pending: true };
   render();
   const out = await settlePlay(profile, GAME_ID, args);
-  if (!out) { await startNew(state.difficulty); return; }
+  if (!out) { await restart(state.difficulty); return; }
   ended = { ...out, ...args, xp: out.xpGained, isBest: out.play.is_best, bestBefore: best };
   if (out.play.is_best) best = Math.max(best, args.score);
   render();
 }
 
+// 結算失敗(放棄存檔)後重開:同題組也要經 comicsFor 取清單;讀不到就只留提示與題組選單。
+async function restart(difficulty) {
+  const set = await comicsFor(difficulty);
+  if (set.ok) { await startNew(difficulty, set.comics); return; }
+  await profile.discardSave(GAME_ID);
+  state = undefined;
+  ended = null;
+  $('result').hidden = true;
+  showUnavailable(difficulty);
+  $('difficulty').disabled = false;
+  music(false);
+}
+
+// 選題組請求序號:清單載入中又改選時,以最後一次選擇為準(不鎖選單)。
+let pick = 0;
+let picking = false;
+
 async function newGame(difficulty = state?.difficulty) {
-  if (!state || busy || ended?.pending) return;
+  if (!difficulty || ended?.pending || (busy && !picking)) return;
+  const mine = ++pick;
   busy = true;
+  picking = true;
   try {
-    if (!ended && hasActed(state)) {
+    const set = await comicsFor(difficulty, () => mine === pick);
+    if (mine !== pick) return;
+    picking = false;
+    if (!set.ok) {
+      if (state) $('difficulty').value = state.difficulty;
+      else showUnavailable(difficulty);
+      return;
+    }
+    if (state && !ended && hasActed(state)) {
       const quit = await confirmQuitBest({ score: scoreFor(state), best, assist: false });
       if (!quit) { $('difficulty').value = state.difficulty; return; }
       await run(() => finish('quit'));
     }
-    await run(() => startNew(difficulty));
-  } finally { busy = false; }
+    await run(() => startNew(difficulty, set.comics));
+  } finally {
+    if (mine === pick) { busy = false; picking = false; }
+  }
 }
 
 function choose(letter) {
@@ -128,12 +182,16 @@ function choose(letter) {
 
 function render() {
   if (!state) return;
-  const q = currentQuestion(state), done = questionDone(state);
+  const q = currentQuestion(state), done = questionDone(state), size = roundSize(state);
+  $('question').hidden = false;
+  $('progress').hidden = false;
   $('difficulty').value = state.difficulty;
   $('seconds').textContent = formatDuration(state.seconds);
   $('best').textContent = best.toLocaleString();
-  $('progress-label').textContent = `第 ${state.index + 1} / 10 題 · ${DIFFICULTIES[state.difficulty].label} · ${scoreFor(state)} 分 · 錯誤 ${totalErrors(state)} 次`;
+  $('progress-label').textContent = `第 ${state.index + 1} / ${size} 題 · ${DIFFICULTIES[state.difficulty].label} · ${scoreFor(state)} 分 · 錯誤 ${totalErrors(state)} 次`;
+  $('progress').max = size;
   $('progress').value = state.index + (done ? 1 : 0);
+  $('result-title').textContent = `🎉 完成 ${size} 題!`;
   $('cells').innerHTML = cellsOf(state).map((cell, i) => `<span class="idiom-cell${cell.active ? ' active' : ''}${cell.wrong ? ' wrong' : ''}" aria-label="第 ${i + 1} 字${cell.active ? ',待填' : ''}${cell.wrong ? ',答錯' : ''}">${esc(cell.text)}</span>`).join('');
   $('status').textContent = done ? '✅ 答對了!可查看《成語典》。' : state.wrong ? '❌ 這個字不對,再選一次。' : `請選字填入亮框(第 ${q.blanks[state.filled] + 1} 字)`;
   // Keep six buttons in place while choosing, preserving native keyboard focus.
@@ -215,7 +273,7 @@ if (saved && isValidState(saved)) {
   profile.startTimer(GAME_ID);
   render();
   if (resultOf(state)) await run(() => finish('win'));
-} else await run(() => startNew());
+} else if (!requestedSet) await run(() => startNew());
 
 setupHelp({
   gameId: GAME_ID, title: '成語填空玩法', mountAfter: document.querySelector('.topbar .btn'),
@@ -223,3 +281,12 @@ setupHelp({
   demo: { steps: demoSteps(), render: renderDemo },
 });
 busy = false;
+if (requestedSet) {
+  // 用過就從網址拿掉,之後改選其他題組再重整不會又被切回來。
+  if (typeof history !== 'undefined' && typeof location !== 'undefined') {
+    const url = new URL(location.href);
+    url.searchParams.delete(SET_PARAM);
+    history.replaceState?.(history.state, '', url.pathname + url.search + url.hash);
+  }
+  if (state?.difficulty !== requestedSet) await newGame(requestedSet);
+}

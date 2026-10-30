@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>成語填空 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../../shared/style.css?v=09d8276">
-  <link rel="stylesheet" href="style.css?v=09d8276">
+  <link rel="stylesheet" href="../../shared/style.css?v=32c428b">
+  <link rel="stylesheet" href="style.css?v=32c428b">
 </head>
 <body>
   <main class="page page-narrow">
@@ -23,11 +23,13 @@
         <option value="easy">入門 · 400 詞</option>
         <option value="normal">一般 · 1,000 詞</option>
         <option value="expert">挑戰 · 全部詞表</option>
+        <option value="comics">典故漫畫 · 有漫畫的成語</option>
       </select>
     </div>
+    <p id="set-notice" class="set-notice" role="alert" hidden></p>
     <p id="progress-label"></p>
     <progress id="progress" max="10" value="0" aria-labelledby="progress-label"></progress>
-    <section class="question-card" aria-label="成語題目">
+    <section class="question-card" id="question" aria-label="成語題目">
       <div class="idiom-cells" id="cells" aria-label="四字成語"></div>
       <p id="status" role="status" aria-live="polite"></p>
       <div class="choices" id="choices" aria-label="候選字"></div>
@@ -44,6 +46,6 @@
     </section>
     <p class="hint">點選候選字填入亮框 · 挑戰級依序填兩格</p>
   </main>
-  <script type="module" src="ui.js?v=09d8276"></script>
+  <script type="module" src="ui.js?v=32c428b"></script>
 </body>
 </html>

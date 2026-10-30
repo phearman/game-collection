@@ -1,6 +1,6 @@
 // 大廳釘選、精選、分類與排序(RS38 第一期,純前端)。規則見 workbook/plans/rs38-lobby-pin.md §2。
 // 動態內容一律 textContent/屬性;偏好與釘選只存本機(R15;雲端同步列第二期)。
-import { CHANGELOG } from './changelog.js?v=09d8276';
+import { CHANGELOG } from './changelog.js?v=32c428b';
 
 export const CATEGORIES = [
   { id: 'puzzle', label: '益智' },
@@ -86,6 +86,19 @@ export function sortGames(list, mode, { recent = [], updates = latestUpdates(), 
 export const featuredGames = (games) => games.filter((g) => g.status === 'active' && g.featured)
   .sort((a, b) => (a.featured.order ?? 0) - (b.featured.order ?? 0)).slice(0, FEATURED_LIMIT);
 
+// RS109 姊妹網站(文言文小幫手);大廳卡片寫在 index.html,這裡給捷徑卡的「看全部成語漫畫」用。
+export const CLASSICAL_SITE = 'https://phearman.github.io/classical-chinese-kids-site/';
+
+// RS106 主題捷徑:直接開某款遊戲的指定題組(網址參數),不是新遊戲 id;該遊戲停用時不顯示。
+export const SHORTCUTS = [
+  { id: 'idiom-comics', game: 'idiom', query: 'set=comics', icon: '📖', title: '成語漫畫挑戰', desc: '只出有典故漫畫的成語,答對看漫畫',
+    more: { href: `${CLASSICAL_SITE}idioms/index.html`, text: '看全部成語漫畫 ', note: '(另開文言文網站)' } },
+];
+export const shortcutsFor = (catalog, shortcuts = SHORTCUTS) => {
+  const ok = playable(catalog);
+  return shortcuts.filter((s) => ok.has(s.game));
+};
+
 // 大廳卡片區。games = summary.games(含 stats);recent = summary.recent;saves = 有存檔的 id。
 export function mountLobby({ doc, games, recent, saves = new Set(), storage = defaultStorage(), catalog = games,
   setTimer = globalThis.setTimeout, clearTimer = globalThis.clearTimeout }) {
@@ -137,6 +150,40 @@ export function mountLobby({ doc, games, recent, saves = new Set(), storage = de
     return wrap;
   };
   const byId = new Map(games.map((g) => [g.id, g]));
+  const shortcutCard = (s) => {
+    const g = catalog.find((item) => item.id === s.game);
+    const wrap = node('div', 'card-wrap');
+    const link = node('a', 'card is-active shortcut-card');
+    link.href = `games/${s.game}/?${s.query}`;
+    link.dataset.shortcut = s.id;
+    const head = node('div', 'card-head');
+    const icon = node('span', 'card-icon', s.icon);
+    icon.setAttribute('aria-hidden', 'true');
+    head.append(icon, node('span', 'card-tags'));
+    const title = node('p', 'card-title');
+    if (g?.code) title.append(node('span', 'card-code', `${g.code}${g.version ? ` v${g.version}` : ''}`));
+    title.append(doc.createTextNode(s.title));
+    link.append(head, title, node('p', 'card-desc', s.desc));
+    wrap.append(link);
+    // RS109:卡片下的小字外部連結,是卡片連結的兄弟元素(⛔ 巢狀 <a>),新分頁開。
+    if (s.more) {
+      const more = node('a', 'card-more', s.more.text);
+      more.href = s.more.href; more.target = '_blank'; more.rel = 'noopener';
+      const arrow = node('span', '', '→');
+      arrow.setAttribute('aria-hidden', 'true');
+      more.append(arrow, node('span', 'card-more-note', s.more.note));
+      wrap.className = 'card-wrap has-more'; // 不用 :has(),舊瀏覽器也排得開
+      wrap.append(more);
+    }
+    return wrap;
+  };
+  const renderShortcuts = () => {
+    const box = $('shortcut-cards');
+    if (!box) return;
+    const list = shortcutsFor(catalog);
+    if ($('shortcuts')) $('shortcuts').hidden = !list.length;
+    box.replaceChildren(...list.map(shortcutCard));
+  };
   const tabs = () => {
     const box = $('category-tabs');
     const all = games.filter((g) => !pins.includes(g.id));
@@ -162,6 +209,7 @@ export function mountLobby({ doc, games, recent, saves = new Set(), storage = de
     const featured = featuredGames(catalog).map((g) => byId.get(g.id) ?? g);
     $('featured').hidden = !featured.length;
     $('featured-cards').replaceChildren(...featured.map((g) => card(g, { note: g.featured.note, pinned: pins.includes(g.id) })));
+    renderShortcuts();
     const opts = { recent, updates, order };
     const pinned = sortGames(pins.map((id) => byId.get(id)).filter(Boolean), view.sort, opts);
     $('pinned').hidden = !pinned.length;

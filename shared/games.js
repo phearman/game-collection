@@ -17,5 +17,5 @@ export const GAMES = [
   { id: 'bridge', code: 'G13', version: '1.0', title: '小人過橋', icon: '🌉', desc: '按住搭橋,剛好就過', category: 'action', status: 'active' },
   { id: 'archery', code: 'G14', version: '1.1', title: '弓箭射擊', icon: '🏹', desc: '拉弓射靶,看風出手', category: 'sport', status: 'active' },
   { id: 'peg', code: 'G15', version: '1.0', title: '孔明棋', icon: '🔵', desc: '跳子吃子,剩一顆最強', category: 'puzzle', featured: { order: 1, note: '新遊戲' }, status: 'active' },
-  { id: 'idiom', code: 'G16', version: '1.2', title: '成語填空', icon: '📜', desc: '四字成語選字填空', category: 'word', status: 'active' },
+  { id: 'idiom', code: 'G16', version: '1.3', title: '成語填空', icon: '📜', desc: '四字成語選字填空', category: 'word', status: 'active' },
 ];

@@ -1,4 +1,4 @@
-@import url("skins.css?v=09d8276");
+@import url("skins.css?v=32c428b");
 :root {
   --bg: #f6f5f1;
   --surface: #ffffff;
@@ -222,6 +222,12 @@ a.card:hover { border-color: var(--accent); }
 .tag.is-pinned { background: var(--accent-bg); color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .pin-btn { transition: none; } }
 .tag.is-resume { background: var(--accent); color: var(--surface); }
+/* RS109 姊妹網站與捷徑卡下的外部小字連結;375px 可折行 */
+.tag.is-external { background: var(--accent-bg); color: var(--accent); }
+.card-wrap.has-more { display: flex; flex-direction: column; gap: 6px; }
+.card-wrap.has-more > .card { height: auto; flex: 1; }
+.card-more { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; min-height: 32px; font-size: 13px; color: var(--accent); overflow-wrap: anywhere; }
+.card-more-note { color: var(--text-sub); font-size: 12px; }
 
 /* 結算遮罩 XP 明細(RS5):小字,可折行 */
 .overlay-xp-detail { font-size: 12px; line-height: 1.5; color: inherit; opacity: .85; margin: 2px 0 6px; }
