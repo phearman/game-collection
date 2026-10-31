@@ -1,6 +1,6 @@
-import { DAILY_GRACE_HOURS, dailySlotDeadline } from './daily-slots.js?v=32c428b';
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=32c428b';
-import { formatDuration } from './duration.js?v=32c428b';
+import { DAILY_GRACE_HOURS, dailySlotDeadline } from './daily-slots.js?v=4a61272';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=4a61272';
+import { formatDuration } from './duration.js?v=4a61272';
 
 export const DAILY_GAMES = ['sudoku', 'minesweeper', 'memory'];
 export const DAILY_NAMES = { wordle: 'Wordle', sudoku: '數獨', minesweeper: '踩地雷', memory: '翻翻樂' };
@@ -11,7 +11,7 @@ export const DAILY_FAST_GAME_MIN_SECONDS = 20;
 export const taiwanDay = (stamp) => new Date(Number(stamp) + 8 * 3600000).toISOString().slice(0, 10);
 export const dailyDateLabel = (day) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`;
 export const dailyAbandonConfirm = (day) => `放棄 ${dailyDateLabel(day)} 的挑戰?這局不列入排行、之後也不能再交,但可以改練習這天的題目。`;
-export { dailySlot, legacyDailySlot } from './daily-slots.js?v=32c428b';
+export { dailySlot, legacyDailySlot } from './daily-slots.js?v=4a61272';
 // IR68:D 日開始的挑戰收到 D+1 台灣中午 12:00,仍計入 D 日。期限只由伺服器(SQL daily_deadline)判定;
 // 這兩個常數是它的鏡像,只給文案與測試用,改期限時兩邊一起改。
 export { DAILY_GRACE_HOURS };
@@ -183,7 +183,7 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
 }
 export async function browserDailyClient() {
   if (!cloudEnabled) return createDailyClient();
-  const { auth } = await (await import('./auth.js?v=32c428b')).getCloudRuntime();
+  const { auth } = await (await import('./auth.js?v=4a61272')).getCloudRuntime();
   return createDailyClient({ auth });
 }
 

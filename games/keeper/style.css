@@ -95,6 +95,8 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
   --kp-snow: #f2f8ff;
   --kp-snow-shade: #d6e5ed;
   --kp-wind: #ffd45a;
+  --kp-leaf: #e08a2c;
+  --kp-leaf-b: #9bbf3a;
   --kp-night-shade: rgba(5, 12, 36, .68);
   --kp-night: 0;
   --kp-sky-top: #8fd0ff;
@@ -148,6 +150,8 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
   --kp-snow: #dbe7f3;
   --kp-snow-shade: #a8becd;
   --kp-wind: #ffe178;
+  --kp-leaf: #f0a24a;
+  --kp-leaf-b: #b6d65a;
   --kp-night-shade: rgba(2, 6, 20, .45);
   --kp-night: 1;
   --kp-sky-top: #0b1230;
@@ -202,6 +206,8 @@ select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px
     --kp-snow: #dbe7f3;
     --kp-snow-shade: #a8becd;
     --kp-wind: #ffe178;
+    --kp-leaf: #f0a24a;
+    --kp-leaf-b: #b6d65a;
     --kp-night-shade: rgba(2, 6, 20, .45);
     --kp-night: 1;
     --kp-sky-top: #0b1230;

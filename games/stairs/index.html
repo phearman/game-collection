@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>下樓梯 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../../shared/style.css?v=32c428b">
-  <link rel="stylesheet" href="style.css?v=32c428b">
+  <link rel="stylesheet" href="../../shared/style.css?v=4a61272">
+  <link rel="stylesheet" href="style.css?v=4a61272">
 </head>
 <body>
   <main class="page page-narrow page-fit">
@@ -31,7 +31,10 @@
       </select>
     </div>
     <div class="adventure-hud" id="adventure-hud" hidden>
-      <strong id="stage-name"></strong><span id="goal-progress"></span>
+      <strong id="stage-name"></strong>
+      <div class="goal-bar" id="goal-bar" role="progressbar" aria-label="本關進度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="goal-fill" id="goal-fill"></div><span class="goal-text" id="goal-progress"></span>
+      </div>
       <span id="treasures"></span>
     </div>
     <div class="stage-area">
@@ -48,6 +51,6 @@
     </div>
     <p class="hint">← → / A D 移動 · 手機按住左半邊/右半邊 · P 暫停</p>
   </main>
-  <script type="module" src="ui.js?v=32c428b"></script>
+  <script type="module" src="ui.js?v=4a61272"></script>
 </body>
 </html>

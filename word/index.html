@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>單字發音 · 遊戲集錦</title>
+  <link rel="stylesheet" href="../shared/style.css?v=4a61272">
+  <link rel="stylesheet" href="style.css?v=4a61272">
+</head>
+<body>
+  <header><a href="../">遊戲集錦</a><button id="theme" type="button" aria-label="切換主題">切換主題</button></header>
+  <main>
+    <h1 id="word">單字發音</h1>
+    <p id="phonetic"></p><p id="stars" aria-label="常用度"></p>
+    <p id="note" role="status">載入中…</p>
+    <div id="definitions"></div>
+    <button id="speak" type="button" hidden>▶ 念出來</button>
+    <p id="speech-hint" hidden>此瀏覽器沒有可用的英語語音，請使用劍橋真人發音連結。</p>
+    <p><a id="cambridge" target="_blank" rel="noopener noreferrer" hidden>劍橋真人發音</a></p>
+    <p class="credit"><a href="../line/#dictionary-license">詞典資料:ECDICT(MIT)</a></p>
+  </main>
+  <footer><a href="../line/">LINE 小幫手使用說明</a> · <a href="../privacy/">隱私權政策</a></footer>
+  <script type="module" src="ui.js?v=4a61272"></script>
+</body>
+</html>

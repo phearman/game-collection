@@ -1,4 +1,4 @@
-import { DAILY_ASSISTED_TEXT, dailyDateLabel, dailyScore, dailyShare, dailyFinishedLater, dailyAbandonConfirm, DAILY_LOGIN_NOTICE, DAILY_FIXED_NOTE, DAILY_PRACTICE_NOTE, dailyPracticeRequested, dailyResumeRequested, DAILY_PAST_OPEN_TEXT, DAILY_RESUME_NO_SAVE_TEXT } from './daily.js?v=32c428b';
+import { DAILY_ASSISTED_TEXT, dailyDateLabel, dailyScore, dailyShare, dailyFinishedLater, dailyAbandonConfirm, DAILY_LOGIN_NOTICE, DAILY_FIXED_NOTE, DAILY_PRACTICE_NOTE, dailyPracticeRequested, dailyResumeRequested, DAILY_PAST_OPEN_TEXT, DAILY_RESUME_NO_SAVE_TEXT } from './daily.js?v=4a61272';
 
 // IR74:往日練習被「那天的每日局還在收件中」擋下 ⇒ 給「繼續那局」與「放棄那局」;翻翻樂接回時找不到原存檔
 // ⇒ 只給「放棄那局」(其他接回錯誤如已過期、網路、未登入不給)。放棄由伺服器標記(不列排行、不能再交),

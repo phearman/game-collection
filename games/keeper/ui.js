@@ -4,19 +4,19 @@ import {
   initState, startShot, actState, stepState, pauseState, resumeState, isPlaying, canPause, setMove, moveTo, isDrag, dragX,
   tally, movesOf, finishInfo, classifyGesture, normalizeShots, toSave, fromSave, isValidState,
   ROLES, roleOf, kickerTally, aimAt, nudgeAim, chooseCurve, chargeShot, releaseShot, cancelCharge,
-  CURVES, CURVE_NAMES, POWER_HALF_MS, kickFlightMs, KICKER_WIN_GOALS,
-} from './logic.js?v=32c428b';
-import { FIELD_H, aimFromPoint, drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js?v=32c428b';
-import { createProfile } from '../../shared/profile.js?v=32c428b';
-import { LocalStore } from '../../shared/stores/local.js?v=32c428b';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=32c428b';
-import { bindThemeToggle } from '../../shared/theme.js?v=32c428b';
-import { play, music } from '../../shared/sound.js?v=32c428b';
-import { setupHelp } from '../../shared/help.js?v=32c428b';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=32c428b';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=32c428b';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=32c428b';
-import { load, save } from '../../shared/storage.js?v=32c428b';
+  CURVES, CURVE_NAMES, POWER_HALF_MS, kickFlightMs, KICKER_WIN_GOALS, windLevel,
+} from './logic.js?v=4a61272';
+import { FIELD_H, aimFromPoint, drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js?v=4a61272';
+import { createProfile } from '../../shared/profile.js?v=4a61272';
+import { LocalStore } from '../../shared/stores/local.js?v=4a61272';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=4a61272';
+import { bindThemeToggle } from '../../shared/theme.js?v=4a61272';
+import { play, music } from '../../shared/sound.js?v=4a61272';
+import { setupHelp } from '../../shared/help.js?v=4a61272';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=4a61272';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=4a61272';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=4a61272';
+import { load, save } from '../../shared/storage.js?v=4a61272';
 
 const GAME_ID = 'keeper';
 const DIFF_KEY = 'difficulty:keeper'; // 上次選的難度(開新局用)
@@ -197,8 +197,11 @@ function tick(now) {
 }
 
 // 球進行中(含結果顯示)、或特效還沒播完時才跑動畫迴圈。
+// 風天氣踢球員瞄準時也要持續播落葉、旗網(RS40 退回 2)。
+const ANIMATED = ['wait', 'runup', 'flight', 'result', 'charge'];
+const animating = (s) => ANIMATED.includes(s.phase) || (s.phase === 'aim' && s.weather === 'wind');
 function syncLoop() {
-  const want = (!confirmingQuit && !state.paused && ['wait', 'runup', 'flight', 'result', 'charge'].includes(state.phase)) || fxBusy(fx);
+  const want = (!confirmingQuit && !state.paused && animating(state)) || fxBusy(fx);
   if (want && !frame) {
     lastT = performance.now();
     frame = requestAnimationFrame(tick);
@@ -292,6 +295,11 @@ function renderFinishInfo() {
   }).join('、')}`);
 }
 
+// RS40:開局特別提示(風向、風力等級、球往哪邊偏)。
+const windHint = (wind) => {
+  const side = wind.direction < 0 ? '左' : '右';
+  return `${wind.direction < 0 ? '←' : '→'} 本回合吹${side}風，風力 ${windLevel(wind.strength)}，球會往${side}偏`;
+};
 let shown = null;
 function renderOverlay() {
   const overlay = $('overlay');
@@ -311,7 +319,7 @@ function renderOverlay() {
     for (const text of [first ? `本回合 ${state.total} 球` : `接著踢第 ${state.log.length + 1} / ${state.total} 球`,
       `天氣：${weatherFor(state.weather).name} · 分數 ×${weatherFor(state.weather).bonus}`,
       (roleOf(state) === 'kicker' ? weatherFor(state.weather).kickerDescription : null) ?? weatherFor(state.weather).description,
-      ...(state.weather === 'wind' ? [`${state.wind.direction < 0 ? '← 左風' : '右風 →'} · 風力 ${state.wind.strength}`] : []),
+      ...(state.weather === 'wind' ? [windHint(state.wind)] : []),
       ...(roleOf(state) === 'kicker' ? ['踢球員：點球門或拖曳瞄準，選弧度，按住射門再放開。', '空白鍵開始後，可按住空白鍵蓄力射門。'] : ['按空白鍵或「開始」'])]) {
       const p = document.createElement('p'); p.textContent = text; info.append(p);
     }
@@ -617,14 +625,17 @@ function weatherDemos() {
   const wind = { ...initState({ weather: 'wind' }, () => 0.99), phase: 'flight', t: 0, shot: { wait: 0, target } };
   const snow = { ...initState({ weather: 'snow' }), phase: 'flight', t: 0, shot: { wait: 0, target } };
   const elapsed = PARAMS.normal.flight / 2;
-  const blown = stepState(wind, elapsed);
+  // 風的示範看到快進門線(90%):球先往左飛,再被右風吹成弧線往右拐。
+  const late = PARAMS.normal.flight * 0.9;
+  const blown = stepState(wind, late);
   const slow = stepState(snow, elapsed);
   const w = ballMotion(target, blown.t, wind.difficulty, wind.weather, wind.wind);
   const s = ballMotion(target, slow.t, snow.difficulty, snow.weather, snow.wind);
   const sunny = ballMotion(target, elapsed, 'normal', 'sun');
+  const sunnyLate = ballMotion(target, late, 'normal', 'sun');
   return [
-    { before: wind, after: blown, caption: '看右風箭頭：球原本往中間附近飛…',
-      result: `…側風把球往右多吹 ${Math.round(w.x - sunny.x)} 單位，撲救要跟著球路調整。`, kind: 'ok' },
+    { before: wind, after: blown, caption: `看上方右風箭頭（風力 ${windLevel(wind.wind.strength)}）：球起腳先往左飛…`,
+      result: `…被風吹成弧線往右拐，比晴天多偏右 ${Math.round(w.x - sunnyLate.x)} 單位；跟著殘影預判落點。`, kind: 'ok' },
     { before: snow, after: slow, caption: '雪中射門：比較相同的飛行時間…',
       result: `…晴天前進 ${Math.round(sunny.progress * 100)}%，雪天只前進 ${Math.round(s.progress * 100)}%；要等球接近才跳。`, kind: 'ok' },
   ];
@@ -641,7 +652,7 @@ setupHelp({
       <li>高球要跳、遠的球要移動或撲;太早跳會落地撲空。</li>
       <li>難度越高等待越短、球越快、手套範圍越小,XP 越多。</li>
       <li>勝利條件:撲到過半(≥ 一半球數);分數 = 撲到數 ×100 + 最長連續撲救 ×50。</li>
-      <li>天氣可選隨機（每回合固定）／晴／雨／雪／夜／風：雨天低球彈地後滑得更快、移動起停有滑行；雪天球速與移動最高速度降低 15%；夜間暗場有照明；風會把球吹偏，方向與風力整回合固定。</li>
+      <li>天氣可選隨機（每回合固定）／晴／雨／雪／夜／風：雨天低球彈地後滑得更快、移動起停有滑行；雪天球速與移動最高速度降低 15%；夜間暗場有照明；風會把球吹成大弧線，方向與風力（1～5 級）整回合固定，畫面上方的大箭頭越長越粗代表風越強，落葉、旗子與球網也會跟著風擺動。</li>
       <li>本回合分數再乘天氣加成並四捨五入：晴 ×1、雨／雪 ×1.2、夜／風 ×1.3。</li>
       <li>開局可選踢球員，每回合固定 5 球：點球門或拖曳準星瞄準；電腦用方向鍵移動準星。</li>
       <li>射門前選直球／左弧／右弧／高吊；按住「射門」或空白鍵讓力道條來回擺動，放開就射。太弱是慢速低球、易被撲出，太強可能高出橫梁；按鈕聚焦時也可按住 Enter。</li>

@@ -4,9 +4,15 @@
 .stats .stat { min-width: 52px; padding: 2px 8px; }
 .actions { display: flex; gap: 8px; margin-bottom: 12px; }
 .actions > * { min-width: 0; }
-.adventure-hud { display: grid; grid-template-columns: 1fr auto; gap: 0 6px; font-size: 12px; line-height: 1.5; padding: 4px 8px; margin-bottom: 6px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); }
+.adventure-hud { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 8px; font-size: 12px; line-height: 1.5; padding: 4px 8px; margin-bottom: 6px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); }
 .adventure-hud[hidden] { display: none; }
 #treasures { grid-column: 1 / -1; min-height: 18px; }
+/* RS39 進度條:佔 HUD 第一列右側(375 寬約 250px ≥ 畫面 60%);最後階段變色+斜紋(不只靠顏色) */
+.goal-bar { position: relative; height: 20px; min-width: 0; border-radius: 10px; overflow: hidden; background: var(--border); }
+.goal-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: color-mix(in srgb, var(--accent) 45%, var(--surface)); border-radius: 10px; transition: width .2s linear; }
+.goal-bar[data-final="1"] .goal-fill { background: repeating-linear-gradient(-45deg, #e8355f 0 8px, #f4c430 8px 16px); }
+.goal-text { position: relative; display: block; text-align: center; font-size: 12px; font-weight: 700; line-height: 20px; color: var(--text); text-shadow: 0 0 3px var(--surface), 0 0 3px var(--surface); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .goal-fill { transition: none; } }
 .actions .btn { flex: 1; white-space: nowrap; padding-left: 8px; padding-right: 8px; }
 select.btn { appearance: auto; }
 select.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

@@ -1,0 +1,8 @@
+body { max-width: 44rem; margin: auto; padding: 1rem; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+main { margin: 2rem 0; padding: 1.5rem; border: 1px solid var(--border); border-radius: 1rem; background: var(--surface); overflow-wrap: anywhere; }
+h1 { margin-top: 0; }
+#definitions p { line-height: 1.7; }
+button { cursor: pointer; padding: .7rem 1rem; }
+.credit, footer { font-size: .9rem; margin-top: 2rem; }
+[hidden] { display: none !important; }

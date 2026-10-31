@@ -1,4 +1,4 @@
-import { seedRng } from '../../shared/seed-rng.js?v=32c428b';
+import { seedRng } from '../../shared/seed-rng.js?v=4a61272';
 
 // 翻翻樂規則層:純函式,不碰 DOM。牌以一維陣列存,牌號 i = r × cols + c。
 // 規則正典:workbook/plans/memory-match.md「規則(驗收依據)」。

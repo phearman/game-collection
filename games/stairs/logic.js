@@ -1,7 +1,9 @@
 // 下樓梯規則層:純函式,不碰 DOM。座標單位 = 場地單位,x 往右、y 往下(0 在畫面頂端)。
 // 規則正典:workbook/plans/stairs.md「規則(驗收依據)」。
-import { STAGES, ADVENTURE, stageFor, directionFor, stageComplete } from './stages.js?v=32c428b';
-export { STAGES, ADVENTURE, stageFor, directionFor, flipNotice, goalText, goalProgress, stageComplete } from './stages.js?v=32c428b';
+import { STAGES, ADVENTURE, stageFor, directionFor, stageComplete, celebrateLength } from './stages.js?v=4a61272';
+export { STAGES, ADVENTURE, stageFor, directionFor, flipNotice, goalText, goalProgress, stageComplete,
+  CLEAR_FX, goalRatio, goalRemaining, finalPhase, finalText, finalCue, goalMarker,
+  celebrateLength, celebrating, tickCelebration, skipCelebration } from './stages.js?v=4a61272';
 
 export const W = 9; // 場地寬
 export const H = 16; // 場地高
@@ -78,6 +80,20 @@ export function spawnPlatform(seed, n, y, difficulty) {
 // 愛心的範圍(在平台中央上方,隨平台移動)。
 export function heartBox(p) {
   return { x: p.x + (p.w - HEART) / 2, y: p.y - HEART_LIFT - HEART, w: HEART, h: HEART };
+}
+
+// 收集關的方向指示(RS39):離玩家最近的金幣中心(場地座標,與 state 同方向);沒有金幣 = null。
+export function nearestCoin(s) {
+  const cx = s.player.x + PLAYER / 2, cy = s.player.y + PLAYER / 2;
+  let best = null;
+  for (const p of s.platforms) {
+    if (p.item !== 'coin') continue;
+    const b = heartBox(p);
+    const c = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+    c.d = Math.hypot(c.x - cx, c.y - cy);
+    if (!best || c.d < best.d) best = c;
+  }
+  return best;
 }
 
 export function enemyBox(p) {
@@ -452,6 +468,8 @@ function stepSimulation(state, input = {}, dt = DT) {
     next.lives = Math.min(MAX_LIVES, next.lives + 1);
     next.paused = true;
     if (next.stage === STAGES.length) { next.over = true; next.won = true; }
+    // RS39:過關演出(畫面用;不進存檔)。期間 stageCleared/paused 已凍結,不再判定傷害或計分。
+    next.celebrate = next.celebrateMax = celebrateLength(next);
   }
   return next;
 }

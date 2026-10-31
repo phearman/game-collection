@@ -4,8 +4,8 @@
 import {
   FIELD_W, GOAL_HALF_W, GOAL_H, RUNUP_MS, ACTION_MS, keeperPose, saveZone, lastResult, tally,
   ballMotion, flightMs, impactTarget, weatherFor, BOUNCE_AT, LOW_BALL_Y,
-  roleOf, kickMotion, kickFlightMs, kickImpact, computerSaveZone, CURVE_NAMES, KICK_PARAMS,
-} from './logic.js?v=32c428b';
+  roleOf, kickMotion, kickFlightMs, kickImpact, computerSaveZone, CURVE_NAMES, KICK_PARAMS, windLevel, WIND_LEVELS,
+} from './logic.js?v=4a61272';
 
 export const FIELD_H = 420;
 const CX = FIELD_W / 2;
@@ -34,7 +34,7 @@ export const PALETTE_KEYS = [
   'skin', 'hair', 'jersey', 'jersey-dark', 'shorts', 'sock', 'glove', 'glove-dark', 'boot', 'eye', 'cheek',
   'kid-jersey', 'kid-cap', 'kid-shorts', 'ball', 'ball-dark', 'shadow', 'ink', 'zone', 'zone-line',
   'save', 'goal', 'star', 'text', 'hud',
-  'rain', 'wet', 'snow', 'snow-shade', 'wind', 'night-shade',
+  'rain', 'wet', 'snow', 'snow-shade', 'wind', 'night-shade', 'leaf', 'leaf-b',
 ];
 
 // cs = getComputedStyle(document.documentElement)(由呼叫端傳入,本模組不碰 DOM 全域)。
@@ -279,6 +279,70 @@ function paintBackground(c, pal, weather = 'sun') {
 }
 
 export const weatherParticleCount = (weather, reduced = false) => ['rain', 'snow'].includes(weather) ? (reduced ? 8 : 40) : 0;
+// RS40 風的環境:落葉數隨風力(16~24 片,reduced-motion 固定 6 片);旗子/球網/草的擺幅隨風力,reduced-motion 減半。
+export const windLeafCount = (weather, strength, reduced = false) => weather !== 'wind' ? 0
+  : reduced ? 6 : 14 + 2 * windLevel(strength);
+export const windSway = (strength, reduced = false) => (2 + 1.6 * windLevel(strength)) * (reduced ? 0.5 : 1);
+// 風向標示的大箭頭:長度與粗細隨風力等級變化。
+export const windArrowSize = (strength) => {
+  const level = windLevel(strength);
+  return { length: 34 + level * 12, width: 4 + level * 1.6, level };
+};
+
+function drawWindArrow(c, pal, cx, cy, dir, { length, width }) {
+  const head = Math.min(length * 0.45, 10 + width * 1.4), half = length / 2;
+  const tail = cx - dir * half, neck = cx + dir * (half - head), tip = cx + dir * half;
+  c.beginPath();
+  c.moveTo(tail, cy - width / 2); c.lineTo(neck, cy - width / 2); c.lineTo(neck, cy - width / 2 - head * 0.55);
+  c.lineTo(tip, cy); c.lineTo(neck, cy + width / 2 + head * 0.55); c.lineTo(neck, cy + width / 2); c.lineTo(tail, cy + width / 2);
+  c.closePath();
+  c.fillStyle = pal.wind; c.fill(); ink(c, pal, 1.6);
+}
+
+// 畫面上方固定的風向標示:「← 風力 n」+ 等級格 + 隨風力變長變粗的大箭頭(守門員、踢球員都顯示)。
+function drawWindBanner(c, pal, wind) {
+  const dir = wind.direction, size = windArrowSize(wind.strength);
+  roundRect(c, CX - 96, 6, 192, 52, 14);
+  c.fillStyle = pal.hud; c.fill(); ink(c, pal, 1.4);
+  c.fillStyle = pal.text; c.font = '800 17px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(`${dir < 0 ? '←' : '→'} 風力 ${size.level}`, CX - 50, 25);
+  for (let i = 0; i < WIND_LEVELS; i++) { // 等級格:亮格數 = 風力
+    roundRect(c, CX - 84 + i * 14, 40, 11, 8, 2);
+    c.fillStyle = i < size.level ? pal.wind : 'rgba(0,0,0,0.18)'; c.fill(); ink(c, pal, 1);
+  }
+  drawWindArrow(c, pal, CX + 42, 32, dir, size);
+}
+
+function drawLeaves(c, s, pal, t, reduced) {
+  const dir = s.wind.direction, count = windLeafCount(s.weather, s.wind.strength, reduced);
+  const speed = 60 + s.wind.strength * 3, sway = windSway(s.wind.strength, reduced);
+  for (let i = 0; i < count; i++) {
+    const vx = dir * speed * (0.75 + hash(i, 97) * 0.5);
+    const x = ((hash(i, 95) * FIELD_W + t * vx) % FIELD_W + FIELD_W) % FIELD_W;
+    const y = (hash(i, 96) * FIELD_H + t * (16 + hash(i, 98) * 22)) % FIELD_H + Math.sin(t * 4 + i) * sway * 0.6;
+    c.save();
+    c.translate(x, y); c.rotate(t * (2 + hash(i, 99) * 3) * dir + i);
+    c.beginPath(); c.ellipse(0, 0, 4.5, 2.2, 0, 0, Math.PI * 2);
+    c.fillStyle = i % 2 ? pal.leaf : pal['leaf-b']; c.fill(); ink(c, pal, 0.8);
+    c.restore();
+  }
+}
+
+// 角旗:旗面往下風方向飄,波浪擺幅與頻率隨風力;旗杆放在上風側,旗面不出畫面。
+function drawWindFlags(c, s, pal, t, reduced) {
+  const dir = s.wind.direction, level = windLevel(s.wind.strength), amp = windSway(s.wind.strength, reduced);
+  const len = 26 + level * 5;
+  const poles = dir > 0 ? [10, FIELD_W - 10 - len] : [10 + len, FIELD_W - 10];
+  for (const x of poles) {
+    c.strokeStyle = pal.ink; c.lineWidth = 2.4;
+    c.beginPath(); c.moveTo(x, 150); c.lineTo(x, 72); c.stroke();
+    const wave = (k) => Math.sin(t * (4 + level) - k * 3) * amp * k;
+    c.beginPath(); c.moveTo(x, 74);
+    for (let k = 0.25; k <= 1.001; k += 0.25) c.lineTo(x + dir * len * k, 76 + wave(k));
+    for (let k = 1; k >= -0.001; k -= 0.25) c.lineTo(x + dir * len * k, 90 - k * 2 + wave(k));
+    c.closePath(); c.fillStyle = pal.wind; c.fill(); ink(c, pal);
+  }
+}
 
 function drawWeather(c, s, pal, fx, reduced) {
   const t = (fx?.t ?? 0) / 1000;
@@ -309,28 +373,23 @@ function drawWeather(c, s, pal, fx, reduced) {
     }
   }
   if (s.weather === 'wind') {
-    const dir = s.wind.direction;
-    for (const x of [12, FIELD_W - 12]) {
-      c.strokeStyle = pal.ink; c.lineWidth = 2;
-      c.beginPath(); c.moveTo(x, 140); c.lineTo(x, 95); c.stroke();
-      c.fillStyle = pal.wind;
-      const flutter = reduced ? 0 : Math.sin(t * 5) * 3;
-      c.beginPath(); c.moveTo(x, 96); c.lineTo(x + dir * 24, 100 + flutter); c.lineTo(x + dir * 24, 112 + flutter); c.lineTo(x, 108); c.closePath(); c.fill(); ink(c, pal);
-    }
+    const dir = s.wind.direction, level = windLevel(s.wind.strength), factor = reduced ? 0.5 : 1;
+    drawWindFlags(c, s, pal, t, reduced);
     c.strokeStyle = pal['grass-a']; c.lineWidth = 1.4;
     for (let i = 0; i < 16; i++) {
       const x = hash(i, 93) * FIELD_W; const y = 225 + hash(i, 94) * 180;
-      const sway = reduced ? 3 : 3 + Math.sin(t * 3 + i) * 2;
+      const sway = (2 + level * 1.2 + Math.sin(t * (3 + level) + i) * (1 + level * 0.5)) * factor;
       c.beginPath(); c.moveTo(x, y); c.lineTo(x + dir * sway, y - 6); c.stroke();
     }
-    tag(c, pal, `${dir < 0 ? '←' : '→'} 風力 ${s.wind.strength}`, CX, 240);
+    drawLeaves(c, s, pal, t, reduced);
+    drawWindBanner(c, pal, s.wind);
   }
   c.restore();
 }
 
 // ---- 球門:門柱(雙色立體+描邊)+球網(網格,進球時震動)----
 
-function drawGoal(c, pal, fx, reduced) {
+function drawGoal(c, pal, fx, reduced, wind = null) {
   const l = sx(-GOAL_HALF_W);
   const r = sx(GOAL_HALF_W);
   const top = sy(GOAL_H);
@@ -344,13 +403,17 @@ function drawGoal(c, pal, fx, reduced) {
     const d2 = (x - net.x) ** 2 + (y - net.y) ** 2;
     return 9 * Math.exp(-d2 / 1800) * Math.cos(net.t / 45) * (1 - net.t / 900);
   };
+  // RS40 風:球網往下風方向鼓起,中段鼓最多、隨時間起伏;擺幅隨風力(reduced-motion 減半)。
+  const amp = wind ? windSway(wind.strength, reduced) : 0, wt = (fx?.t ?? 0) / 1000;
+  const bow = (x, y) => !wind ? 0
+    : wind.direction * amp * Math.sin(Math.PI * clamp((y - top) / GOAL_H, 0, 1)) * (0.7 + 0.3 * Math.sin(wt * 3 + x * 0.04));
   c.strokeStyle = pal.net;
   c.lineWidth = 1;
   c.beginPath();
   for (let x = l + 12; x < r; x += 12) {
     for (let i = 0; i <= 10; i++) {
       const y = top + (GOAL_H * i) / 10;
-      const px = x;
+      const px = x + bow(x, y);
       const py = y + bump(px, y);
       if (i === 0) c.moveTo(px, py);
       else c.lineTo(px, py);
@@ -360,8 +423,8 @@ function drawGoal(c, pal, fx, reduced) {
     for (let i = 0; i <= 20; i++) {
       const x = l + ((r - l) * i) / 20;
       const py = y + bump(x, y);
-      if (i === 0) c.moveTo(x, py);
-      else c.lineTo(x, py);
+      if (i === 0) c.moveTo(x + bow(x, y), py);
+      else c.lineTo(x + bow(x, y), py);
     }
   }
   c.stroke();
@@ -646,14 +709,17 @@ function drawShadow(c, pal, { x, y, r }) {
   c.fill();
 }
 
+// 拖尾殘影:平常 5 格短拖尾;風天氣加長為 10 格(RS40),讓被吹彎的弧線看得見。
+export const trailSteps = (weather) => weather === 'wind' ? { n: 10, gap: 0.04 } : { n: 5, gap: 0.035 };
 function drawTrail(c, pal, target, p, state) {
-  for (let i = 5; i >= 1; i--) {
-    const q = p - i * 0.035;
+  const { n, gap } = trailSteps(state?.weather);
+  for (let i = n; i >= 1; i--) {
+    const q = p - i * gap;
     if (q <= 0) continue;
     const b = ballAt(target, q, state);
-    c.globalAlpha = 0.09 * (6 - i);
+    c.globalAlpha = 0.45 * (n + 1 - i) / n;
     c.fillStyle = pal.ball;
-    circle(c, b.x, b.y, b.r * (1 - i * 0.08));
+    circle(c, b.x, b.y, b.r * (1 - i * 0.4 / n));
     c.fill();
   }
   c.globalAlpha = 1;
@@ -780,8 +846,9 @@ export function drawScene(c, s, pal, fx = null, opts = {}) {
   if (L) c.drawImage(L.bg, 0, 0, FIELD_W, FIELD_H);
   else paintBackground(c, pal, s.weather);
   const shaking = fx?.net && fx.net.t < 900 && !opts.reduced;
-  if (L && !shaking) c.drawImage(L.goal, 0, 0, FIELD_W, FIELD_H);
-  else drawGoal(c, pal, fx, opts.reduced);
+  const windy = s.weather === 'wind' && s.wind?.strength > 0 ? s.wind : null;
+  if (L && !shaking && !windy) c.drawImage(L.goal, 0, 0, FIELD_W, FIELD_H);
+  else drawGoal(c, pal, fx, opts.reduced, windy);
 
   const shot = s.shot;
   const r = (s.phase === 'result' || s.phase === 'over') ? lastResult(s) : null;

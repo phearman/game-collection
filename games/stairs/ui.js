@@ -3,20 +3,22 @@ import {
   W, H, PLAYER, DT, MAX_LIVES, DIFFICULTIES, initState, stepState, pauseState, resumeState, overlayFor,
   toSave, fromSave, isValidState,
   initAdventure, nextStage, scoreFor, detailFor, resultFor, stageFor, goalText, goalProgress, flipNotice, ridingCloud,
-} from './logic.js?v=32c428b';
-import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=32c428b';
-import { createProfile } from '../../shared/profile.js?v=32c428b';
-import { LocalStore } from '../../shared/stores/local.js?v=32c428b';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=32c428b';
-import { bindThemeToggle } from '../../shared/theme.js?v=32c428b';
-import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=32c428b';
-import { skinPalette } from './skins.js?v=32c428b';
-import { play, music } from '../../shared/sound.js?v=32c428b';
-import { setupHelp } from '../../shared/help.js?v=32c428b';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=32c428b';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=32c428b';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=32c428b';
-import { load, save } from '../../shared/storage.js?v=32c428b';
+  goalRatio, finalPhase, finalCue, celebrating, tickCelebration, skipCelebration,
+} from './logic.js?v=4a61272';
+import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone, fxBanner, fxCelebrate, fxSkipCelebrate } from './draw.js?v=4a61272';
+import { createProfile } from '../../shared/profile.js?v=4a61272';
+import { LocalStore } from '../../shared/stores/local.js?v=4a61272';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=4a61272';
+import { bindThemeToggle } from '../../shared/theme.js?v=4a61272';
+import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=4a61272';
+import { skinPalette } from './skins.js?v=4a61272';
+import { play, music } from '../../shared/sound.js?v=4a61272';
+import { musicTempo } from '../../shared/sound.js?v=4a61272';
+import { setupHelp } from '../../shared/help.js?v=4a61272';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=4a61272';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=4a61272';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=4a61272';
+import { load, save } from '../../shared/storage.js?v=4a61272';
 
 const GAME_ID = 'stairs';
 const DIFF_KEY = 'difficulty:stairs'; // 上次選的難度(開新局用)
@@ -182,7 +184,7 @@ let running = false;
 let last = 0;
 let acc = 0;
 const playing = () => !confirmingQuit && !state.paused && !state.over && !ended;
-const animating = () => fxBusy(fx);
+const animating = () => fxBusy(fx) || celebrating(state);
 
 function frame(t) {
   if (!playing() && !animating()) {
@@ -206,7 +208,16 @@ function frame(t) {
           && state.platforms.some((p) => p.kind === 'bounce' && Math.abs(p.y - state.player.y - PLAYER) < 0.3))) play('land');
       if (state.hurt > prev.hurt) play('hurt');
       if (state.picked) play('coin');
-      if (state.stageCleared && !prev.stageCleared) play('win');
+      if (state.stageCleared && !prev.stageCleared) {
+        play('win');
+        if (state.won) play('fanfare');
+        fxCelebrate(fx, { seconds: state.celebrate, final: state.won, reduced: reducedMotion.matches });
+      }
+      const cue = finalCue(prev, state);
+      if (cue) { // RS39 最後階段:大字一次+提示音(配樂改快由 render 處理)
+        fxBanner(fx, cue);
+        play('go');
+      }
       if (state.over && !prev.over && !state.won) play('lose');
       fxEvents(fx, prev, state, { dir, reduced: reducedMotion.matches });
       if (state.over) {
@@ -221,6 +232,7 @@ function frame(t) {
       }
     }
   }
+  if (celebrating(state)) state = tickCelebration(state, dt); // 過關演出倒數;歸零後 render 出過關遮罩
   const wasEnding = !endingDone(fx);
   fxUpdate(fx, dt, playing() ? state.speed : 0);
   if (wasEnding && endingDone(fx)) shownKind = null; // 結束動畫播完:顯示結算遮罩
@@ -265,7 +277,9 @@ function draw() {
 // ---- 畫面 ----
 
 let shown = { score: -1, best: -1, lives: -1 };
+const FINAL_TEMPO = 1.15; // 最後階段配樂加快倍數(RS39;任何選曲都適用)
 function render() {
+  musicTempo(playing() && finalPhase(state) ? FINAL_TEMPO : 1); // RS39 最後階段:配樂加快
   music(playing() && overlayFor(state) === null); // 只在實際遊玩中播背景音樂;暫停、過關、結束即淡出
   const score = scoreFor(state);
   const b = Math.max(best, score);
@@ -283,6 +297,10 @@ function render() {
   if (adventure) {
     $('stage-name').textContent = `${state.stage}. ${stageFor(state).name}`;
     $('goal-progress').textContent = goalProgress(state);
+    const pct = Math.round(goalRatio(state) * 100);
+    $('goal-fill').style.width = `${pct}%`;
+    $('goal-bar').setAttribute('aria-valuenow', String(pct));
+    $('goal-bar').dataset.final = finalPhase(state) || state.stageCleared ? '1' : '';
     const treasures = [`生命 ${state.lives}/${MAX_LIVES}`, `金幣 ${state.coins}`];
     if (state.star > 0) treasures.push(`星星 ${Math.ceil(state.star)}秒`);
     if (state.shield) treasures.push('護盾 ×1');
@@ -329,7 +347,7 @@ function resultInfo() {
 let shownKind = null;
 function renderOverlay() {
   const overlay = $('overlay');
-  const kind = overlayFor(state) === 'over' && !endingDone(fx) ? null : overlayFor(state); // 結束動畫播完才出遮罩
+  const kind = celebrating(state) || (overlayFor(state) === 'over' && !endingDone(fx)) ? null : overlayFor(state); // 過關演出、結束動畫播完才出遮罩
   const sig = `${state.mode}|${state.stage}|${kind}|${ended ? (ended.pending ? 'p' : 'd') : ''}`;
   if (sig === shownKind) return; // 進行中不重繪遮罩
   shownKind = sig;
@@ -365,6 +383,14 @@ function renderOverlay() {
 // ---- 事件 ----
 
 const KEYS = { ArrowLeft: 'left', ArrowRight: 'right', a: 'left', d: 'right', ArrowUp: 'up', ArrowDown: 'down', w: 'up', s: 'down' };
+// 過關演出中點畫面或按鍵 ⇒ 略過(按住不放的自動重複不算)。
+function skipShow() {
+  const next = skipCelebration(state);
+  if (next === state) return;
+  state = next;
+  fxSkipCelebrate(fx);
+  render();
+}
 function dismount() {
   if (!ridingCloud(state) || state.paused) return;
   dismountQueued = true;
@@ -374,6 +400,10 @@ function dismount() {
 document.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]')) return;
   if (e.target instanceof HTMLSelectElement) return; // 難度選單用方向鍵切換選項
+  if (celebrating(state)) {
+    if (!e.repeat && e.key !== 'Tab') { e.preventDefault(); skipShow(); }
+    return;
+  }
   if (e.key === 'p' || e.key === 'P') {
     e.preventDefault();
     if (ended || e.repeat) return;
@@ -409,6 +439,7 @@ const touchOf = (e) => {
   return { side: e.clientX < r.left + r.width / 2 ? -1 : 1, x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
 };
 stage.addEventListener('pointerdown', (e) => {
+  if (celebrating(state) && !e.target.closest('button')) { e.preventDefault(); skipShow(); return; }
   if (ended || state.over || e.target.closest('button')) return;
   e.preventDefault();
   stage.setPointerCapture?.(e.pointerId);
@@ -529,6 +560,7 @@ setupHelp({
   mountAfter: document.querySelector('.topbar .btn'),
   rules: `
     <ol>
+      <li>上方進度條顯示本關目標；剩兩成時進度條變色、跳「最後 3 層！」這類提示，終點旗、出口光門或金幣光暈會出現。過關時放煙火慶祝，點畫面或按任意鍵可略過。</li>
       <li>闖關模式依序挑戰六關：層數、生存時間、金幣與終點旗；第五關往上爬，畫面上下顛倒（像把手機倒著拿），危險刺在底部。每關按開始，過關回 1 命並延續生命。</li>
       <li>平台不斷往上捲;用 ← → / A D,或按住畫面左半邊/右半邊移動。</li>
       <li>刺平台扣 1 命;彈跳平台會把你彈起;翻轉平台踩上 0.5 秒後消失。</li>

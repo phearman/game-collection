@@ -72,6 +72,16 @@ export const WEATHER_PARAMS = {
 };
 export const WIND_MIN = 20;
 export const WIND_MAX = 45;
+// RS40:風力手感加強。側向加速度 = 風力 × WIND_GAIN(RS20 原為 ×1);守門員模式的小朋友起腳先往逆風側瞄 WIND_AIM 倍的
+// 整段風偏,球路先偏逆風、再被吹回來形成明顯弧線,落點仍多半在門框內。踢球員模式由玩家自己決定要不要逆風瞄準。
+export const WIND_GAIN = 2.6;
+export const WIND_AIM = 0.2;
+export const WIND_LEVELS = 5;
+// 畫面與提示顯示的風力等級 1~5(風力 20 → 1 級、45 → 5 級)。
+export const windLevel = (strength) => clamp(1 + Math.round((strength - WIND_MIN) * (WIND_LEVELS - 1) / (WIND_MAX - WIND_MIN)), 1, WIND_LEVELS);
+// 飛行 seconds 秒時,風造成的側向位移(世界單位);非風天氣為 0。
+export const windDrift = (weather, wind, seconds) => weather === 'wind' && wind
+  ? wind.direction * wind.strength * WIND_GAIN * seconds ** 2 / 2 : 0;
 export const LOW_BALL_Y = 40;
 export const BOUNCE_AT = 0.65;
 export const BOUNCE_HEIGHT = 12;
@@ -98,8 +108,8 @@ export function ballMotion(target, elapsed, difficulty = 'normal', weather = 'su
   const seconds = clamp(elapsed, 0, flightMs(difficulty, weather, target)) / 1000;
   const q = clamp(elapsed / base, 0, 1);
   const progress = clamp(q <= BOUNCE_AT ? q : BOUNCE_AT + (q - BOUNCE_AT) * retainedSpeed(weather, target), 0, 1);
-  const drift = weather === 'wind' ? wind.direction * wind.strength * seconds ** 2 / 2 : 0;
-  const x = clamp(target.x * progress + drift, -TARGET_X_MAX, TARGET_X_MAX);
+  const x = clamp(keeperWindX(target, seconds, flightMs(difficulty, weather, target) / 1000, progress, weather, wind),
+    -TARGET_X_MAX, TARGET_X_MAX);
   let y = target.y * progress + Math.sin(Math.PI * progress) * BALL_LIFT;
   if (target.y <= LOW_BALL_Y && weather === 'rain') {
     if (progress <= BOUNCE_AT) y *= 1 - progress / BOUNCE_AT;
@@ -110,6 +120,16 @@ export function ballMotion(target, elapsed, difficulty = 'normal', weather = 'su
   }
   return { x, y: progress >= 1 - 1e-12 ? target.y : y, progress: progress >= 1 - 1e-12 ? 1 : progress };
 }
+// 守門員模式球的水平位置(未限制在門框內):起腳瞄點逆風修正 WIND_AIM 倍整段風偏,再加上當下風偏。
+function keeperWindX(target, seconds, total, progress, weather, wind) {
+  const aim = target.x - WIND_AIM * windDrift(weather, wind, total);
+  return aim * progress + windDrift(weather, wind, seconds);
+}
+// 球抵達門線時的水平位置(未限制在門框內);進框率統計用。
+export const windLandingX = (target, difficulty = 'normal', weather = 'sun', wind = { direction: 0, strength: 0 }) => {
+  const total = flightMs(difficulty, weather, target) / 1000;
+  return keeperWindX(target, total, total, 1, weather, wind);
+};
 export const impactTarget = (state) => {
   const { x, y } = ballMotion(state.shot.target, flightMs(state.difficulty, state.weather, state.shot.target), state.difficulty, state.weather, state.wind);
   return { x, y };
@@ -479,8 +499,7 @@ export function kickMotion(shot, elapsed, weather = 'sun', wind = { direction: 0
   const q = clamp(elapsed / base, 0, 1), target = kickTarget(shot);
   const p = clamp(q <= BOUNCE_AT ? q : BOUNCE_AT + (q - BOUNCE_AT) * retainedSpeed(weather, target), 0, 1);
   const dir = shot.curve === 'left' ? -1 : shot.curve === 'right' ? 1 : 0;
-  const x = target.x * p + dir * Math.sin(Math.PI * p) * KICK_PARAMS.bend
-    + (weather === 'wind' ? wind.direction * wind.strength * seconds ** 2 / 2 : 0);
+  const x = target.x * p + dir * Math.sin(Math.PI * p) * KICK_PARAMS.bend + windDrift(weather, wind, seconds);
   let y = target.y * p + Math.sin(Math.PI * p) * (shot.curve === 'lob' ? KICK_PARAMS.lobLift : KICK_PARAMS.lift);
   if (shot.power < KICK_PARAMS.weak) y = target.y * p;
   if (target.y <= LOW_BALL_Y && weather === 'rain') {

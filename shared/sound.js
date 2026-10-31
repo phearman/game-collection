@@ -247,6 +247,7 @@ export function createSound(env = globalThis) {
   let theme = THEMES[pageGame(env)] ?? null;
   const game = pageGame(env);
   let wanted = null, track = null; // wanted=頁面要求(true=依選曲、曲名=指定)；track=正在排程的曲子
+  let tempo = 1; // 播放速率倍數(RS39 最後階段加快);1=原速
   const buttons = new Set(), voices = new Set();
   const read = () => {
     try {
@@ -434,7 +435,7 @@ export function createSound(env = globalThis) {
     for (const old of [...fading]) cut(old);
     const song = SONGS[name];
     const parts = song.tracks.map((t) => ({ ...t, ...parseTrack(t.notes) }));
-    const step = 30 / song.bpm, at = context.currentTime + 0.05;
+    const step = 30 / (song.bpm * tempo), at = context.currentTime + 0.05;
     const bus = context.createGain();
     bus.gain.setValueAtTime(0, at);
     bus.gain.linearRampToValueAtTime(MUSIC_LEVEL, at + FADE_IN);
@@ -542,6 +543,19 @@ export function createSound(env = globalThis) {
     syncMusic();
   }
 
+  // 背景音樂播放速率(0.5~2 倍;1=原速)。播放中改速:從下一格起依新速率,已排的音不動、不中斷。
+  function musicTempo(factor = 1) {
+    const next = Number.isFinite(factor) ? Math.min(2, Math.max(0.5, factor)) : 1;
+    if (next === tempo) return;
+    const ratio = tempo / next;
+    tempo = next;
+    const t = track;
+    if (!t) return;
+    const when = t.at + t.next * t.step; // 下一格原定時間,保持接續
+    t.step *= ratio;
+    t.at = when - t.next * t.step;
+  }
+
   function bindSoundToggle(btn) {
     if (buttons.has(btn)) return;
     buttons.add(btn); label(btn);
@@ -551,7 +565,7 @@ export function createSound(env = globalThis) {
     });
   }
   return {
-    play, music, bindSoundToggle, setEnabled, setMode, mode, musicChoice, setMusicChoice, globalMusicChoice, setGlobalMusicChoice, songFor,
+    play, music, musicTempo, tempo: () => tempo, bindSoundToggle, setEnabled, setMode, mode, musicChoice, setMusicChoice, globalMusicChoice, setGlobalMusicChoice, songFor,
     setTheme: (id) => { theme = Object.hasOwn(THEMES, id) ? THEMES[id] : null; },
     isEnabled: () => sfxOn, isMusicPlaying: () => !!track,
   };
@@ -560,6 +574,7 @@ export function createSound(env = globalThis) {
 const sound = createSound();
 export const play = sound.play;
 export const music = sound.music;
+export const musicTempo = sound.musicTempo;
 export const bindSoundToggle = sound.bindSoundToggle;
 export const musicChoice = sound.musicChoice;
 export const setMusicChoice = sound.setMusicChoice;

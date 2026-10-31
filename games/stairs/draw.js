@@ -1,7 +1,8 @@
 // 下樓梯繪圖模組(RS11):只負責畫面與特效,⛔ 不改 state、不含規則。
 // 座標單位 = 場地單位(logic.js 的 W × H,x 往右、y 往下);呼叫端先把 ctx 縮放到場地單位。
 // 美術正典:workbook/plans/rs11-stairs-art.md「RS11 美術要求」;第 1 輪退回(PR #20 A1~A3)後改為「高塔內部」世界觀。
-import { W, H, PLAYER, CEIL, FLIP_DELAY, MAX_LIVES, HURT_SEC, heartBox, enemyBox, scrolledBy, canonicalState, directionFor, stageFor } from './logic.js?v=32c428b';
+import { W, H, PLAYER, CEIL, FLIP_DELAY, MAX_LIVES, HURT_SEC, heartBox, enemyBox, scrolledBy, canonicalState, directionFor, stageFor,
+  goalMarker, nearestCoin, celebrating } from './logic.js?v=4a61272';
 
 export const THICK = 0.3; // 平台畫面厚度(碰撞只看上緣)
 export const END_SEC = 0.8; // 結束動畫長度(≤ 1 秒),播完才顯示結算遮罩
@@ -61,12 +62,43 @@ export function createFx() {
     shake: 0,
     hurtFlash: 0,
     ending: null, // { t, kind: 'fall' 掉出底部 / 'ko' 生命歸零, x, y }
+    banner: null, // RS39 最後階段大字 { text, life, max }
+    show: null, // RS39 過關演出 { t, shells: [{ at, x, y, color }] }(煙火排程,畫面座標)
+    sparks: [], // RS39 煙火粒子(畫面座標,不隨場景翻轉){ x, y, vx, vy, life, max, color }
     anim: { t: 0, facing: 1, moving: false, phase: 0, land: 0 },
   };
 }
 
 export const fxBusy = (fx) => fx.particles.length > 0 || fx.texts.length > 0 || fx.ghosts.length > 0
-  || fx.shake > 0 || fx.hurtFlash > 0 || (fx.ending !== null && fx.ending.t < END_SEC);
+  || fx.shake > 0 || fx.hurtFlash > 0 || (fx.ending !== null && fx.ending.t < END_SEC)
+  || fx.banner !== null || fx.sparks.length > 0 || (fx.show?.shells.length ?? 0) > 0;
+
+// ---- RS39 最後階段大字、過關煙火 ----
+export const BANNER_SEC = 1.6;
+const FIREWORK_COLORS = ['warn', 'heart', 'shield', 'bounce-hi', 'star', 'flag'];
+// 最後階段提示(ui 依 logic.finalCue 呼叫)。
+export function fxBanner(fx, text) { fx.banner = { text, life: BANNER_SEC, max: BANNER_SEC }; }
+// 過關演出開始:排好煙火。reduced = 不放煙火(改畫靜態星芒)。final = 6 關全過,放更多發。
+export function fxCelebrate(fx, { seconds = 2, final = false, reduced = false } = {}) {
+  const shells = [];
+  if (!reduced) {
+    const every = final ? 0.22 : 0.3;
+    for (let at = 0.05, i = 0; at < seconds - 0.4; at += every, i++) {
+      shells.push({ at, x: 1.2 + Math.random() * (W - 2.4), y: 2.2 + Math.random() * (H * 0.4), color: FIREWORK_COLORS[i % FIREWORK_COLORS.length] });
+    }
+  }
+  fx.show = { t: 0, shells };
+}
+// 略過演出:停止尚未發射的煙火。
+export function fxSkipCelebrate(fx) { if (fx.show) fx.show.shells = []; fx.sparks = []; }
+function explode(fx, shell) {
+  const n = 18;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + Math.random() * 0.2;
+    const v = 2.6 + Math.random() * 1.4;
+    fx.sparks.push({ x: shell.x, y: shell.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.9, max: 0.9, color: shell.color });
+  }
+}
 
 export const endingDone = (fx) => fx.ending === null || fx.ending.t >= END_SEC;
 
@@ -171,6 +203,17 @@ export function fxUpdate(fx, dt, scroll = 0) {
   fx.shake = Math.max(0, fx.shake - dt);
   fx.hurtFlash = Math.max(0, fx.hurtFlash - dt);
   if (fx.ending) fx.ending.t += dt;
+  if (fx.banner) { fx.banner.life -= dt; if (fx.banner.life <= 0) fx.banner = null; }
+  if (fx.show) {
+    fx.show.t += dt;
+    while (fx.show.shells.length && fx.show.shells[0].at <= fx.show.t) explode(fx, fx.show.shells.shift());
+  }
+  for (const p of fx.sparks) {
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vx *= 1 - 1.6 * dt; p.vy = p.vy * (1 - 1.6 * dt) + 2.2 * dt; // 空氣阻力+微重力
+    p.life -= dt;
+  }
+  fx.sparks = fx.sparks.filter((p) => p.life > 0);
 }
 
 // ---- 形狀 ----
@@ -691,7 +734,7 @@ function drawPlatforms(c, s, pal, fx, t, reduced) {
     if (p.item === 'heart') drawHeartItem(c, p, pal, reduced ? 0 : t);
     else if (p.item) drawTreasure(c, p, pal);
     if (p.enemy) drawEnemy(c, p, pal);
-    if (p.flag) drawFlag(c, p, pal);
+    if (p.flag && s.mode !== 'adventure') drawFlag(c, p, pal);
   }
   for (const p of s.clouds ?? []) {
     c.globalAlpha = Math.min(1, p.life / .4);
@@ -761,14 +804,206 @@ function drawEnemy(c, p, pal) {
   c.beginPath(); c.arc(cx, b.y + .44, .06, 0, Math.PI); c.stroke();
   for (const dx of [-.2, .2]) { circle(c, cx + dx, p.y - .035, .07); c.fillStyle = pal['wood-dark']; c.fill(); ink(c, pal); }
 }
-function drawFlag(c, p, pal) {
+function drawFlag(c, p, pal, scale = 1) {
   const x = p.x + p.w / 2;
+  if (scale !== 1) { // 以旗桿底為中心放大
+    c.save(); c.translate(x, p.y); c.scale(scale, scale); c.translate(-x, -p.y);
+    drawFlag(c, p, pal); c.restore(); return;
+  }
   c.strokeStyle = pal.iron; c.lineWidth = .06;
   c.beginPath(); c.moveTo(x, p.y); c.lineTo(x, p.y - 1.6); c.stroke();
   c.beginPath(); c.moveTo(x, p.y - 1.5); c.lineTo(x + .85, p.y - 1.2); c.lineTo(x, p.y - .9); c.closePath();
   c.fillStyle = pal.flag; c.fill(); ink(c, pal);
   starPath(c, x + .27, p.y - 1.2, .12); c.fillStyle = pal.star; c.fill();
   circle(c, x, p.y - 1.62, .09); c.fillStyle = pal.coin; c.fill(); ink(c, pal);
+}
+
+
+// ---- RS39 終點標示:旗子(層數/旗子關)、出口光門(存活關)、金幣光暈+方向指示(收集關)----
+// 都畫在「規範座標」(往下的方向);第 5 關由 drawScene 整個翻轉,所以「底部」自動變成畫面頂部。
+
+// 只翻字不翻位置(第 5 關畫面翻轉時字仍是正的)。
+function uprightText(c, text, x, y, reversed, { size = 0.42, fill, stroke }) {
+  c.save();
+  c.translate(x, y);
+  if (reversed) c.scale(1, -1);
+  c.font = `bold ${size}px system-ui, sans-serif`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.lineWidth = size * 0.2; c.lineJoin = 'round';
+  c.strokeStyle = stroke; c.strokeText(text, 0, 0);
+  c.fillStyle = fill; c.fillText(text, 0, 0);
+  c.restore();
+}
+
+function glow(c, x, y, r, color, alpha) {
+  const g = c.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, color);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.save();
+  c.globalAlpha = clamp(alpha, 0, 1);
+  c.fillStyle = g;
+  c.fillRect(x - r, y - r, r * 2, r * 2);
+  c.restore();
+}
+
+// 出口光門:石框拱門+發光門洞;rise 0~1 由畫面底部升起。在平台之前畫(不擋平台)。
+function drawPortal(c, m, pal, t, reduced, reversed) {
+  const w = 3, h = 3.4, x = (W - w) / 2;
+  const top = H - h * m.rise + 0.1;
+  const r = w / 2;
+  const arch = (inset) => {
+    c.beginPath();
+    c.moveTo(x + inset, H + 1);
+    c.lineTo(x + inset, top + r);
+    c.arc(x + r, top + r, r - inset, Math.PI, 0);
+    c.lineTo(x + w - inset, H + 1);
+    c.closePath();
+  };
+  c.save();
+  glow(c, x + r, top + r, 2.6, pal.warn, 0.35 + 0.4 * m.rise);
+  arch(0); c.fillStyle = pal.iron; c.fill(); ink(c, pal, 0.05);
+  arch(0.32);
+  const g = c.createLinearGradient(0, top, 0, H);
+  g.addColorStop(0, pal.glint); g.addColorStop(0.5, pal.star); g.addColorStop(1, pal.warn);
+  c.fillStyle = g; c.fill();
+  // 門洞裡的光紋:reduced 時固定不動
+  c.clip();
+  c.strokeStyle = pal.glint; c.lineWidth = 0.08; c.globalAlpha = 0.7;
+  const off = reduced ? 0 : (t * 1.2) % 0.8;
+  c.beginPath();
+  for (let yy = top + off; yy < H + 1; yy += 0.8) { c.moveTo(x, yy + 0.4); c.quadraticCurveTo(x + r, yy - 0.2, x + w, yy + 0.4); }
+  c.stroke();
+  c.restore();
+  // 拱頂石+門上的字
+  starPath(c, x + r, top + 0.16, 0.24); c.fillStyle = pal.star; c.fill(); ink(c, pal);
+  uprightText(c, `出口 ${m.remaining} 秒`, x + r, top - 0.45, reversed, { size: 0.42, fill: pal.text, stroke: pal.hud });
+}
+
+// 終點旗(層數/旗子關):進畫面後隨距離變大、變亮;還沒進畫面就在底部邊緣顯示小旗+剩餘層數。
+function drawGoalFlag(c, s, m, pal, t, reduced, reversed) {
+  const p = s.platforms.find((q) => q.n === m.n);
+  if (p && p.y <= H + 0.5) {
+    const near = clamp(1 - (p.y - (s.player.y + PLAYER)) / (H - CEIL), 0, 1); // 1 = 就在腳下
+    glow(c, p.x + p.w / 2, p.y - 0.9, 1.6 + near, pal.warn, 0.25 + 0.55 * near);
+    const scale = 1 + 0.45 * near + (reduced ? 0 : 0.04 * Math.sin(t * 6));
+    drawFlag(c, p, pal, scale);
+    uprightText(c, '終點', p.x + p.w / 2, p.y + 0.75, reversed, { size: 0.38, fill: pal.text, stroke: pal.hud });
+    return;
+  }
+  // 終點還在下方、畫面外(含已生成但還在底部之下)⇒ 邊緣小旗;已捲過頂端就不畫。接近(approach)前半透明,越近越清楚
+  if (p ? p.y < 0 : m.n < s.nextN) return;
+  // 放在角色的另一側,站在底部時不會被角色擋住
+  const y = H - 0.15, x = s.player.x + PLAYER / 2 < W / 2 ? W - 2.05 : 2.05;
+  c.save();
+  c.globalAlpha = m.approach ? 1 : 0.6;
+  c.fillStyle = pal.hud;
+  roundRect(c, x - 1.6, y - 1.05, 3.2, 0.95, 0.3);
+  drawFlag(c, { x: x - 1.45, y: y - 0.12, w: 0.5 }, pal, 0.55);
+  // 往下的小箭頭:終點在這個方向
+  c.fillStyle = pal.flag;
+  const bob = reduced ? 0 : Math.abs(Math.sin(t * 4)) * 0.08;
+  c.beginPath(); c.moveTo(x + 1.15, y - 0.3 + bob); c.lineTo(x + 0.95, y - 0.6 + bob); c.lineTo(x + 1.35, y - 0.6 + bob); c.closePath(); c.fill();
+  uprightText(c, `還有 ${m.remaining} 層`, x + 0.05, y - 0.58, reversed, { size: 0.4, fill: pal.text, stroke: pal.hud });
+  c.restore();
+}
+
+// 收集關最後 3 枚:每枚金幣加光暈;畫面邊緣一個箭頭指向最近的金幣。
+function drawCoinGuide(c, s, m, pal, t, reduced, reversed) {
+  const pulse = reduced ? 1 : 0.8 + 0.2 * Math.sin(t * 6);
+  for (const p of s.platforms) {
+    if (p.item !== 'coin' || p.y > H + 0.5) continue;
+    const b = heartBox(p);
+    glow(c, b.x + b.w / 2, b.y + b.h / 2, 1.1, pal.coin, 0.85 * pulse);
+    c.strokeStyle = pal.warn; c.lineWidth = 0.06;
+    circle(c, b.x + b.w / 2, b.y + b.h / 2, 0.48); c.stroke();
+  }
+  const coin = nearestCoin(s);
+  if (!coin) return;
+  const px = s.player.x + PLAYER / 2, py = s.player.y + PLAYER / 2;
+  const dx = coin.x - px, dy = coin.y - py;
+  const len = Math.hypot(dx, dy);
+  if (len < 0.01) return;
+  const ux = dx / len, uy = dy / len;
+  // 由玩家沿方向射到畫面邊框(內縮)的交點
+  const box = { l: 0.55, r: W - 0.55, t: CEIL + 1.3, b: H - 0.55 };
+  const ts = [ux > 0 ? (box.r - px) / ux : ux < 0 ? (box.l - px) / ux : Infinity, uy > 0 ? (box.b - py) / uy : uy < 0 ? (box.t - py) / uy : Infinity];
+  const k = Math.max(0, Math.min(...ts));
+  const ax = clamp(px + ux * k, box.l, box.r), ay = clamp(py + uy * k, box.t, box.b);
+  c.save();
+  c.translate(ax, ay);
+  c.fillStyle = pal.hud;
+  circle(c, 0, 0, 0.5); c.fill();
+  c.rotate(Math.atan2(uy, ux));
+  c.beginPath(); c.moveTo(0.42, 0); c.lineTo(-0.12, -0.3); c.lineTo(-0.12, 0.3); c.closePath();
+  c.fillStyle = pal.coin; c.fill(); ink(c, pal, 0.05);
+  c.restore();
+  uprightText(c, `還差 ${m.remaining} 枚`, clamp(ax, 1.4, W - 1.4), ay + (ay > H / 2 ? -0.8 : 0.8), reversed, { size: 0.36, fill: pal.text, stroke: pal.hud });
+}
+
+// 過關演出(畫面座標,不翻轉):煙火粒子/靜態星芒、「過關！」大字。
+function drawCelebration(c, s, fx, pal, reduced) {
+  const max = s.celebrateMax || 1;
+  const k = clamp(1 - s.celebrate / max, 0, 1); // 0 → 1
+  c.save();
+  c.fillStyle = 'rgba(0,0,0,0.18)';
+  c.fillRect(0, 0, W, H);
+  if (reduced || !fx) { // 靜態星芒:固定位置、不閃爍
+    const spots = [[1.6, 3.2, 0.5, 'warn'], [7.3, 2.8, 0.42, 'shield'], [2.4, 11.2, 0.38, 'heart'], [6.8, 11.8, 0.46, 'star'], [4.5, 1.9, 0.3, 'bounce-hi']];
+    for (const [x, y, r, col] of spots) {
+      c.strokeStyle = pal[col]; c.lineWidth = 0.07;
+      c.beginPath();
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; c.moveTo(x + Math.cos(a) * r * 0.35, y + Math.sin(a) * r * 0.35); c.lineTo(x + Math.cos(a) * r * 1.6, y + Math.sin(a) * r * 1.6); }
+      c.stroke();
+      starPath(c, x, y, r); c.fillStyle = pal[col]; c.fill(); ink(c, pal, 0.04);
+    }
+  } else {
+    for (const p of fx.sparks) {
+      c.globalAlpha = clamp(p.life / p.max * 1.4, 0, 1);
+      c.fillStyle = pal[p.color];
+      circle(c, p.x, p.y, 0.09); c.fill();
+    }
+    c.globalAlpha = 1;
+  }
+  const text = s.won ? '全部通關！' : '過關！';
+  const pop = reduced ? 1 : k < 0.15 ? 0.4 + 0.6 * (k / 0.15) * 1.15 : 1 + 0.03 * Math.sin(k * 30);
+  c.translate(W / 2, H * 0.36);
+  c.scale(pop, pop);
+  c.font = `900 ${s.won ? 1.25 : 1.6}px system-ui, sans-serif`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.lineJoin = 'round';
+  c.lineWidth = 0.32; c.strokeStyle = pal.ink; c.strokeText(text, 0, 0);
+  c.fillStyle = pal.warn; c.fillText(text, 0, 0);
+  if (s.won) {
+    c.font = 'bold 0.5px system-ui, sans-serif';
+    c.lineWidth = 0.14; c.strokeStyle = pal.hud; c.strokeText('六關全破，太厲害了！', 0, 1.15);
+    c.fillStyle = pal.text; c.fillText('六關全破，太厲害了！', 0, 1.15);
+  }
+  c.restore();
+  c.save();
+  c.font = 'bold 0.36px system-ui, sans-serif';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.lineWidth = 0.1; c.strokeStyle = pal.hud; c.strokeText('點畫面或按任意鍵略過', W / 2, H - 0.8);
+  c.fillStyle = pal.text; c.fillText('點畫面或按任意鍵略過', W / 2, H - 0.8);
+  c.restore();
+}
+
+// 最後階段大字(畫面座標):跳出後停留、淡出。
+function drawBanner(c, b, pal, reduced) {
+  const k = 1 - b.life / b.max; // 0 → 1
+  const alpha = clamp(b.life / 0.4, 0, 1);
+  const pop = reduced ? 1 : k < 0.12 ? 0.5 + 0.5 * (k / 0.12) * 1.1 : 1;
+  c.save();
+  c.globalAlpha = alpha;
+  c.translate(W / 2, H * 0.3);
+  c.scale(pop, pop);
+  c.fillStyle = pal.hud;
+  roundRect(c, -3.6, -0.85, 7.2, 1.7, 0.5);
+  c.font = '900 1.05px system-ui, sans-serif';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.lineJoin = 'round';
+  c.lineWidth = 0.22; c.strokeStyle = pal.ink; c.strokeText(b.text, 0, 0.04);
+  c.fillStyle = pal.danger; c.fillText(b.text, 0, 0.04);
+  c.restore();
 }
 
 // ---- 頂刺:鐵梁+鉚釘+雙面鋼刺(高光/陰影);玩家接近時頂端泛紅脈動 ----
@@ -893,11 +1128,12 @@ function shadeBack(c, cut, alpha = 0.2) {
 }
 
 function drawHero(c, fx, fy, o, pal) {
-  const { pose, facing, phase, t, hurt, tint, rot = 0, squash = 0 } = o;
+  const { pose, facing, phase, t, hurt, tint, rot = 0, squash = 0, still = false } = o;
+  const cheer = pose === 'cheer'; // RS39 過關歡呼:雙手高舉揮動、小跳、瞇眼笑
   const col = (k) => tint ?? pal[k];
   const line = pal.ink; // 四肢描邊
   const air = pose === 'fall' || pose === 'jump';
-  const bob = pose === 'idle' ? Math.sin(t * 4) * 0.02 : pose === 'walk' ? -Math.abs(Math.sin(phase)) * 0.04 : 0;
+  const bob = cheer ? (still ? 0 : -Math.abs(Math.sin(t * 9)) * 0.14) : pose === 'idle' ? Math.sin(t * 4) * 0.02 : pose === 'walk' ? -Math.abs(Math.sin(phase)) * 0.04 : 0;
   c.save();
   c.translate(fx, fy);
   c.scale(HERO, HERO);
@@ -912,7 +1148,7 @@ function drawHero(c, fx, fy, o, pal) {
   c.lineJoin = 'round';
 
   const swing = pose === 'walk' ? Math.sin(phase) * 0.7 : 0;
-  const wave = Math.sin(t * (air ? 18 : 6));
+  const wave = cheer && still ? 0 : Math.sin(t * (air ? 18 : cheer ? 12 : 6));
 
   // 圍巾尾巴(在身體後面):走路往後飄、下墜往上飄
   c.strokeStyle = col('scarf');
@@ -930,7 +1166,7 @@ function drawHero(c, fx, fy, o, pal) {
   // 腿+靴子
   c.strokeStyle = col('pants');
   c.lineWidth = 0.13;
-  const legs = pose === 'fall' ? [1.0 + wave * 0.1, -1.0 - wave * 0.1] : pose === 'jump' ? [0.35, -0.1] : [swing, -swing];
+  const legs = pose === 'fall' ? [1.0 + wave * 0.1, -1.0 - wave * 0.1] : pose === 'jump' ? [0.35, -0.1] : cheer ? [0.3, -0.3] : [swing, -swing];
   for (const [hx, a] of [[-0.08, legs[0]], [0.08, legs[1]]]) {
     const [ex, ey] = limb(c, hx, -0.3, a, pose === 'fall' ? 0.26 : 0.22, line);
     c.fillStyle = col('boot');
@@ -963,9 +1199,10 @@ function drawHero(c, fx, fy, o, pal) {
   // 手臂:下墜時張開往上、彈起時高舉
   c.strokeStyle = col('sleeve');
   c.lineWidth = 0.1;
-  const arms = pose === 'fall' ? [-1.85 - wave * 0.2, 1.85 + wave * 0.2] : pose === 'jump' ? [-2.6, 2.6] : [-swing * 0.8 - 0.35, swing * 0.8 + 0.35];
+  const arms = pose === 'fall' ? [-1.85 - wave * 0.2, 1.85 + wave * 0.2] : pose === 'jump' ? [-2.6, 2.6]
+    : cheer ? [-2.75 - wave * 0.2, 2.75 + wave * 0.2] : [-swing * 0.8 - 0.35, swing * 0.8 + 0.35];
   for (const [sx, a] of [[-0.15, arms[0]], [0.15, arms[1]]]) {
-    const [ex, ey] = limb(c, sx, -0.5, a, pose === 'idle' || pose === 'walk' ? 0.2 : 0.26, line);
+    const [ex, ey] = limb(c, sx, -0.5, a, pose === 'idle' || pose === 'walk' ? 0.2 : cheer ? 0.3 : 0.26, line);
     c.fillStyle = col('skin');
     circle(c, ex, ey, 0.05);
     c.fill();
@@ -1051,6 +1288,18 @@ function drawHero(c, fx, fy, o, pal) {
     c.quadraticCurveTo(0.09, hy + 0.12, 0.12, hy + 0.15);
     c.quadraticCurveTo(0.15, hy + 0.18, 0.18, hy + 0.15);
     c.stroke();
+  } else if (cheer) { // ^ ^ 瞇眼+張口大笑
+    for (const x of [ex1, ex2]) {
+      c.beginPath();
+      c.moveTo(x - 0.045, ey + 0.02);
+      c.lineTo(x, ey - 0.03);
+      c.lineTo(x + 0.045, ey + 0.02);
+      c.stroke();
+    }
+    c.beginPath();
+    c.arc(0.13, hy + 0.1, 0.07, 0, Math.PI);
+    c.closePath();
+    c.fill();
   } else {
     const blink = pose === 'idle' && t % 3.2 < 0.12;
     for (const x of [ex1, ex2]) {
@@ -1105,7 +1354,7 @@ function drawPlayer(c, s, pal, fx, opts) {
     if (s.shield) { shieldPath(c, cx + .5, y - .4, .16); c.fillStyle = pal.shield; c.fill(); ink(c, pal); }
     c.restore();
   }
-  const pose = on === null ? (vy < 0 ? 'jump' : vy > 2 ? 'fall' : 'idle') : a.moving ? 'walk' : 'idle';
+  const pose = celebrating(s) ? 'cheer' : on === null ? (vy < 0 ? 'jump' : vy > 2 ? 'fall' : 'idle') : a.moving ? 'walk' : 'idle';
   const squash = a.land > 0 ? Math.sin((1 - a.land / LAND_SEC) * Math.PI) : 0;
   if (on !== null) { // 腳下小陰影
     c.fillStyle = pal.shadow;
@@ -1113,7 +1362,7 @@ function drawPlayer(c, s, pal, fx, opts) {
     c.ellipse(cx, y + PLAYER + 0.02, 0.36, 0.07, 0, 0, Math.PI * 2);
     c.fill();
   }
-  drawHero(c, cx, y + PLAYER, { pose, facing: a.facing, phase: a.phase, t: a.t, hurt: flashing, tint, squash }, pal);
+  drawHero(c, cx, y + PLAYER, { pose, facing: a.facing, phase: a.phase, t: a.t, hurt: flashing && pose !== 'cheer', tint: pose === 'cheer' ? undefined : tint, squash, still: opts.reduced }, pal);
   // 壁燈附近:角色受到暖色光(只疊在角色周圍一小圈)
   const scroll = s.mode === 'adventure' ? s.speed * s.time : scrolledBy(s.difficulty, s.time);
   if (s.mode === 'adventure' && stageFor(s).theme !== 'tower') return;
@@ -1208,7 +1457,14 @@ export function drawScene(c, s, pal, fx = null, opts = {}) {
     c.translate(Math.sin(t * 95) * m, Math.cos(t * 83) * m);
   }
   drawBackground(c, pal, s.mode === 'adventure' ? s.speed * s.time : scrolledBy(s.difficulty, s.time), t, opts.reduced);
+  const marker = s.mode === 'adventure' && !opts.demo ? goalMarker(s) : null;
+  if (marker?.kind === 'portal') drawPortal(c, marker, pal, t, opts.reduced, reversed);
+  if (marker?.kind === 'coins') drawCoinGuide(c, s, marker, pal, t, opts.reduced, reversed); // 光暈在金幣後面
   drawPlatforms(c, s, pal, fx, t, opts.reduced);
+  if (s.mode === 'adventure') { // 終點旗:旗子關的旗平台一律畫;層數關只在 goalMarker 有給時畫
+    const m = marker?.kind === 'flag' ? marker : { kind: 'flag', n: stageFor(s).target, remaining: 0, approach: false };
+    if (marker?.kind === 'flag' || stageFor(s).goal === 'flag') drawGoalFlag(c, s, m, pal, t, opts.reduced, reversed);
+  }
   drawCeiling(c, s, pal, t, opts.reduced);
   if (s.mode === 'adventure' && s.cloudTime > 0) { // 駕雲中(IR48):腳下踩著一朵雲
     c.globalAlpha = s.cloudTime < 2 && !opts.reduced ? .55 + .45 * Math.abs(Math.sin(t * 8)) : 1; // 快到期閃爍
@@ -1240,6 +1496,8 @@ export function drawScene(c, s, pal, fx = null, opts = {}) {
     c.fillRect(0, 0, W, H);
     c.globalAlpha = 1;
   }
+  if (fx?.banner && !celebrating(s)) drawBanner(c, fx.banner, pal, opts.reduced);
+  if (celebrating(s)) drawCelebration(c, s, fx, pal, opts.reduced);
   if (fx?.ending) { // 結束:由下往上暗下來
     const k = clamp(fx.ending.t / END_SEC, 0, 1);
     const g = c.createLinearGradient(0, H, 0, H * (1 - k));

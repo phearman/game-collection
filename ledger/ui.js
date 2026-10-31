@@ -1,6 +1,6 @@
-import { bindThemeToggle } from '../shared/theme.js?v=32c428b';
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=32c428b';
-import { ledgerCSV, renderLedger } from './logic.js?v=32c428b';
+import { bindThemeToggle } from '../shared/theme.js?v=4a61272';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=4a61272';
+import { ledgerCSV, renderLedger } from './logic.js?v=4a61272';
 
 bindThemeToggle(document.getElementById('theme'));
 const token=new URL(location.href).searchParams.get('t');
