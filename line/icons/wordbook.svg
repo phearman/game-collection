@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="單字本">
+<title>單字本</title>
+<defs><clipPath id="clip-wordbook"><rect x="14" y="14" width="212" height="212" rx="52"/></clipPath></defs>
+<rect x="14" y="14" width="212" height="212" rx="52" fill="#2c9f68"/>
+<g clip-path="url(#clip-wordbook)"><rect x="0" y="0" width="240" height="44" fill="#ffffff" opacity="0.18"/><rect x="0" y="200" width="240" height="40" fill="#000000" opacity="0.14"/></g>
+<rect x="14" y="14" width="212" height="212" rx="52" fill="none" stroke="#3b2a1e" stroke-width="7"/>
+<rect x="68" y="58" width="104" height="124" rx="12" fill="#ffffff" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="M68 70 a12 12 0 0 1 12 -12 h12 v124 h-12 a12 12 0 0 1 -12 -12 z" fill="#8fd1ad" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="M112 140 L130 96 L148 140 M118 126 H142" fill="none" stroke="#3b2a1e" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M150 58 V92 l9 -7 l9 7 V58" fill="#e5484d" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

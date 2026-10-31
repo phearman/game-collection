@@ -1,6 +1,6 @@
 // 側面斜視角 Canvas 與畫面特效;所有物理判定由 logic.js 提供。
 import { W, H, DIST_SCALE, HEIGHT_SCALE, RIDER_X, LANE_Y, LANE_GAP, LANE_SKEW, ROAD_SKEW,
-  PARALLAX, TRACK_LEN, MAX_SPEED, CAR_HALF_LANE, CRASH_SEC, playerOf, terrainAt } from './logic.js?v=4a61272';
+  PARALLAX, TRACK_LEN, MAX_SPEED, CAR_HALF_LANE, CRASH_SEC, BUMP_SEC, HINT_SEC, isHighRamp, playerOf, terrainAt } from './logic.js?v=b19b96f';
 
 export const PALETTE_KEYS = ['night', 'sky', 'mountain', 'grass', 'grass-dark', 'road', 'road-hi', 'road-dark',
   'ink', 'shadow', 'mud', 'mud-hi', 'wood', 'danger', 'ramp', 'skin', 'player', 'blue', 'yellow', 'purple',
@@ -16,6 +16,7 @@ export function ghostLabelY(you, ghost) {
     && Math.abs(you.y - y) < LABEL_H + 0.04; i++) y -= LABEL_H + 0.08;
   return y;
 }
+const HINT_MSG = '換個車道超車!';
 export const createFx = () => ({ t: 0, shake: 0, flash: 0, particles: [], landing: 0, message: '', messageLeft: 0, ending: null });
 export const endingDone = (fx) => fx.ending === null || fx.ending >= END_SEC;
 export const fxBusy = (fx) => !endingDone(fx) || fx.shake > 0 || fx.flash > 0 || fx.particles.length > 0 || fx.messageLeft > 0;
@@ -33,6 +34,8 @@ export function sceneView(width, height) {
 export function fxEvents(fx, prev, next, { reduced = false } = {}) {
   const a = playerOf(prev), b = playerOf(next);
   const crash = b.crash > a.crash, land = b.landing !== null, hot = b.overheat > a.overheat;
+  // IR96:提示是否顯示中,要在本幀改字樣之前判斷(同幀落地會先改掉字樣)。
+  const hinting = fx.message === HINT_MSG && fx.messageLeft > 0;
   if (crash || land || hot) {
     if (crash || land) fx.shake = reduced ? 0 : 0.25;
     if (crash) fx.flash = 0.3;
@@ -45,6 +48,22 @@ export function fxEvents(fx, prev, next, { reduced = false } = {}) {
         vx: Math.cos(i * 2.4) * 2, vy: -Math.abs(Math.sin(i * 2.4)) * 2, life: 0.5 });
     }
   }
+  // RS42:車輛相撞——每台新撞到的車(含電腦車)噴火花;玩家牽涉時另有字樣與輕微震動。
+  const camera = b.x, limit = reduced ? 10 : 50;
+  next.vehicles.forEach((v, i) => {
+    if (!(v.bump > prev.vehicles[i].bump)) return;
+    const x = screenX(v.x, v.lanePos, camera), y = groundY(v.lanePos, x) - v.h * HEIGHT_SCALE - 0.4;
+    for (let k = 0; k < (reduced ? 3 : 8) && fx.particles.length < limit; k++)
+      fx.particles.push({ x: x + 0.6, y, vx: 1 + Math.cos(k * 2.1) * 2, vy: -Math.abs(Math.sin(k * 2.1)) * 2.5, life: 0.4, spark: true });
+    if (i === 0) {
+      if (!reduced) fx.shake = Math.max(fx.shake, 0.15);
+      // IR96:「換個車道超車!」顯示中再擦撞,只噴火花、不蓋掉提示字樣;同幀的摔車、落地、過熱字樣優先於擦撞。
+      if (!(v.crash > prev.vehicles[0].crash) && !hinting && !(crash || land || hot)) { fx.message = '擦撞!速度變慢'; fx.messageLeft = 0.8; }
+    }
+  });
+  if (b.ram && b.crash > a.crash) { fx.message = '追撞摔車!快跑回車上'; fx.messageLeft = 0.9; }
+  // 被同車道慢車連撞擋住:提示換道超車(文字提示,reduced-motion 也顯示)。
+  if (b.hintAt !== null && b.hintAt !== a.hintAt) { fx.message = HINT_MSG; fx.messageLeft = HINT_SEC; }
   if (next.over && !prev.over) { fx.ending = 0; fx.message = '衝過終點!'; fx.messageLeft = END_SEC; }
 }
 export function fxUpdate(fx, dt) {
@@ -163,6 +182,11 @@ function obstacle(c, o, camera, p) {
     for (let i = 0; i <= 12; i++) points.push([x + length * i / 12, y - length * i / 12 * ROAD_SKEW - o.height * Math.sin(i / 12 * Math.PI / 2) * HEIGHT_SCALE]);
     points.push([x + length, y + 0.15]); path(c, points, p.ramp, p.ink);
     line(c, [[x + 0.3, y + 0.03], [x + 0.6, y - 0.1], [x + 0.5, y - 0.13]], p.white, 0.05);
+    // 高跳台:加上警示黃斜紋,形狀與顏色都比一般跳台醒目(RS42)。
+    if (isHighRamp(o)) for (let i = 1; i <= 3; i++) {
+      const sx = x + length * i / 4, top = y - length * i / 4 * ROAD_SKEW - o.height * Math.sin(i / 4 * Math.PI / 2) * HEIGHT_SCALE;
+      line(c, [[sx - 0.18, top + 0.32], [sx + 0.12, top + 0.04]], p.yellow, 0.1);
+    }
   } else if (o.kind === 'cooling') {
     line(c, [[x, 3.95], [x, 5.1]], p.metal, 0.08);
     box(c, x - 0.3, 3.9, 0.6, 0.65, p.blue, p.ink);
@@ -192,7 +216,8 @@ function rider(c, v, camera, p, color, fx, reduced, ghost = false) {
   c.save(); if (ghost) c.globalAlpha = 0.35;
   const height = v.h * HEIGHT_SCALE;
   oval(c, x, y + 0.18, Math.max(0.2, 0.72 - height * 0.12), 0.1, p.shadow);
-  c.translate(x, y - height - 0.1);
+  const jolt = v.bump > 0 && !reduced ? Math.sin(t * 70) * 0.05 * v.bump / BUMP_SEC : 0;
+  c.translate(x, y - height - 0.1 + jolt);
   c.rotate(-v.angle * Math.PI / 180 - Math.atan(ROAD_SKEW) + (v.crash && !reduced ? Math.min(1, (CRASH_SEC - v.crash) / 0.5) * Math.PI * 2 : 0));
   const squash = v.id === 0 && fx?.landing ? 1 - fx.landing * 0.5 : 1; c.scale(1, squash);
   if (v.sprinting) path(c, [[-0.65, -0.32], [-1.35, -0.1], [-1.1, -0.3], [-1.4, -0.45]], p.yellow, p.danger);
@@ -217,6 +242,14 @@ function rider(c, v, camera, p, color, fx, reduced, ghost = false) {
     line(c, [[-0.09, -1.43], [0.19, -1.47]], p.white, 0.04);
   }
   c.restore();
+  if (v.bump > 0 && !ghost) { // RS42:相撞火花(車頭前方放射短線,隨 bump 淡出)
+    c.save(); c.globalAlpha = Math.min(1, v.bump / BUMP_SEC * 1.4);
+    for (let k = 0; k < 6; k++) {
+      const a = -0.5 + k * 0.55 - (reduced ? 0 : (t * 8) % 0.3), r0 = 0.15, r1 = 0.5 + (k % 2) * 0.25;
+      line(c, [[x + 0.75 + Math.cos(a) * r0, y - height - 0.45 + Math.sin(a) * r0], [x + 0.75 + Math.cos(a) * r1, y - height - 0.45 + Math.sin(a) * r1]], k % 2 ? p.white : p.yellow, 0.07);
+    }
+    c.restore();
+  }
   if (v.crash && v.crash <= 0.6) {
     c.save(); c.translate(x - v.crash * 2, y);
     const swing = reduced ? 0 : Math.sin(t * 24) * 0.17;
@@ -273,7 +306,7 @@ export function drawScene(c, s, p, fx = null, { reduced = false, ghost = null, l
     } c.restore();
   }
   if (fx) {
-    for (const q of fx.particles) { c.save(); c.globalAlpha = Math.min(1, q.life * 2); oval(c, q.x, q.y, 0.08, 0.06, p.dust); c.restore(); }
+    for (const q of fx.particles) { c.save(); c.globalAlpha = Math.min(1, q.life * 2); oval(c, q.x, q.y, q.spark ? 0.05 : 0.08, q.spark ? 0.05 : 0.06, q.spark ? p.yellow : p.dust); c.restore(); }
     if (fx.flash) { c.save(); c.globalAlpha = fx.flash * 0.35; box(c, 0, -view.offsetY, view.width, view.height, p.danger); c.restore(); }
   }
   if (s.countdown) {

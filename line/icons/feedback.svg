@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="回饋">
+<title>回饋</title>
+<defs><clipPath id="clip-feedback"><rect x="14" y="14" width="212" height="212" rx="52"/></clipPath></defs>
+<rect x="14" y="14" width="212" height="212" rx="52" fill="#667585"/>
+<g clip-path="url(#clip-feedback)"><rect x="0" y="0" width="240" height="44" fill="#ffffff" opacity="0.18"/><rect x="0" y="200" width="240" height="40" fill="#000000" opacity="0.14"/></g>
+<rect x="14" y="14" width="212" height="212" rx="52" fill="none" stroke="#3b2a1e" stroke-width="7"/>
+<rect x="58" y="78" width="124" height="86" rx="12" fill="#ffffff" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="M62 86 L120 128 L178 86" fill="none" stroke="#3b2a1e" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M162 170 c-16 -10 -26 -18 -26 -30 a12 12 0 0 1 26 -6 a12 12 0 0 1 26 6 c0 12 -10 20 -26 30 z" fill="#e5484d" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

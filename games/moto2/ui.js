@@ -3,17 +3,17 @@ import {
   W, H, DT, TRACK_LEN, DIFFICULTIES, MODES, initState, stepState, pauseState, resumeState,
   overlayFor, playerOf, ranking, resultFor, toSave, fromSave, isValidGhost, ghostFor, betterGhost, ghostAt,
   ghostLead, leadLabel,
-} from './logic.js?v=4a61272';
-import { drawScene, sceneView, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=4a61272';
-import { createProfile } from '../../shared/profile.js?v=4a61272';
-import { LocalStore } from '../../shared/stores/local.js?v=4a61272';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=4a61272';
-import { bindThemeToggle } from '../../shared/theme.js?v=4a61272';
-import { play, music } from '../../shared/sound.js?v=4a61272';
-import { setupHelp } from '../../shared/help.js?v=4a61272';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=4a61272';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=4a61272';
-import { load, save } from '../../shared/storage.js?v=4a61272';
+} from './logic.js?v=b19b96f';
+import { drawScene, sceneView, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=b19b96f';
+import { createProfile } from '../../shared/profile.js?v=b19b96f';
+import { LocalStore } from '../../shared/stores/local.js?v=b19b96f';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=b19b96f';
+import { bindThemeToggle } from '../../shared/theme.js?v=b19b96f';
+import { play, music } from '../../shared/sound.js?v=b19b96f';
+import { setupHelp } from '../../shared/help.js?v=b19b96f';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=b19b96f';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=b19b96f';
+import { load, save } from '../../shared/storage.js?v=b19b96f';
 
 const GAME_ID = 'moto2';
 const SAVE_EVERY = 30;
@@ -31,9 +31,11 @@ const pref = (key, choices, fallback) => {
 };
 
 // 影子跑法使用規格指定的原始鍵;不透過 profile 或通用 storage 的前綴。
+// RS42:地形改版,舊的 moto2:ghost:{難度} 不再拿來比(不刪、讀不到就算),新鍵 ghost2。
+const GHOST_KEY = 'moto2:ghost2:';
 function readGhost(difficulty) {
   try {
-    const g = JSON.parse(localStorage.getItem(`moto2:ghost:${difficulty}`));
+    const g = JSON.parse(localStorage.getItem(`${GHOST_KEY}${difficulty}`));
     return isValidGhost(g) ? g : null;
   } catch { return null; }
 }
@@ -41,7 +43,7 @@ function writeGhost(s) {
   const old = readGhost(s.difficulty), candidate = ghostFor(s);
   const next = betterGhost(old, candidate);
   if (next !== candidate) return;
-  try { localStorage.setItem(`moto2:ghost:${s.difficulty}`, JSON.stringify(next)); } catch { /* 無儲存空間仍能完賽 */ }
+  try { localStorage.setItem(`${GHOST_KEY}${s.difficulty}`, JSON.stringify(next)); } catch { /* 無儲存空間仍能完賽 */ }
 }
 
 function persist() {
@@ -323,7 +325,16 @@ function demoImage(s) {
   drawScene(g, s, pal, null, { reduced: true });
   return `<img class="demo-field" src="${c.toDataURL()}" alt="橫向機車示範場面">`;
 }
-const crashDemo = demoState(40), perfectDemo = demoState(0);
+const crashDemo = demoState(40);
+// 完美落地降溫示範:落地前引擎 40 度,落地當下實算降 15。
+const perfectDemo = (() => { const s = demoState(0); return { ...s, vehicles: [{ ...playerOf(s), heat: 40 }] }; })();
+// 追撞示範:競速盤面,玩家高速衝向同車道的慢車,速度差 ≥ 25 ⇒ 玩家摔車。
+const ramDemo = (() => {
+  const s = initState(() => 0.4, 'normal', 'race'), me = playerOf(s);
+  const vehicles = s.vehicles.map((v, i) => i === 0 ? { ...me, lane: 1, from: 1, lanePos: 1, x: 90, speed: 62 }
+    : i === 1 ? { ...v, lane: 1, from: 1, lanePos: 1, x: 97, speed: 20 } : { ...v, x: 260 + i * 12 });
+  return { ...s, paused: false, countdown: 0, time: 10, ticks: 780, track: [], vehicles };
+})();
 const heatDemo = { ...demoState(0), vehicles: [{ ...playerOf(demoState(0)), air: 0, h: 0, vy: 0, heat: 99.5 }] };
 document.addEventListener('helpopen', pause);
 setupHelp({
@@ -332,15 +343,20 @@ setupHelp({
     <li>→ D／油門按住加速;空白 J／衝刺加速更快、最高速多25%。手機油門與衝刺可同時按。</li>
     <li>↑↓ W S／▲▼按一下換道;空中不能換道,改為後仰／前傾。← A／◀地面煞車、空中後仰;▶空中前傾。</li>
     <li>土坡車身隨坡面傾斜;跳台飛得多高多遠取決於速度。落地角差≤8°完美加速,≤25°安全,超過25°摔車停1.5秒。</li>
-    <li>衝刺每秒升溫30;只按油門降10;放開降25。溫度100過熱停3秒,路邊藍色雪花冷卻點歸零。</li>
-    <li>泥坑限速一半;地面撞路障摔車;騰空可飛越障礙。同車道追撞降至前車速度。</li>
+    <li>衝刺每秒升溫30;放開油門降25。<b>只按油門、速度在最高速85%以上時每秒升溫5</b>——一直按油門約20秒就會過熱,要適時鬆開。速度低於85%時按油門每秒降10。</li>
+    <li>完美落地獎勵:除了加速,溫度再降15。溫度100過熱停3秒,路邊藍色雪花冷卻點(比較稀疏)歸零。</li>
+    <li>跳台比以前多:有連續跳台(落地馬上再起跳),困難以上還有飛得更遠的高跳台(黃斜紋)。</li>
+    <li>泥坑限速一半;地面撞路障摔車;騰空可飛越障礙。</li>
+    <li>同車道的車會相撞:速度差小於25,後車降到前車的70%、前車被推快一點並冒火花;速度差25以上,後車摔車。換道時旁邊緊貼著車會被彈回原車道,速度少10%。騰空時可飛越別的車,摔車中的車手不擋路。被慢車擋住就換道超車(連撞兩次畫面會提醒)。</li>
     <li>計時賽有最佳紀錄時畫面出現半透明影子車(標「最佳紀錄」)與上方「領先／落後 x.x 秒」;設定「影子車」可隱藏。</li>
     <li>⏸／P暫停;開說明、離開分頁也暫停。競速與3台電腦車比;計時賽挑戰同難度最佳影子。</li>
     <li>競速第一名／計時賽完賽獲勝。名次分3000/2000/1000/500或計時賽1000,加max(0,150−秒數)×10取整。放棄0分。</li>
   </ol>`,
   demo: { render: demoImage, steps: [
     { before: crashDemo, after: stepState(crashDemo, { throttle: true }), kind: 'fail', caption: '跳台後以40°角落地…', result: '…角差過大,摔車停1.5秒' },
-    { before: perfectDemo, after: stepState(perfectDemo, { throttle: true }), kind: 'ok', caption: '空中調整至與坡面一致…', result: '…完美落地,立刻加速!' },
+    { before: perfectDemo, after: stepState(perfectDemo, { throttle: true }), kind: 'ok', caption: '空中調整至與坡面一致…',
+      result: `…完美落地,立刻加速,溫度 ${Math.round(playerOf(perfectDemo).heat)} → ${Math.round(playerOf(stepState(perfectDemo, { throttle: true })).heat)}!` },
+    { before: ramDemo, after: stepState(ramDemo, { throttle: true }), kind: 'fail', caption: '高速追上同車道的慢車…', result: '…速度差太大,追撞摔車!(先換道繞開)' },
     { before: heatDemo, after: stepState(heatDemo, { sprint: true }), kind: 'fail', caption: '引擎接近100仍繼續衝刺…', result: '…過熱強制停車3秒,冷卻後再起步' },
   ] },
 });

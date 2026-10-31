@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="遊戲集錦 LINE 小幫手使用說明：開遊戲、傳回饋、綁定成績、加入群組排行與查天氣的指令及對話範例。">
   <title>LINE 小幫手使用說明 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=4a61272">
-  <link rel="stylesheet" href="style.css?v=4a61272">
+  <link rel="stylesheet" href="../shared/style.css?v=b19b96f">
+  <link rel="stylesheet" href="style.css?v=b19b96f">
 </head>
 <body>
   <main class="page line-guide">
@@ -117,7 +117,7 @@
             <div data-command="天氣" data-scopes="user group"><dt><code>#天氣 [縣市]</code><span class="command-scope">兩者</span></dt><dd>查今明 36 小時預報，例如 #天氣 高雄。私訊省略縣市沿用上次查詢，首次預設高雄市；群組預設高雄市。新竹、嘉義請寫市或縣。縣市可不空格（#天氣高雄），後面多打「如何」「呢」「今天」等字也查得到；看不出縣市時用預設縣市，不會回錯誤。</dd></div>
             <div data-command="捷運" data-scopes="user group"><dt><code>#捷運 [站名|站號|狀態]</code><span class="command-scope">兩者</span></dt><dd>打 #捷運 到 {站名}，再傳位置可看路線預估。查高雄捷運與環狀輕軌各方向下一班「約幾分到」，例如 #捷運 美麗島、#捷運 R10；#捷運 狀態 看營運異常。私訊打 #捷運 後按「傳送目前位置」，列附近 1.5 公里內最近 3 站；群組要先打 #捷運 看提醒，2 分鐘內傳的位置才查（位置全群看得到）。位置只用於當次查詢、不保存。即時資料暫缺時顯示表定或首末班。資料來源：交通部 TDX 平臺。目前只支援高雄。</dd></div>
             <div data-command="輕軌" data-scopes="user group"><dt><code>#輕軌 [站名]</code><span class="command-scope">兩者</span></dt><dd>用法同 #捷運，兩個指令都查得到捷運與輕軌；同名時 #輕軌 先給輕軌站，例如 #輕軌 夢時代。</dd></div>
-            <div data-command="早安" data-scopes="user group"><dt><code>#早安</code><span class="command-scope">兩者</span></dt><dd>早安問候、台灣時間與天氣提醒，再附一則「今日小常識」（全站同一則，每天換）。已同意公事時，另附今天的行事曆（私訊列與你相關的，群組列本群的；最多 5 件，沒有就不顯示）。</dd></div>
+            <div data-command="早安" data-scopes="user group"><dt><code>#早安</code><span class="command-scope">兩者</span></dt><dd>早安問候、台灣時間與天氣提醒，再附一則「今日小常識」（全站同一則，每天換），最後一行附「📜 今日成語」（讀不到時省略；純工作群不附）。已同意公事時，另附今天的行事曆（私訊列與你相關的，群組列本群的；最多 5 件，沒有就不顯示）。</dd></div>
             <div data-command="午安" data-scopes="user group"><dt><code>#午安</code><span class="command-scope">兩者</span></dt><dd>午安問候、台灣時間與天氣提醒。已同意公事時，另附今天還沒到的與明天的行程（同 #早安 範圍，最多 5 件）。</dd></div>
             <div data-command="晚安" data-scopes="user group"><dt><code>#晚安</code><span class="command-scope">兩者</span></dt><dd>晚安問候、台灣時間與天氣提醒，再附一則「每日一笑」（全站同一則，每天換；純工作群不附）；已同意公事時另附今天還沒到的與明天的行程（同 #早安 範圍）。問候要加 # 或在群組 @ 小幫手才會回應；群組問候使用高雄市天氣。</dd></div>
             <div data-command="笑話" data-scopes="user group"><dt><code>#笑話 [分類]</code><span class="command-scope">兩者</span></dt><dd>抽未看過的上架笑話，可指定物品、動物、校園、諧音、生活、益智、食物、自然、語文或急轉彎，例如 #笑話 自然。未指定分類不抽急轉彎。看完該分類會重新開始；有出處以小字標示。按三鍵給 1～3 分，重按覆蓋分數。</dd></div>
@@ -125,15 +125,16 @@
             <div data-command="急轉彎" data-scopes="user group"><dt><code>#急轉彎</code><span class="command-scope">兩者</span></dt><dd>先抽機智問答題目，按「看答案」才揭曉答案並評分；也可用 #笑話 急轉彎。看答案只限自己抽到的題目。抽題計生活次數，看答案不另計次。資料庫失效時暫停新分類與急轉彎出題，原五類仍有備援但不能評分。</dd></div>
             <div data-command="笑話排行" data-scopes="user group"><dt><code>#笑話排行</code><span class="command-scope">兩者</span></dt><dd>近 30 天至少 3 人評分的前五名，顯示平均分、評分人數與出處；急轉彎只顯示題目。</dd></div>
             <div data-command="投稿" data-scopes="user group"><dt><code>#投稿 內容</code><span class="command-scope">兩者</span></dt><dd>投稿 10～200 字笑話，不含網址、電話或 email。每人每天最多 3 則，預設生活分類，管理者審核後才上架。</dd></div>
-            <div data-command="單字" data-scopes="user group"><dt><code>#單字 apple</code><span class="command-scope">兩者</span></dt><dd>免費查英文單字、最多三字的片語（如 #單字 look up），不限次數、不扣生活次數。可省略指令後空白、英文不分大小寫；顯示最多四行繁體釋義、音標與五星常用度，片語不顯示常用度，變化形會指回原形。查不到可按相近字直接查；中文輸入 1～6 個字可中查英。卡片上的 例句 先出 Tatoeba 真人例句（附作者，不扣 AI 額度），可按「更多例句」再看最多 2 句，或按「🤖 AI 例句」；沒有真人句時直接改用 AI。「更多例句」與「🤖 AI 例句」是快速回覆，只掛在最新一則訊息上，電腦版 LINE 不顯示。🤖 易混淆字、🤖 AI 例句 共用 AI 額度，同字快取 30 天；🔊 發音 會開啟單字頁，可用手機語音或劍橋真人發音連結。私訊及已核准的休閒群、工作群（含休閒）可用，純工作群不開放。不保存查詢文字。資料為 ECDICT，中文以 OpenCC 離線轉台灣繁體，授權見下方。</dd></div>
+            <div data-command="單字" data-scopes="user group"><dt><code>#單字 apple</code><span class="command-scope">兩者</span></dt><dd>免費查英文單字、最多三字的片語（如 #單字 look up），不限次數、不扣生活次數。可省略指令後空白、英文不分大小寫；顯示最多四行繁體釋義、音標與五星常用度，片語不顯示常用度，變化形會指回原形。查不到可按相近字直接查；中文輸入 1～6 個字可中查英。查不到時會列出相近字，也可按下方按鈕直接查。卡片上的 例句 先出 Tatoeba 真人例句（附作者，不扣 AI 額度），每句下方有「📋 複製第 n 句」，另有「📋 全部複製」（連來源一起複製；需 LINE 14.0.0 以上），🤖 AI 例句與 🤖 易混淆字也一樣，可按「更多例句」再看最多 2 句，或按「🤖 AI 例句」；沒有真人句時直接改用 AI。「更多例句」與「🤖 AI 例句」是快速回覆，只掛在最新一則訊息上，電腦版 LINE 不顯示。🤖 易混淆字、🤖 AI 例句 共用 AI 額度，同字快取 30 天；🔊 發音 會開啟單字頁，可用手機語音或劍橋真人發音連結。私訊及已核准的休閒群、工作群（含休閒）可用，純工作群不開放。不保存查詢文字。資料為 ECDICT，中文以 OpenCC 離線轉台灣繁體，授權見下方。</dd></div>
             <div data-command="今日單字" data-scopes="user group"><dt><code>#今日單字</code><span class="command-scope">兩者</span></dt><dd>全站每天同一個常用度三至四星單字，依台灣日期輪替。附例句（先出真人例句）、🤖 易混淆字與發音頁，不扣生活次數、不主動推播；純工作群不開放。</dd></div>
-            <div data-command="AI" data-scopes="user group"><dt><code>#AI</code><span class="command-scope">兩者</span></dt><dd>說明 AI 會幫哪些指令整理格式：#揪、#投票、#捷運 打得不合格式時，AI 整理成正確寫法，本人按 ✓ 確認才執行；#單字 的 🤖 AI 例句（沒有真人例句或另按時）、🤖 易混淆字 會用 AI；之後會加入 #問 自由問答。私訊 #AI 顯示今日剩餘次數，群組只顯示每人每日上限。一般聊天不會送給 AI。每人每天 50 次，台灣午夜重算。#AI 本身不呼叫 AI、不計次數，也可打 #ai。</dd></div>
+            <div data-command="今日成語" data-scopes="user group"><dt><code>#今日成語</code><span class="command-scope">兩者</span></dt><dd>全站每天同一個成語，依台灣日期輪替，內容來自文言文網站的典故漫畫：漫畫第一格、意思、例句與出處（書名）。按「看完整漫畫」看整篇，按「玩成語填空」玩典故漫畫題組。暫時讀不到時會說明，並附「玩成語填空」。不扣生活次數、不用 AI、不主動推播；純工作群不開放。</dd></div>
+            <div data-command="AI" data-scopes="user group"><dt><code>#AI</code><span class="command-scope">兩者</span></dt><dd>說明 AI 會幫哪些指令整理格式：#揪、#投票、#捷運 打得不合格式時，AI 整理成正確寫法，本人按 ✓ 確認才執行；#單字 的 🤖 AI 例句（沒有真人例句或另按時）、🤖 易混淆字 會用 AI；#今日成語 不用 AI；之後會加入 #問 自由問答。私訊 #AI 顯示今日剩餘次數，群組只顯示每人每日上限。一般聊天不會送給 AI。每人每天 50 次，台灣午夜重算。#AI 本身不呼叫 AI、不計次數，也可打 #ai。</dd></div>
             <div data-command="新聞" data-scopes="user group"><dt><code>#新聞</code><span class="command-scope">兩者</span></dt><dd>中央通訊社生活新聞，每頁 5 則標題與原站連結，不轉載內文。不帶關鍵字只看生活新聞；加關鍵字可搜中央社各分類標題，例如 #新聞 颱風。關鍵字後的數字仍屬關鍵字，例如 #新聞 iPhone 17；翻頁請按「再來 5 則」或輸入 #新聞 iPhone 17 第2頁。</dd></div>
             <div data-command="投票" data-scopes="group"><dt><code>#投票 [公開] 標題 選項1/選項2 [截止]</code><span class="command-scope">群組</span></dt><dd>投票預設匿名，只公布票數；加「公開」才記名，開頭寫「匿名」仍可用。匿名投票請按卡片按鈕投，打字別人看得到你的選擇。一人一票，可改票或用 #n 投 收回；#結果 n 看結果，發起人 #結算 n 確認後結束。#揪團 列出進行中的揪團與投票。</dd></div>
-            <div data-command="取消 n" data-scopes="group user"><dt><code>#取消 n</code><span class="command-scope">群組／私訊</span></dt><dd>發起人確認後取消進行中的投票，不公布結果。</dd></div>
-            <div data-command="加選項" data-scopes="group user"><dt><code>#加選項 n 選項</code><span class="command-scope">群組／私訊</span></dt><dd>發起人確認後新增 1～15 字、不重複的選項，總數最多 6 個。小集會發新投票卡，原有票數保留，舊卡仍可投票。</dd></div>
-            <div data-command="截止" data-scopes="group user"><dt><code>#截止 n 時間</code><span class="command-scope">群組／私訊</span></dt><dd>發起人確認後可延後、提前或補設截止，須晚於現在且在 30 天內。例：#截止 1 明天 18:00、#截止 1 2小時。</dd></div>
-            <div data-command="我的投票" data-scopes="user"><dt><code>#我的投票</code><span class="command-scope">私訊</span></dt><dd>按群組列出本人發起、進行中的投票，每次最多 10 筆。可結算、取消、加選項或改截止；加選項後請在 10 分鐘內直接輸入 1～15 字，再確認選項文字。期間輸入其他 # 指令不會清除等待，仍可在確認卡按「算了」。私訊打號碼遇到多群同號時先選群組。操作完成會推播一則群組公告；同一群組 6 小時內只推播一次，推播失敗或 6 小時內已推播過時，群組下次有人說話（一般聊天也算）就會公告。</dd></div>
+            <div data-command="取消 n" data-scopes="group user"><dt><code>#取消 n</code><span class="command-scope">群組／私訊</span></dt><dd>發起人確認後取消進行中的揪團或投票（揪團與投票共用團號）。投票取消後不公布結果；揪團取消後群組會公告，之後按 +1 只會回「已取消」。</dd></div>
+            <div data-command="加選項" data-scopes="group user"><dt><code>#加選項 n 選項</code><span class="command-scope">群組／私訊</span></dt><dd>發起人確認後新增 1～15 字、不重複的選項，總數最多 6 個。小集會發新投票卡，原有票數保留，舊卡仍可投票。揪團沒有選項，只有投票可以加選項。</dd></div>
+            <div data-command="截止" data-scopes="group user"><dt><code>#截止 n 時間</code><span class="command-scope">群組／私訊</span></dt><dd>發起人確認後可延後、提前或補設揪團或投票的截止，須晚於現在且在 30 天內。例：#截止 1 明天 18:00、#截止 1 2小時。舊卡按鈕依新的截止判斷。</dd></div>
+            <div data-command="我的投票" data-scopes="user"><dt><code>#我的投票</code> / <code>#我的揪團</code><span class="command-scope">私訊</span></dt><dd>兩個指令效果相同：按群組列出本人發起、進行中的揪團（🙋）和投票（🗳），每次最多 10 筆。可結算、取消或改截止，投票另可加選項（揪團沒有選項）；加選項後請在 10 分鐘內直接輸入 1～15 字，再確認選項文字。期間輸入其他 # 指令不會清除等待，仍可在確認卡按「算了」。私訊打號碼遇到多群同號時先選群組。操作完成會推播一則群組公告；同一群組 6 小時內只推播一次，推播失敗或 6 小時內已推播過時，群組下次有人說話（一般聊天也算）就會公告。</dd></div>
             <div data-command="結果" data-scopes="group"><dt><code>#結果 n</code><span class="command-scope">群組</span></dt><dd>查看指定團號的投票結果；記名列各選項的人，匿名只列票數。截止後第一次互動公布最終結果，不主動推播。</dd></div>
             <div data-command="行事曆" data-scopes="user group"><dt><code>#行事曆 [下週|本月|M/D]</code><span class="command-scope">兩者</span></dt><dd>看未來 7 天的約、提醒與交辦；私訊須公事同意，群組只列本群並附揪團報名截止，休閒群也可用。最多 15 件、群組最多 7 天，不計公事查詢次數。</dd></div>
           </dl>
@@ -143,6 +144,10 @@
             <li class="bot"><div class="bubble"><span class="speaker">小集</span>📘 abandon  /əˈbændən/  常用度 ★★★☆☆<br>vt. 放棄;拋棄;遺棄<br>n. 放任;狂熱</div></li>
             <li class="player"><div class="bubble"><span class="speaker">小美</span>#今日單字</div></li>
             <li class="bot"><div class="bubble"><span class="speaker">小集</span>📅 今日單字<br>📘 abandon（示意）<br>例句 · 🤖 易混淆字 · 🔊 發音</div></li>
+            <li class="player"><div class="bubble"><span class="speaker">小美</span>#我的投票</div></li>
+            <li class="bot"><div class="bubble"><span class="speaker">小集</span>按群組列出你發起、進行中的投票（示意）<br>結算 · 取消 · 加選項 · 改截止</div></li>
+            <li class="player"><div class="bubble"><span class="speaker">小美</span>#今日成語</div></li>
+            <li class="bot"><div class="bubble"><span class="speaker">小集</span>📜 今日成語:畫蛇添足（示意）<br>漫畫第一格 · 意思 · 例句 · 出處<br>看完整漫畫 · 玩成語填空</div></li>
             <li class="player"><div class="bubble"><span class="speaker">小美</span>#AI</div></li>
             <li class="bot"><div class="bubble"><span class="speaker">小集</span>🤖 小集 AI 輔助<br>#揪、#投票、#捷運 打得不合格式時，AI 會幫你整理成正確寫法，你按 ✓ 確認才會執行。一般聊天不會送給 AI。每人每天 50 次。（示意）</div></li>
           </ol>
@@ -190,7 +195,7 @@
         <article class="command-card" aria-labelledby="help-title">
           <h3 id="help-title">❓ 說明</h3>
           <dl class="command-list">
-            <div data-command="功能" data-scopes="user group"><dt><code>#功能</code> / <code>#介紹</code><span class="command-scope">兩者</span></dt><dd>用分類卡片認識小幫手，含笑話題庫與急轉彎；按「試試看」送出指令，按「看用法」查看 #說明。依場合顯示可用功能，不計生活次數、不記錄為回饋。</dd></div>
+            <div data-command="功能" data-scopes="user group"><dt><code>#功能</code> / <code>#介紹</code><span class="command-scope">兩者</span></dt><dd>第一張是功能目錄，列出目前場合有的分類，按分類就送出 #說明 看用法；往左滑是各分類卡片（帳務、揪團投票、遊戲與今日挑戰、意見回饋、成績與排行、生活小幫手、學習、AI 小幫手、笑話與急轉彎），按「試試看」送出指令，按「看用法」查看 #說明。卡片超過 12 張時，成績與排行會併入遊戲卡。依場合顯示可用功能，不計生活次數、不記錄為回饋。</dd></div>
             <div data-command="說明" data-scopes="user group"><dt><code>#說明 [指令]</code><span class="command-scope">兩者</span></dt><dd>不帶指令看清單，帶指令看用法，例如 #說明 天氣、#說明 #排行；也可用 #指令 或 #help。方括號表示可省略，不必真的輸入。</dd></div>
             <div data-command="提及" data-scopes="group"><dt><code>@遊戲集錦回饋</code><span class="command-scope">群組</span></dt><dd>在已核准群組用 LINE 的 @ 選到小幫手，後面可接不帶 # 的指令，例如「天氣 台北」。只 @、接「介紹」或無法辨識時回功能介紹；@ 其他人不回應。</dd></div>
           </dl>
@@ -283,6 +288,6 @@ SOFTWARE.</p>
     </section>
     <footer class="guide-footer"><a href="../privacy/">隱私權政策</a><a href="../">回大廳</a></footer>
   </main>
-  <script type="module" src="ui.js?v=4a61272"></script>
+  <script type="module" src="ui.js?v=b19b96f"></script>
 </body>
 </html>

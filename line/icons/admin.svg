@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="管理">
+<title>管理</title>
+<defs><clipPath id="clip-admin"><rect x="14" y="14" width="212" height="212" rx="52"/></clipPath></defs>
+<rect x="14" y="14" width="212" height="212" rx="52" fill="#b4473b"/>
+<g clip-path="url(#clip-admin)"><rect x="0" y="0" width="240" height="44" fill="#ffffff" opacity="0.18"/><rect x="0" y="200" width="240" height="40" fill="#000000" opacity="0.14"/></g>
+<rect x="14" y="14" width="212" height="212" rx="52" fill="none" stroke="#3b2a1e" stroke-width="7"/>
+<polygon points="120.0,60.0 131.7,61.2 137.6,77.5 145.6,81.8 162.4,77.6 169.9,86.7 162.5,102.4 165.1,111.0 180.0,120.0 178.8,131.7 162.5,137.6 158.2,145.6 162.4,162.4 153.3,169.9 137.6,162.5 129.0,165.1 120.0,180.0 108.3,178.8 102.4,162.5 94.4,158.2 77.6,162.4 70.1,153.3 77.5,137.6 74.9,129.0 60.0,120.0 61.2,108.3 77.5,102.4 81.8,94.4 77.6,77.6 86.7,70.1 102.4,77.5 111.0,74.9" fill="#ffffff" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><circle cx="120" cy="120" r="20" fill="#d5dbe3" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

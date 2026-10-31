@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="成績排行">
+<title>成績排行</title>
+<defs><clipPath id="clip-rank"><rect x="14" y="14" width="212" height="212" rx="52"/></clipPath></defs>
+<rect x="14" y="14" width="212" height="212" rx="52" fill="#ee6a3c"/>
+<g clip-path="url(#clip-rank)"><rect x="0" y="0" width="240" height="44" fill="#ffffff" opacity="0.18"/><rect x="0" y="200" width="240" height="40" fill="#000000" opacity="0.14"/></g>
+<rect x="14" y="14" width="212" height="212" rx="52" fill="none" stroke="#3b2a1e" stroke-width="7"/>
+<path d="M84 82 h-16 a18 18 0 0 0 20 32 M156 82 h16 a18 18 0 0 1 -20 32" fill="none" stroke="#3b2a1e" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><path d="M84 82 h-16 a18 18 0 0 0 20 32 M156 82 h16 a18 18 0 0 1 -20 32" fill="none" stroke="#ffcf3f" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M82 64 h76 v34 a38 38 0 0 1 -76 0 z" fill="#ffcf3f" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><rect x="111" y="134" width="18" height="20" fill="#ffcf3f" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><rect x="88" y="152" width="64" height="22" rx="6" fill="#b0693a" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><polygon points="120.0,84.0 123.7,92.9 133.3,93.7 126.0,99.9 128.2,109.3 120.0,104.3 111.8,109.3 114.0,99.9 106.7,93.7 116.3,92.9" fill="#ffffff" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="看更新">
+<title>看更新</title>
+<defs><clipPath id="clip-updates"><rect x="14" y="14" width="212" height="212" rx="52"/></clipPath></defs>
+<rect x="14" y="14" width="212" height="212" rx="52" fill="#16969c"/>
+<g clip-path="url(#clip-updates)"><rect x="0" y="0" width="240" height="44" fill="#ffffff" opacity="0.18"/><rect x="0" y="200" width="240" height="40" fill="#000000" opacity="0.14"/></g>
+<rect x="14" y="14" width="212" height="212" rx="52" fill="none" stroke="#3b2a1e" stroke-width="7"/>
+<rect x="66" y="132" width="22" height="40" rx="8" fill="#d5dbe3" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="M58 102 h26 l70 -36 v104 l-70 -36 h-26 a8 8 0 0 1 -8 -8 v-16 a8 8 0 0 1 8 -8 z" fill="#ffffff" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="M172 100 q10 18 0 36" fill="none" stroke="#3b2a1e" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M180 51 Q182.7 63.3 195 66 Q182.7 68.7 180 81 Q177.3 68.7 165 66 Q177.3 63.3 180 51 Z" fill="#ffcf3f" stroke="#3b2a1e" stroke-width="5" stroke-linejoin="round"/>
+</svg>

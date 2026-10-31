@@ -18,6 +18,10 @@ export const SPRINT_ACCEL = ACCEL * 1.6;
 export const HEAT_UP = 30;
 export const HEAT_THROTTLE_COOL = 10;
 export const HEAT_IDLE_COOL = 25;
+// RS42:只按油門且速度 ≥ 最高速 85% 時改為升溫(原為降溫);完美落地降溫。
+export const HEAT_FAST_RATIO = 0.85;
+export const HEAT_FAST_UP = 5;
+export const PERFECT_COOL = 15;
 export const OVERHEAT_SEC = 3;
 export const GRAVITY = 32;
 export const JUMP_BASE = 8;
@@ -34,7 +38,7 @@ export const HILL_HEIGHT = 2;
 export const RAMP_HEIGHT = 4;
 export const HEIGHT_SCALE = 0.16;
 export const LAUNCH_DEG = 18;
-export const COOLING_EVERY = 5;
+export const COOLING_EVERY = 12; // RS42:冷卻點變稀疏,一路按油門(約 20 秒)才會在到達冷卻點前過熱。
 export const G9_MAX_SPEED = 42;
 export const G9_DIST_SCALE = 0.05;
 export const G9_W = 9;
@@ -52,16 +56,37 @@ export const FIRST_OBJECT = 180;
 export const OBJECT_LENGTHS = { mud: 35, barrier: 8, ramp: 24, hill: 55, cooling: 6 };
 export const CAR_GAP = 8;
 export const CAR_HALF_LANE = 0.38;
+// RS42:車輛相撞。相對速度 < RAM_CRASH_DIFF 擦撞(後車降為前車 70%、前車 +3),≥ 則後車摔車。
+export const RAM_CRASH_DIFF = 25;
+export const RAM_KEEP = 0.7;
+export const RAM_PUSH = 3;
+export const LANE_BUMP_LOSS = 0.1;
+export const BUMP_SEC = 0.35;
+// 被同車道慢車擋住時的提示:3 秒內第 2 次擦撞,提示「換個車道超車!」(顯示 1.5 秒,同一場每 10 秒最多一次)。
+export const HINT_WINDOW = 3;
+export const HINT_COOLDOWN = 10;
+export const HINT_SEC = 1.5;
+// RS42:跳台下限與種類(大跳台=kind 'ramp';高跳台高 1.5 倍、起跳垂直速度 ×1.25,飛得更遠)。
+export const RAMP_MIN = { normal: 10, hard: 12, expert: 12 };
+export const HIGH_RAMP_MIN = { normal: 0, hard: 2, expert: 3 };
+export const COMBO_MIN = { normal: 1, hard: 2, expert: 2 };
+export const HIGH_RAMP_HEIGHT = RAMP_HEIGHT * 1.5;
+export const HIGH_RAMP_BOOST = 1.25;
+export const COMBO_OFFSET = 124; // 連續跳台:第二個跳台起點 = 第一個起點 + 124(兩台間距 100)。
+export const LANDING_CLEAR = 140; // 跳台尾端之後這段距離同車道不放路障/泥坑。
+export const HIGH_LANDING_CLEAR = 170;
+export const isHighRamp = (o) => o.kind === 'ramp' && o.height > RAMP_HEIGHT;
 export const GHOST_INTERVAL = 0.1;
 export const GHOST_LIMIT = 2000;
 export const GHOST_MAX_LANE_DELTA = 1; // 0.1 秒內換道加上摔車回正,最多一條車道。
 export const TIME_SEEDS = { normal: 9001, hard: 9002, expert: 9003 };
 export const DIFFICULTIES = ['normal', 'hard', 'expert'];
 export const MODES = ['race', 'time'];
+// push=溫度允許時比巡航多衝的速度;aim=落地前先預估落點坡角再調整(RS42)。
 export const LEVELS = {
-  normal: { density: 0.38, target: 55, accuracy: 0.62, reaction: 48, heatLimit: 95 },
-  hard: { density: 0.58, target: 62, accuracy: 0.82, reaction: 66, heatLimit: 82 },
-  expert: { density: 0.78, target: 67, accuracy: 0.96, reaction: 86, heatLimit: 68 },
+  normal: { density: 0.38, target: 55, accuracy: 0.62, reaction: 48, heatLimit: 95, push: 3, aim: false },
+  hard: { density: 0.58, target: 62, accuracy: 0.82, reaction: 66, heatLimit: 82, push: 4, aim: true },
+  expert: { density: 0.78, target: 67, accuracy: 0.96, reaction: 86, heatLimit: 68, push: 14, aim: true },
 };
 export const AI_SPEED_OFFSETS = [-2, 0, 1];
 export const PLACE_POINTS = [3000, 2000, 1000, 500];
@@ -77,6 +102,7 @@ export function nextRandom(seed) {
 }
 
 // 安全車道每段最多移一格,相鄰物件間留足換道距離。
+// RS42:先照密度亂數鋪物件,再補到跳台下限、挑出連續跳台與高跳台、清掉落地區的路障/泥坑。
 export function generateTrack(seed, difficulty = 'normal', rng) {
   const random = () => {
     if (rng) return rng();
@@ -84,28 +110,76 @@ export function generateTrack(seed, difficulty = 'normal', rng) {
     [r, seed] = nextRandom(seed);
     return r;
   };
+  const level = LEVELS[difficulty];
   let safe = Math.floor(random() * LANES);
-  const track = [];
+  const segs = [];
   for (let x = FIRST_OBJECT; x < TRACK_LEN - SEGMENT; x += SEGMENT) {
     safe = clamp(safe + Math.floor(random() * 3) - 1, 0, LANES - 1);
+    const cells = Array.from({ length: LANES }, () => null);
     for (let lane = 0; lane < LANES; lane++) {
-      if (lane === safe || random() >= LEVELS[difficulty].density) continue;
+      if (lane === safe || random() >= level.density) continue;
       const r = random();
-      const kind = r < 0.22 ? 'mud' : r < 0.48 ? 'barrier' : r < 0.75 ? 'ramp' : 'hill';
-      track.push({ id: track.length, lane, x, kind, length: OBJECT_LENGTHS[kind],
-        height: kind === 'hill' ? HILL_HEIGHT : kind === 'ramp' ? RAMP_HEIGHT : 0 });
+      cells[lane] = { kind: r < 0.18 ? 'mud' : r < 0.42 ? 'barrier' : r < 0.74 ? 'ramp' : 'hill', combo: false, high: false };
     }
+    segs.push({ x, safe, cells });
   }
+  const pick = (n) => Math.min(n - 1, Math.floor(random() * n));
+  const ramps = () => segs.reduce((n, g) => n + g.cells.filter((c) => c?.kind === 'ramp').length, 0);
+  // 1. 補到跳台下限(亂數挑空格,挑不到就依序掃描,保證結束)。
+  const place = (min) => {
+    for (let tries = 0; ramps() < min && tries < 200; tries++) {
+      const g = segs[pick(segs.length)], lane = pick(LANES);
+      if (lane !== g.safe && !g.cells[lane]) g.cells[lane] = { kind: 'ramp', combo: false, high: false };
+    }
+    // 空格不夠(退化亂數把格子鋪滿)時,把路障/泥坑/土坡改成跳台,仍保證下限。
+    for (const empty of [true, false]) for (const g of segs) for (let lane = 0; lane < LANES && ramps() < min; lane++)
+      if (lane !== g.safe && (empty ? !g.cells[lane] : g.cells[lane].kind !== 'ramp')) g.cells[lane] = { kind: 'ramp', combo: false, high: false };
+  };
+  place(RAMP_MIN[difficulty]);
+  // 2. 連續跳台:同車道下一段清空(第二個跳台落在那裡),且不得落在下一段的安全車道上。
+  const comboCandidates = () => segs.flatMap((g, i) => i + 1 < segs.length ? g.cells.flatMap((c, lane) =>
+    c?.kind === 'ramp' && !c.combo && !c.high && lane !== segs[i + 1].safe && segs[i + 1].cells[lane]?.kind !== 'ramp'
+      ? [[i, lane]] : []) : []);
+  for (let n = 0; n < COMBO_MIN[difficulty]; n++) {
+    const list = comboCandidates(); if (!list.length) break;
+    const [i, lane] = list[pick(list.length)];
+    segs[i].cells[lane].combo = true; segs[i + 1].cells[lane] = null;
+  }
+  // 3. 高跳台:困難以上才有;從不屬於連續組的跳台挑。
+  for (let n = 0; n < HIGH_RAMP_MIN[difficulty]; n++) {
+    const list = segs.flatMap((g, i) => g.cells.flatMap((c, lane) => c?.kind === 'ramp' && !c.combo && !c.high ? [[i, lane]] : []));
+    if (!list.length) break;
+    const [i, lane] = list[pick(list.length)]; segs[i].cells[lane].high = true;
+  }
+  // 4. 落地區不放路障/泥坑(同車道,跳台尾端之後 LANDING_CLEAR);連續跳台的第二台一併處理。
+  const objects = [];
+  const add = (lane, x, kind, height) => objects.push({ id: 0, lane, x, kind, length: OBJECT_LENGTHS[kind], height });
+  segs.forEach((g) => g.cells.forEach((c, lane) => {
+    if (!c) return;
+    const height = c.kind === 'hill' ? HILL_HEIGHT : c.kind === 'ramp' ? (c.high ? HIGH_RAMP_HEIGHT : RAMP_HEIGHT) : 0;
+    add(lane, g.x, c.kind, height);
+    if (c.combo) add(lane, g.x + COMBO_OFFSET, 'ramp', RAMP_HEIGHT);
+  }));
+  const hazards = new Set();
+  for (const o of objects.filter((o) => o.kind === 'ramp')) {
+    const end = o.x + o.length, clear = o.height > RAMP_HEIGHT ? HIGH_LANDING_CLEAR : LANDING_CLEAR;
+    for (const h of objects) if (['barrier', 'mud'].includes(h.kind) && h.lane === o.lane && h.x > o.x && h.x < end + clear) hazards.add(h);
+  }
+  const track = objects.filter((o) => !hazards.has(o));
   // 冷卻標誌在段落間,全車道可用;不會占用安全車道。
   for (let x = FIRST_OBJECT + SEGMENT / 2; x < TRACK_LEN - SEGMENT; x += SEGMENT * COOLING_EVERY)
-    track.push({ id: track.length, lane: -1, x, kind: 'cooling', length: OBJECT_LENGTHS.cooling, height: 0 });
-  return track.sort((a, b) => a.x - b.x || a.id - b.id);
+    track.push({ id: 0, lane: -1, x, kind: 'cooling', length: OBJECT_LENGTHS.cooling, height: 0 });
+  track.sort((a, b) => a.x - b.x || a.lane - b.lane);
+  track.forEach((o, i) => { o.id = i; });
+  return track;
 }
 
 const vehicle = (id, lane) => ({
   id, lane, lanePos: lane, from: lane, laneLeft: 0, x: 0, speed: 0,
   crash: 0, air: 0, h: 0, vy: 0, angle: 0, heat: 0, overheat: 0,
   sprinting: false, landing: null, mud: false, lastObject: null, seen: null, finishAt: null,
+  bump: 0, ram: false, avoid: null, // RS42:碰撞閃爍計時、因追撞摔車、電腦車已處理過的前車
+  hitAt: null, hintAt: null, // RS42:玩家上次擦撞(當後車)的時刻、上次出現「換道超車」提示的時刻(只有玩家會填)
 });
 
 export function initState(rng = Math.random, difficulty = 'normal', mode = 'race') {
@@ -134,24 +208,52 @@ function changeLane(v, dir) {
   v.laneLeft = LANE_SEC;
 }
 
+// 以目前速度與垂直速度估計落點,回傳該處坡角(高難度電腦車與「會玩」機器人用來對準落地角度)。
+export function landingSlope(v, track) {
+  let h = terrainAt(v.x, v.lanePos, track).h, t = 0;
+  for (let k = 0; k < 3; k++) {
+    t = (v.vy + Math.sqrt(Math.max(0, v.vy * v.vy + 2 * GRAVITY * (v.h - h)))) / GRAVITY;
+    h = terrainAt(v.x + v.speed * t, v.lanePos, track).h;
+  }
+  return terrainAt(v.x + v.speed * t, v.lanePos, track).angle;
+}
+const hazardOn = (track, lane, from, to) => track.some((o) => ['barrier', 'mud'].includes(o.kind) && o.lane === lane
+  && o.x + o.length >= from && o.x <= to);
+
 function aiInput(v, s, random) {
   const level = LEVELS[s.difficulty];
+  // 目標車道前方沒有障礙,旁邊也沒有緊貼的車。
+  const free = (lane) => lane >= 0 && lane < LANES && !hazardOn(s.track, lane, v.x, v.x + level.reaction)
+    && !s.vehicles.some((o) => o.id !== v.id && solid(o) && Math.abs(o.lanePos - lane) <= CAR_HALF_LANE * 2
+      && o.x > v.x - CAR_GAP * 2 && o.x < v.x + CAR_GAP * 3);
   const obstacle = s.track.find((o) => ['barrier', 'mud'].includes(o.kind) && o.lane === v.lane
     && o.x >= v.x && o.x - v.x <= level.reaction && o.id !== v.seen);
   if (obstacle && !v.air && !v.crash && !v.laneLeft) {
     v.seen = obstacle.id; // 每個障礙只作一次反應,不因 fps 重抽機率。
     if (random() < level.accuracy) {
-      const safe = [-1, 1].filter((d) => v.lane + d >= 0 && v.lane + d < LANES
-        && !s.track.some((o) => ['barrier', 'mud'].includes(o.kind) && o.lane === v.lane + d
-          && o.x + o.length >= v.x && o.x <= v.x + level.reaction));
+      const safe = [-1, 1].filter((d) => free(v.lane + d));
       if (safe.length) changeLane(v, safe[Math.floor(random() * safe.length)]);
     }
   }
-  const target = level.target + AI_SPEED_OFFSETS[v.id - 1];
+  // RS42:前方有慢車就試著換道繞開;每台前車只作一次反應。
+  const slow = s.vehicles.find((o) => o.id !== v.id && solid(o) && Math.abs(o.lanePos - v.lanePos) <= CAR_HALF_LANE * 2
+    && o.x > v.x && o.x - v.x <= level.reaction * 0.6 && v.speed > o.speed + 2);
+  if (!slow) v.avoid = null;
+  else if (v.avoid !== slow.id && !v.air && !v.crash && !v.laneLeft) {
+    v.avoid = slow.id;
+    if (random() < level.accuracy) {
+      const safe = [-1, 1].filter((d) => free(v.lane + d));
+      if (safe.length) changeLane(v, safe[Math.floor(random() * safe.length)]);
+    }
+  }
+  // 溫度允許時衝刺並追加 push;溫度到 heatLimit 就鬆油門(滑行降溫),再靠 -25/s 回來。
+  const cool = v.heat < level.heatLimit, cruise = level.target + AI_SPEED_OFFSETS[v.id - 1];
+  const goal = cool ? cruise + level.push : cruise;
   const ground = terrainAt(v.x + v.speed * DT, v.lanePos, s.track);
-  return { throttle: v.speed < target, brake: v.speed > target + 1,
-    sprint: v.speed < target && v.heat < level.heatLimit,
-    tilt: v.air ? Math.sign(ground.angle - v.angle) * Math.min(1, Math.abs(ground.angle - v.angle) / (TILT_SPEED * DT)) : 0 };
+  const aim = v.air ? (level.aim ? landingSlope(v, s.track) : ground.angle) : 0;
+  return { throttle: v.speed < goal && (cool || v.speed < MAX_SPEED * HEAT_FAST_RATIO),
+    brake: v.speed > cruise + level.push + 1, sprint: cool && v.speed < goal,
+    tilt: v.air ? Math.sign(aim - v.angle) * Math.min(1, Math.abs(aim - v.angle) / (TILT_SPEED * DT)) : 0 };
 }
 
 // 同一地形供物理、落地角度與繪圖使用;車道間高度線性插值。
@@ -173,13 +275,17 @@ export function landingFor(angle, slope) {
   const difference = Math.abs(angle - slope);
   return difference <= PERFECT_DEG ? 'perfect' : difference <= SAFE_DEG ? 'normal' : 'crash';
 }
-function crashVehicle(v, objectId = v.lastObject) {
+function crashVehicle(v, objectId = v.lastObject, ram = false) {
   v.speed = 0; v.crash = CRASH_SEC; v.air = 0; v.vy = 0; v.mud = false;
   v.sprinting = false; v.laneLeft = 0; v.from = v.lane; v.lanePos = v.lane;
-  v.lastObject = objectId;
+  v.lastObject = objectId; v.ram = ram;
 }
+// 摔車中的車手已離開機車,不參與相撞;其餘在地面的車都是實體。
+const solid = (v) => v.air === 0 && v.crash === 0 && v.finishAt === null;
 function advanceVehicle(v, old, input, track, dt) {
   v.landing = null; v.sprinting = false;
+  v.bump = Math.max(0, v.bump - dt);
+  if (v.bump < 1e-9) v.bump = 0;
   if (v.finishAt !== null) return;
   if (v.overheat > 0) {
     v.overheat = Math.max(0, v.overheat - dt);
@@ -188,8 +294,11 @@ function advanceVehicle(v, old, input, track, dt) {
     v.speed = 0;
     return;
   }
-  v.heat = clamp(v.heat + (input.sprint && !v.crash ? HEAT_UP
-    : input.throttle ? -HEAT_THROTTLE_COOL : -HEAT_IDLE_COOL) * dt, 0, 100);
+  // RS42:只按油門時,速度 ≥ 最高速 85% 升溫、低於則降溫;煞車等同放開油門。
+  const braking = input.brake || (input.left && !v.air);
+  const heating = input.sprint && !v.crash ? HEAT_UP
+    : input.throttle && !braking ? (v.speed >= MAX_SPEED * HEAT_FAST_RATIO ? HEAT_FAST_UP : -HEAT_THROTTLE_COOL) : -HEAT_IDLE_COOL;
+  v.heat = clamp(v.heat + heating * dt, 0, 100);
   if (v.heat >= 100 - 1e-9) {
     v.heat = 100; v.overheat = OVERHEAT_SEC; v.speed = 0;
     // 強制停車時回到當前坡面,避免停在半空。
@@ -202,6 +311,7 @@ function advanceVehicle(v, old, input, track, dt) {
     if (v.crash < 1e-9) v.crash = 0;
     v.speed = 0;
     if (!v.crash) {
+      v.ram = false;
       const ground = terrainAt(v.x, v.lanePos, track);
       v.h = ground.h; v.angle = ground.angle;
     }
@@ -234,8 +344,11 @@ function advanceVehicle(v, old, input, track, dt) {
         crashVehicle(v);
         v.h = terrainAt(v.x, v.lanePos, track).h;
       }
-      else v.speed = Math.min(v.landing === 'perfect' ? SPRINT_SPEED : cap, v.speed * (1 - NORMAL_LOSS * Math.abs(v.angle - ground.angle) / SAFE_DEG)
-        + (v.landing === 'perfect' ? PERFECT_BOOST : 0));
+      else {
+        v.speed = Math.min(v.landing === 'perfect' ? SPRINT_SPEED : cap, v.speed * (1 - NORMAL_LOSS * Math.abs(v.angle - ground.angle) / SAFE_DEG)
+          + (v.landing === 'perfect' ? PERFECT_BOOST : 0));
+        if (v.landing === 'perfect') v.heat = Math.max(0, v.heat - PERFECT_COOL);
+      }
       v.angle = ground.angle;
     }
   } else { v.h = ground.h; v.angle = ground.angle; }
@@ -262,7 +375,8 @@ function advanceVehicle(v, old, input, track, dt) {
       && Math.abs(v.lanePos - o.lane) <= CAR_HALF_LANE)) continue;
     if (o.kind === 'mud') { v.mud = true; v.speed = Math.min(v.speed, MAX_SPEED * MUD_CAP); }
     else if (o.kind === 'ramp' && v.speed > 0) {
-      v.air = dt * Math.max(0.001, 1 - enter); v.vy = JUMP_BASE + JUMP_SPEED * v.speed;
+      v.air = dt * Math.max(0.001, 1 - enter);
+      v.vy = (JUMP_BASE + JUMP_SPEED * v.speed) * (isHighRamp(o) ? HIGH_RAMP_BOOST : 1);
       v.h = o.height; v.angle = LAUNCH_DEG;
       v.mud = false; v.lastObject = o.id;
     } else if (o.kind === 'barrier') {
@@ -296,6 +410,64 @@ export function resultFor(s, quit = false) {
   };
 }
 
+// 速度上限(撞擊推前車時不超過):泥坑/衝刺/一般;已超速(衝刺餘速)的不再加。
+const capOf = (v) => Math.max(v.speed, v.mud ? MAX_SPEED * MUD_CAP : v.sprinting ? SPRINT_SPEED : MAX_SPEED);
+function settle(v, track) {
+  const ground = terrainAt(v.x, v.lanePos, track);
+  v.h = ground.h; v.angle = ground.angle;
+}
+// 換道撞車:換道動畫倒轉回原車道(lanePos 連續),速度 -10%。
+function bounce(v) {
+  const elapsed = LANE_SEC - v.laneLeft, target = v.lane;
+  v.lane = v.from; v.from = target; v.laneLeft = elapsed;
+  v.speed *= 1 - LANE_BUMP_LOSS; v.bump = BUMP_SEC;
+}
+// RS42:同車道、都在地面的車相撞;騰空與摔車中的車不參與,影子車完全不參與。
+// 前車先處理,降速可以向後傳遞。
+// 玩家當後車的擦撞紀錄:3 秒內第 2 次且距上次提示 ≥ 10 秒 ⇒ 記下提示時刻(畫面據此顯示)。
+function noteHit(v, now) {
+  if (v.hitAt !== null && now - v.hitAt <= HINT_WINDOW && (v.hintAt === null || now - v.hintAt >= HINT_COOLDOWN)) v.hintAt = now;
+  v.hitAt = now;
+}
+export const hintActive = (s) => playerOf(s).hintAt !== null && s.time - playerOf(s).hintAt < HINT_SEC;
+function collide(s, state, now) {
+  const cars = s.vehicles, old = (v) => state.vehicles[v.id];
+  const bounced = new Set();
+  const contact = (a, b) => Math.abs(a.x - b.x) < CAR_GAP && Math.abs(a.lanePos - b.lanePos) <= CAR_HALF_LANE * 2;
+  // 換道途中第一次碰到車(不論先橫向重疊或先縱向接近):朝對方移動、還在換道的那台被彈回,不算追撞。
+  for (let i = 0; i < cars.length; i++) for (let j = i + 1; j < cars.length; j++) {
+    const a = cars[i], b = cars[j];
+    if (!solid(a) || !solid(b) || !contact(a, b) || contact(old(a), old(b))) continue;
+    for (const [v, other] of [[a, b], [b, a]]) {
+      const moved = v.lanePos - old(v).lanePos, toward = old(other).lanePos - old(v).lanePos;
+      if (v.laneLeft > 0 && moved * toward > 0) { bounce(v); bounced.add(v.id); }
+    }
+  }
+  const ahead = [...cars].sort((a, b) => old(b).x - old(a).x || a.id - b.id);
+  for (let i = 1; i < ahead.length; i++) {
+    const rear = ahead[i];
+    for (let j = 0; j < i; j++) {
+      const front = ahead[j];
+      if (!solid(front) || !solid(rear) || bounced.has(front.id) || bounced.has(rear.id)
+        || Math.abs(front.lanePos - rear.lanePos) > CAR_HALF_LANE * 2
+        // 橫向正在拉開(剛被彈回):不算追撞。
+        || Math.abs(front.lanePos - rear.lanePos) > Math.abs(old(front).lanePos - old(rear).lanePos) + 1e-9
+        || front.x - rear.x >= CAR_GAP || rear.speed <= front.speed) continue;
+      const diff = rear.speed - front.speed;
+      rear.x = Math.max(old(rear).x, front.x - CAR_GAP);
+      rear.bump = front.bump = BUMP_SEC;
+      if (diff >= RAM_CRASH_DIFF) { crashVehicle(rear, rear.lastObject, true); }
+      else {
+        rear.speed = front.speed * RAM_KEEP;
+        if (rear.id === 0) noteHit(rear, now);
+        // 過熱停車中的前車不被推動(過熱時速度必須維持 0)。
+        if (!front.overheat) front.speed = Math.min(capOf(front), front.speed + RAM_PUSH);
+      }
+      settle(rear, s.track);
+    }
+  }
+}
+
 // UI 使用 DT 累積器;測試可傳 dt 或注入 rng。預設亂數序列完整存在 state 中。
 export function stepState(state, input = {}, dt = DT, rng) {
   if (state.paused || state.over || !Number.isFinite(dt) || dt <= 0 || dt > 0.25) return state;
@@ -315,20 +487,7 @@ export function stepState(state, input = {}, dt = DT, rng) {
     const controls = i === 0 ? input : aiInput(v, s, random);
     advanceVehicle(v, state.vehicles[i], controls, s.track, dt);
   });
-  // 前車先處理,降速可以向後傳遞;影子車完全不參與。
-  const ahead = [...s.vehicles].sort((a, b) => state.vehicles[b.id].x - state.vehicles[a.id].x || a.id - b.id);
-  for (let i = 1; i < ahead.length; i++) {
-    const rear = ahead[i];
-    for (let j = 0; j < i; j++) {
-      const front = ahead[j];
-      if (front.finishAt !== null || front.air > 0 || rear.air > 0 || Math.abs(front.lanePos - rear.lanePos) > CAR_HALF_LANE * 2
-        || front.x - rear.x >= CAR_GAP || rear.speed <= front.speed) continue;
-      rear.speed = front.speed;
-      rear.x = Math.max(state.vehicles[rear.id].x, front.x - CAR_GAP);
-      const ground = terrainAt(rear.x, rear.lanePos, s.track);
-      rear.h = ground.h; rear.angle = ground.angle;
-    }
-  }
+  collide(s, state, state.time + dt);
   s.time += dt;
   for (const v of s.vehicles) {
     if (v.finishAt === null && v.x >= TRACK_LEN) {
@@ -444,14 +603,17 @@ export function isValidState(s) {
     if (!obj(v) || v.id !== i || !Number.isInteger(v.lane) || !num(v.lane, 0, 3) || !num(v.lanePos, 0, 3)
       || !Number.isInteger(v.from) || !num(v.from, 0, 3) || !num(v.x, 0, TRACK_LEN)
       || !num(v.speed, 0, SPRINT_SPEED) || !num(v.laneLeft, 0, LANE_SEC) || !num(v.crash, 0, CRASH_SEC)
-      || !num(v.air, 0, MAX_AIR_SEC) || !num(v.h, 0, MAX_HEIGHT) || !num(v.vy, -GRAVITY * MAX_AIR_SEC, JUMP_BASE + JUMP_SPEED * SPRINT_SPEED)
+      || !num(v.air, 0, MAX_AIR_SEC) || !num(v.h, 0, MAX_HEIGHT) || !num(v.vy, -GRAVITY * MAX_AIR_SEC, (JUMP_BASE + JUMP_SPEED * SPRINT_SPEED) * HIGH_RAMP_BOOST)
       || !num(v.angle, -ANGLE_LIMIT, ANGLE_LIMIT) || !num(v.heat, 0, 100) || !num(v.overheat, 0, OVERHEAT_SEC)
-      || typeof v.mud !== 'boolean' || typeof v.sprinting !== 'boolean'
+      || typeof v.mud !== 'boolean' || typeof v.sprinting !== 'boolean' || typeof v.ram !== 'boolean' || !num(v.bump, 0, BUMP_SEC)
+      || (v.avoid !== null && (!Number.isInteger(v.avoid) || !num(v.avoid, 0, 3) || v.avoid === i))
+      || (v.hitAt !== null && !num(v.hitAt, 0, s.time + 1e-6)) || (v.hintAt !== null && (v.hitAt === null || !num(v.hintAt, 0, v.hitAt + 1e-6)))
+      || (i !== 0 && (v.hitAt !== null || v.hintAt !== null))
       || ![null, 'perfect', 'normal', 'crash'].includes(v.landing)) return false;
     if (!near(v.lanePos, v.lane + (v.from - v.lane) * v.laneLeft / LANE_SEC) || Math.abs(v.from - v.lane) > 1
       || (!v.laneLeft && v.from !== v.lane)
       || (v.air > 0 && (v.crash || v.overheat || v.mud))
-      || (v.crash > 0 && (v.speed || v.laneLeft || v.mud || v.sprinting))
+      || (v.crash > 0 && (v.speed || v.laneLeft || v.mud || v.sprinting)) || (v.ram && !v.crash)
       || (v.overheat > 0 && (v.speed || v.sprinting || !near(v.heat, 100 * v.overheat / OVERHEAT_SEC)))
       || (v.mud && v.speed > MAX_SPEED * MUD_CAP + 1e-6)) return false;
     const ground = terrainAt(v.x, v.lanePos, s.track);
@@ -464,11 +626,12 @@ export function isValidState(s) {
     if (v.air && (!last || last.kind !== 'ramp'
       || v.x - last.x > last.length + SPRINT_SPEED * MAX_AIR_SEC
       || Math.abs(v.lanePos - last.lane) > CAR_HALF_LANE + Math.min(1, v.air / LANE_SEC) + 1e-6)) return false;
-    if (v.crash && (!last || !['barrier', 'ramp'].includes(last.kind))) return false;
+    if (v.crash && !v.ram && (!last || !['barrier', 'ramp'].includes(last.kind))) return false;
     if (v.finishAt !== null && (!num(v.finishAt, TRACK_LEN / SPRINT_SPEED, s.time) || v.x !== TRACK_LEN || i === 0)) return false;
     if (v.finishAt === null && v.x === TRACK_LEN) return false;
     if (s.time === 0 && (v.x || v.speed || v.lane !== i || v.lanePos !== i || v.crash || v.air || v.laneLeft
-      || v.h || v.vy || v.angle || v.heat || v.overheat || v.sprinting || v.landing !== null || v.lastObject !== null || v.seen !== null)) return false;
+      || v.h || v.vy || v.angle || v.heat || v.overheat || v.sprinting || v.landing !== null || v.lastObject !== null || v.seen !== null
+      || v.bump || v.ram || v.avoid !== null || v.hitAt !== null || v.hintAt !== null)) return false;
     return v.x <= SPRINT_SPEED * s.time + 1e-6;
   })) return false;
   if (s.mode === 'race') return Array.isArray(s.recording) && s.recording.length === 0;

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="學習">
+<title>學習</title>
+<defs><clipPath id="clip-learn"><rect x="14" y="14" width="212" height="212" rx="52"/></clipPath></defs>
+<rect x="14" y="14" width="212" height="212" rx="52" fill="#2c9f68"/>
+<g clip-path="url(#clip-learn)"><rect x="0" y="0" width="240" height="44" fill="#ffffff" opacity="0.18"/><rect x="0" y="200" width="240" height="40" fill="#000000" opacity="0.14"/></g>
+<rect x="14" y="14" width="212" height="212" rx="52" fill="none" stroke="#3b2a1e" stroke-width="7"/>
+<path d="M120 90 C100 76 76 74 54 80 V166 C76 160 100 162 120 176 Z" fill="#ffffff" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="M120 90 C140 76 164 74 186 80 V166 C164 160 140 162 120 176 Z" fill="#ffffff" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="M150 79 V112 l10 -8 l10 8 V78" fill="#e5484d" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="M72 108 c12 -3 24 -2 34 2 M72 130 c12 -3 24 -2 34 2" fill="none" stroke="#3b2a1e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

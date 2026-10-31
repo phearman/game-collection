@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="群組">
+<title>群組</title>
+<defs><clipPath id="clip-group"><rect x="14" y="14" width="212" height="212" rx="52"/></clipPath></defs>
+<rect x="14" y="14" width="212" height="212" rx="52" fill="#b4473b"/>
+<g clip-path="url(#clip-group)"><rect x="0" y="0" width="240" height="44" fill="#ffffff" opacity="0.18"/><rect x="0" y="200" width="240" height="40" fill="#000000" opacity="0.14"/></g>
+<rect x="14" y="14" width="212" height="212" rx="52" fill="none" stroke="#3b2a1e" stroke-width="7"/>
+<path d="M120 170 v-18 a28 28 0 0 1 56 0 v18 z" fill="#d5dbe3" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><circle cx="148" cy="100" r="20" fill="#d5dbe3" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="M60 178 v-20 a32 32 0 0 1 64 0 v20 z" fill="#ffffff" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><circle cx="92" cy="104" r="24" fill="#ffffff" stroke="#3b2a1e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>
