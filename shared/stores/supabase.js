@@ -1,4 +1,4 @@
-import { parseDailySlot, legacyDailySlot, migrateDailySlot } from '../daily-slots.js?v=b19b96f';
+import { parseDailySlot, legacyDailySlot, migrateDailySlot } from '../daily-slots.js?v=7b889b3';
 // SupabaseStore:只用 fetch 呼叫 PostgREST，交易由 RPC 執行。
 //
 // store 介面(MemoryStore / LocalStore / SupabaseStore 共同遵守;所有方法回傳 Promise;
@@ -74,6 +74,7 @@ export class SupabaseStore {
         const err = new Error(error?.message === 'STALE_PROFILE' ? '紀錄已過期' : `同步失敗 (${res.status})`);
         err.stale = error?.message === 'STALE_PROFILE';
         err.status = res.status;
+        if (typeof error?.code === 'string' && /^(?:[0-9]{5}|[0-9]{2}[A-Z][0-9]{2}|P[0-9]{4}|PGRST[0-9]{3})$/.test(error.code)) err.code = error.code;
         throw err;
       }
       let data = null;
@@ -283,10 +284,10 @@ export class SupabaseStore {
   async legacyBest() { return 0; }
 }
 
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=b19b96f';
-import { writeFailure, allInOrder } from './errors.js?v=b19b96f';
-import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=b19b96f';
-import { normalizePlay } from './normalize.js?v=b19b96f';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=7b889b3';
+import { writeFailure, allInOrder } from './errors.js?v=7b889b3';
+import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=7b889b3';
+import { normalizePlay } from './normalize.js?v=7b889b3';
 
 function recalculateFinish(base, stats, play, live) {
   const missing = (live?.achievements ?? []).filter((id) => !base.achievements?.[id]);

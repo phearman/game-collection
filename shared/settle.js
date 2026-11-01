@@ -2,8 +2,8 @@
 // profile.finishPlay 是一次提交:失敗會把已寫的紀錄整批還原再丟錯。這裡接住錯誤,跳出共用對話框
 // 「重試 / 不存了,再玩一次」,不讓畫面停在「結算中」。重試 = 從目前的資料重新算一次;不存了 = 什麼都不記、開新局。
 
-import { isCloudOffline, OFFLINE_FINISH_TEXT } from './cloud-status.js?v=b19b96f';
-import { failureReason } from './stores/errors.js?v=b19b96f';
+import { isCloudOffline, OFFLINE_FINISH_TEXT } from './cloud-status.js?v=7b889b3';
+import { failureReason } from './stores/errors.js?v=7b889b3';
 
 export const DUPLICATE_FINISH_TEXT = '這一局已經在其他分頁結算過了';
 
@@ -63,7 +63,7 @@ export function settleErrorCode(error) {
   const code = source?.code;
   let safeCode = '';
   if (Number.isSafeInteger(code) && code >= 0 && code <= 99999) safeCode = String(code);
-  else if (code === 'LOCAL_DATA_LIMIT' || (typeof code === 'string' && /^(?:[0-9]{5}|[0-9]{2}[A-Z][0-9]{2}|P[0-9]{4})$/.test(code))) safeCode = code;
+  else if (code === 'LOCAL_DATA_LIMIT' || (typeof code === 'string' && /^(?:[0-9]{5}|[0-9]{2}[A-Z][0-9]{2}|P[0-9]{4}|PGRST[0-9]{3})$/.test(code))) safeCode = code;
   return `錯誤代碼:${name}${safeStatus}${safeCode ? ` / ${safeCode}` : ''}${error?.rollbackFailed ? ' / rollbackFailed' : ''}`;
 }
 
