@@ -1,3 +1,3 @@
-import { bindThemeToggle } from '../shared/theme.js?v=7b889b3';
+import { bindThemeToggle } from '../shared/theme.js?v=f94633b';
 
 bindThemeToggle(document.getElementById('theme'));

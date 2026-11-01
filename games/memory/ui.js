@@ -2,20 +2,20 @@
 import {
   DIFFICULTIES, HIDE_MS, initState, initDailyState, flip, hideState, tickState, scoreFor, resultOf, isOver, isWaiting,
   hasActed, seededRng, demoPlan, remainingPairs, cardView, symbolOf, detailOf, pairsOf, toSave, fromSave, isValidState,
-} from './logic.js?v=7b889b3';
-import { createProfile } from '../../shared/profile.js?v=7b889b3';
-import { LocalStore } from '../../shared/stores/local.js?v=7b889b3';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=7b889b3';
-import { bindThemeToggle } from '../../shared/theme.js?v=7b889b3';
-import { play, music } from '../../shared/sound.js?v=7b889b3';
-import { setupHelp } from '../../shared/help.js?v=7b889b3';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=7b889b3';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=7b889b3';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=7b889b3';
+} from './logic.js?v=f94633b';
+import { createProfile } from '../../shared/profile.js?v=f94633b';
+import { LocalStore } from '../../shared/stores/local.js?v=f94633b';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=f94633b';
+import { bindThemeToggle } from '../../shared/theme.js?v=f94633b';
+import { play, music } from '../../shared/sound.js?v=f94633b';
+import { setupHelp } from '../../shared/help.js?v=f94633b';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=f94633b';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=f94633b';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=f94633b';
 
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume, DAILY_RESUME_NO_SAVE_TEXT } from '../../shared/daily.js?v=7b889b3';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=7b889b3';
-import { formatDuration } from '../../shared/duration.js?v=7b889b3';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume, DAILY_RESUME_NO_SAVE_TEXT } from '../../shared/daily.js?v=f94633b';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=f94633b';
+import { formatDuration } from '../../shared/duration.js?v=f94633b';
 
 const GAME_ID = 'memory';
 const LABELS = { normal: '一般', hard: '困難', expert: '專家' };

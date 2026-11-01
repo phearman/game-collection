@@ -1,14 +1,14 @@
-import { PLAYER, AI, DIFFICULTIES, ORDERS, initState, newGameState, stepState, aiStepState, undoState, cursorMove, winningLine, demoSteps } from './logic.js?v=7b889b3';
-import { createProfile } from '../../shared/profile.js?v=7b889b3';
-import { LocalStore } from '../../shared/stores/local.js?v=7b889b3';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=7b889b3';
-import { bindThemeToggle } from '../../shared/theme.js?v=7b889b3';
-import { play as playSound, music } from '../../shared/sound.js?v=7b889b3';
-import { setupHelp } from '../../shared/help.js?v=7b889b3';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=7b889b3';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=7b889b3';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=7b889b3';
-import { load, save } from '../../shared/storage.js?v=7b889b3';
+import { PLAYER, AI, DIFFICULTIES, ORDERS, initState, newGameState, stepState, aiStepState, undoState, cursorMove, winningLine, demoSteps } from './logic.js?v=f94633b';
+import { createProfile } from '../../shared/profile.js?v=f94633b';
+import { LocalStore } from '../../shared/stores/local.js?v=f94633b';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=f94633b';
+import { bindThemeToggle } from '../../shared/theme.js?v=f94633b';
+import { play as playSound, music } from '../../shared/sound.js?v=f94633b';
+import { setupHelp } from '../../shared/help.js?v=f94633b';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=f94633b';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=f94633b';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=f94633b';
+import { load, save } from '../../shared/storage.js?v=f94633b';
 
 const GAME_ID = 'tictactoe';
 const $ = (id) => document.getElementById(id);
