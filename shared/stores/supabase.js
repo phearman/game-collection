@@ -1,4 +1,4 @@
-import { parseDailySlot, legacyDailySlot, migrateDailySlot } from '../daily-slots.js?v=f94633b';
+import { parseDailySlot, legacyDailySlot, migrateDailySlot } from '../daily-slots.js?v=1eaba68';
 // SupabaseStore:只用 fetch 呼叫 PostgREST，交易由 RPC 執行。
 //
 // store 介面(MemoryStore / LocalStore / SupabaseStore 共同遵守;所有方法回傳 Promise;
@@ -284,10 +284,10 @@ export class SupabaseStore {
   async legacyBest() { return 0; }
 }
 
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=f94633b';
-import { writeFailure, allInOrder } from './errors.js?v=f94633b';
-import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=f94633b';
-import { normalizePlay } from './normalize.js?v=f94633b';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../supabase-config.js?v=1eaba68';
+import { writeFailure, allInOrder } from './errors.js?v=1eaba68';
+import { applyFinish, ACHIEVEMENT_XP } from '../progress.js?v=1eaba68';
+import { normalizePlay } from './normalize.js?v=1eaba68';
 
 function recalculateFinish(base, stats, play, live) {
   const missing = (live?.achievements ?? []).filter((id) => !base.achievements?.[id]);

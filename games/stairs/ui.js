@@ -4,21 +4,21 @@ import {
   toSave, fromSave, isValidState,
   initAdventure, nextStage, scoreFor, detailFor, resultFor, stageFor, goalText, goalProgress, flipNotice, ridingCloud,
   goalRatio, finalPhase, finalCue, celebrating, tickCelebration, skipCelebration,
-} from './logic.js?v=f94633b';
-import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone, fxBanner, fxCelebrate, fxSkipCelebrate } from './draw.js?v=f94633b';
-import { createProfile } from '../../shared/profile.js?v=f94633b';
-import { LocalStore } from '../../shared/stores/local.js?v=f94633b';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=f94633b';
-import { bindThemeToggle } from '../../shared/theme.js?v=f94633b';
-import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=f94633b';
-import { skinPalette } from './skins.js?v=f94633b';
-import { play, music } from '../../shared/sound.js?v=f94633b';
-import { musicTempo } from '../../shared/sound.js?v=f94633b';
-import { setupHelp } from '../../shared/help.js?v=f94633b';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=f94633b';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=f94633b';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=f94633b';
-import { load, save } from '../../shared/storage.js?v=f94633b';
+} from './logic.js?v=1eaba68';
+import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone, fxBanner, fxCelebrate, fxSkipCelebrate } from './draw.js?v=1eaba68';
+import { createProfile } from '../../shared/profile.js?v=1eaba68';
+import { LocalStore } from '../../shared/stores/local.js?v=1eaba68';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=1eaba68';
+import { bindThemeToggle } from '../../shared/theme.js?v=1eaba68';
+import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=1eaba68';
+import { skinPalette } from './skins.js?v=1eaba68';
+import { play, music } from '../../shared/sound.js?v=1eaba68';
+import { musicTempo } from '../../shared/sound.js?v=1eaba68';
+import { setupHelp } from '../../shared/help.js?v=1eaba68';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=1eaba68';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=1eaba68';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=1eaba68';
+import { load, save } from '../../shared/storage.js?v=1eaba68';
 
 const GAME_ID = 'stairs';
 const DIFF_KEY = 'difficulty:stairs'; // 上次選的難度(開新局用)

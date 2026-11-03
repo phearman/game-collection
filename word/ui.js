@@ -1,13 +1,14 @@
-import { bindThemeToggle } from '../shared/theme.js?v=f94633b';
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from '../shared/supabase-config.js?v=f94633b';
-import { parseWord, wordModel } from './word-page.js?v=f94633b';
+import { bindThemeToggle } from '../shared/theme.js?v=1eaba68';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from '../shared/supabase-config.js?v=1eaba68';
+import { parseWord, parseAiSource, wordModel } from './word-page.js?v=1eaba68';
 
 bindThemeToggle(document.getElementById('theme'));
 const word = parseWord(location.search);
+const ai = parseAiSource(location.search);
 const speak = document.getElementById('speak');
 let spokenWord = word;
 function render(entry, unavailable = false) {
-  const model = wordModel(word, entry, { unavailable });
+  const model = wordModel(word, entry, { unavailable, ai });
   spokenWord = model.word;
   for (const [id, value] of [['word', model.heading], ['phonetic', model.phonetic], ['stars', model.stars], ['note', model.note]]) {
     document.getElementById(id).textContent = value;
