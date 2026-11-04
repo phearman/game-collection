@@ -2,18 +2,18 @@ import {
   DIFFICULTIES, initState, currentQuestion, questionDone, answerState, nextState, tickState,
   cellsOf, totalErrors, scoreFor, resultOf, hasActed, settlementOf, lookupUrl, toSave, isValidState,
   isComicList, comicFor, comicUrl, roundSize, comicPool, setFromSearch, COMICS_SET, COMICS_UNAVAILABLE, SET_PARAM,
-} from './logic.js?v=1eaba68';
-import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=1eaba68';
-import { createProfile } from '../../shared/profile.js?v=1eaba68';
-import { LocalStore } from '../../shared/stores/local.js?v=1eaba68';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=1eaba68';
-import { bindThemeToggle } from '../../shared/theme.js?v=1eaba68';
-import { play, music } from '../../shared/sound.js?v=1eaba68';
-import { setupHelp } from '../../shared/help.js?v=1eaba68';
-import { formatDuration } from '../../shared/duration.js?v=1eaba68';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=1eaba68';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=1eaba68';
-import { confirmQuitBest } from '../../shared/quit.js?v=1eaba68';
+} from './logic.js?v=37094ee';
+import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=37094ee';
+import { createProfile } from '../../shared/profile.js?v=37094ee';
+import { LocalStore } from '../../shared/stores/local.js?v=37094ee';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=37094ee';
+import { bindThemeToggle } from '../../shared/theme.js?v=37094ee';
+import { play, music } from '../../shared/sound.js?v=37094ee';
+import { setupHelp } from '../../shared/help.js?v=37094ee';
+import { formatDuration } from '../../shared/duration.js?v=37094ee';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=37094ee';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=37094ee';
+import { confirmQuitBest } from '../../shared/quit.js?v=37094ee';
 
 // One promise per page, including failures and timeouts. Importing never blocks render().
 export function createComicsLoader() {
