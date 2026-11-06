@@ -1,6 +1,6 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=890b5a85';
-import { levelFor } from './progress.js?v=890b5a85';
-import { markCloudOffline } from './cloud-status.js?v=890b5a85';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=a7c00f9e';
+import { levelFor } from './progress.js?v=a7c00f9e';
+import { markCloudOffline } from './cloud-status.js?v=a7c00f9e';
 
 const AUTH_KEY = 'gc:auth';
 const REFRESH_LOCK_KEY = 'gc:auth-refresh-lock';
@@ -505,7 +505,7 @@ export async function selectCloudStore(local) {
   };
   if (!rt.auth.session) { showNotice(); return guarded(local); }
   if (!rt.store) {
-    const { SupabaseStore } = await import('./stores/supabase.js?v=890b5a85');
+    const { SupabaseStore } = await import('./stores/supabase.js?v=a7c00f9e');
     rt.store = new SupabaseStore({ auth: rt.auth });
     try {
       rt.notice = await prepareCloudStore({ auth: rt.auth, local, cloud: rt.store });
