@@ -1,13 +1,13 @@
-import { bindThemeToggle } from '../shared/theme.js?v=a7c00f9e';
-import { createDailyPublicClient, mountDailyRank, initDailyPublicNotice } from '../shared/daily-public.js?v=a7c00f9e';
-import { cloudEnabled } from '../shared/supabase-config.js?v=a7c00f9e';
+import { bindThemeToggle } from '../shared/theme.js?v=b51711e5';
+import { createDailyPublicClient, mountDailyRank, initDailyPublicNotice } from '../shared/daily-public.js?v=b51711e5';
+import { cloudEnabled } from '../shared/supabase-config.js?v=b51711e5';
 
 bindThemeToggle(document.getElementById('theme'));
 
 // 未登入也能看(R9);雲端未開放時仍顯示頁面,錯誤訊息放在空狀態。
 let auth = null;
 if (cloudEnabled) {
-  try { ({ auth } = await (await import('../shared/auth.js?v=a7c00f9e')).getCloudRuntime()); } catch { auth = null; }
+  try { ({ auth } = await (await import('../shared/auth.js?v=b51711e5')).getCloudRuntime()); } catch { auth = null; }
 }
 const client = createDailyPublicClient({ auth });
 if (auth) initDailyPublicNotice({ doc: document, auth, client });

@@ -1,5 +1,5 @@
 // Pure game rules; no DOM, storage or clock reads. All randomness is injectable.
-import { WORDS, AMBIGUITY_LEXICON } from './words.js?v=a7c00f9e';
+import { WORDS, AMBIGUITY_LEXICON } from './words.js?v=b51711e5';
 
 export const ROUND_SIZE = 10;
 export const DIFFICULTIES = Object.freeze({
