@@ -2,18 +2,18 @@ import {
   DIFFICULTIES, initState, currentQuestion, questionDone, answerState, nextState, tickState,
   cellsOf, totalErrors, scoreFor, resultOf, hasActed, settlementOf, lookupUrl, toSave, isValidState,
   isComicList, comicFor, comicUrl, roundSize, comicPool, setFromSearch, COMICS_SET, COMICS_UNAVAILABLE, SET_PARAM,
-} from './logic.js?v=a6b60c5';
-import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=a6b60c5';
-import { createProfile } from '../../shared/profile.js?v=a6b60c5';
-import { LocalStore } from '../../shared/stores/local.js?v=a6b60c5';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=a6b60c5';
-import { bindThemeToggle } from '../../shared/theme.js?v=a6b60c5';
-import { play, music } from '../../shared/sound.js?v=a6b60c5';
-import { setupHelp } from '../../shared/help.js?v=a6b60c5';
-import { formatDuration } from '../../shared/duration.js?v=a6b60c5';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=a6b60c5';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=a6b60c5';
-import { confirmQuitBest } from '../../shared/quit.js?v=a6b60c5';
+} from './logic.js?v=890b5a85';
+import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=890b5a85';
+import { createProfile } from '../../shared/profile.js?v=890b5a85';
+import { LocalStore } from '../../shared/stores/local.js?v=890b5a85';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=890b5a85';
+import { bindThemeToggle } from '../../shared/theme.js?v=890b5a85';
+import { play, music } from '../../shared/sound.js?v=890b5a85';
+import { setupHelp } from '../../shared/help.js?v=890b5a85';
+import { formatDuration } from '../../shared/duration.js?v=890b5a85';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=890b5a85';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=890b5a85';
+import { confirmQuitBest } from '../../shared/quit.js?v=890b5a85';
 
 // One promise per page, including failures and timeouts. Importing never blocks render().
 export function createComicsLoader() {
