@@ -1,4 +1,4 @@
-import { DAILY_ASSISTED_TEXT, dailyDateLabel, dailyScore, dailyShare, dailyFinishedLater, dailyAbandonConfirm, DAILY_LOGIN_NOTICE, DAILY_FIXED_NOTE, DAILY_PRACTICE_NOTE, dailyPracticeRequested, dailyResumeRequested, DAILY_PAST_OPEN_TEXT, DAILY_RESUME_NO_SAVE_TEXT } from './daily.js?v=96d31cfb';
+import { DAILY_ASSISTED_TEXT, dailyDateLabel, dailyScore, dailyShare, dailyFinishedLater, dailyAbandonConfirm, DAILY_LOGIN_NOTICE, DAILY_FIXED_NOTE, DAILY_PRACTICE_NOTE, dailyPracticeRequested, dailyResumeRequested, DAILY_PAST_OPEN_TEXT, DAILY_RESUME_NO_SAVE_TEXT } from './daily.js?v=6c5347ab';
 
 // IR74:往日練習被「那天的每日局還在收件中」擋下 ⇒ 給「繼續那局」與「放棄那局」;翻翻樂接回時找不到原存檔
 // ⇒ 只給「放棄那局」(其他接回錯誤如已過期、網路、未登入不給)。放棄由伺服器標記(不列排行、不能再交),
@@ -40,7 +40,8 @@ export function appendDailySummary(doc, mount, daily, marks = []) {
   if (!daily?.row?.finished_at || daily.row.cleared) return;
   const later = dailyFinishedLater(daily.row); // IR68:跨日完成,成績算在開始那天
   const p = doc.createElement('p'); p.textContent = `你${later ? ` ${dailyDateLabel(daily.day)} ` : '今天'}的成績：${dailyScore(daily.row)}`
-    + (['minesweeper', 'memory'].includes(daily.row.game_id) ? '（從開題起算,含離開時間）' : ''); mount.append(p);
+    // RS70 R4:每日踩地雷每一下都經伺服器,秒數另含連線時間。
+    + (daily.row.game_id === 'minesweeper' ? '（從開題起算,含離開與連線時間）' : daily.row.game_id === 'memory' ? '（從開題起算,含離開時間）' : ''); mount.append(p);
   if (daily.row.detail?.assisted === true) { // RS108
     const note = doc.createElement('p'); note.textContent = DAILY_ASSISTED_TEXT; mount.append(note);
   }

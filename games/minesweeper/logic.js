@@ -1,7 +1,7 @@
 // 踩地雷規則層:純函式,不碰 DOM。棋盤以一維陣列存,格子編號 i = r × cols + c。
 // 規則正典:workbook/plans/minesweeper.md「規則(驗收依據)」。
 
-import { seedRng } from '../../shared/seed-rng.js?v=96d31cfb';
+import { seedRng } from '../../shared/seed-rng.js?v=6c5347ab';
 
 export const DIFFICULTIES = {
   normal: { rows: 9, cols: 9, mines: 10 },
@@ -135,6 +135,87 @@ export function initDailyState({ day, seed }, rng = seedRng(seed)) {
   return board;
 }
 
+// ---- RS70 每日盤伺服器翻開 ----
+// 伺服器(Edge,daily-minesweeper)持有雷位,前端只拿到「霧盤」:已翻開格與其數字,⛔ 雷位(結束前)。
+// 本段函式同時給 Edge 與網站用;Edge 的複本由 scripts/sync-edge-rules.mjs 產生,測試鎖住逐字一致。
+
+export const DAILY_REVEAL_LIMIT = 2000; // PM 裁 E2:每天每人 reveal 次數上限
+const BOARD_BITS = /^[01]+$/;
+
+// 雷位/翻開格 ⇄ '0'/'1' 字串(資料表存法)。
+export const bitsOf = (cells) => cells.map((v) => (v ? '1' : '0')).join('');
+export function cellsOf(bits, n) {
+  if (typeof bits !== 'string' || bits.length !== n || !BOARD_BITS.test(bits)) throw new Error('盤面格式錯誤');
+  return [...bits].map((v) => v === '1');
+}
+
+// 由每日盤(伺服器端,含雷位)與已翻開格還原完整狀態;翻開格須連同起點一起成立。
+export function serverBoardState(board, openBits = null) {
+  const empty = initState('hard');
+  const n = empty.rows * empty.cols;
+  const mines = cellsOf(board.mines, n);
+  const start = { ...empty, mines, status: 'playing' };
+  const opened = openBits === null ? openCells(start, [board.start]).open : cellsOf(openBits, n);
+  const s = { ...start, open: opened, moves: 0 };
+  if (opened.some((o, i) => o && mines[i]) || !opened[board.start]) throw new Error('翻開進度與盤面不符');
+  return { ...s, status: isCleared(s, opened) ? 'win' : 'playing', ...(isCleared(s, opened) ? { flags: mines.slice() } : {}) };
+}
+
+// PM 裁 E1:一次送 1 格,或同屬一個已翻開數字格的鄰格 2~8 格(快速翻開)。格號須為整數、不重複。
+// 已翻開的格忽略(冪等);旗子只在前端,伺服器不認旗。
+export function revealTargets(state, cells) {
+  const n = state.rows * state.cols;
+  if (!Array.isArray(cells) || cells.length < 1 || cells.length > 8
+    || cells.some((i) => !Number.isInteger(i) || i < 0 || i >= n) || new Set(cells).size !== cells.length) return null;
+  if (cells.length > 1 && !state.open.some((open, c) => open && adjacentMines(state, c) > 0
+    && cells.every((i) => neighbors(state.rows, state.cols, c).includes(i)))) return null;
+  return cells.filter((i) => !state.open[i]);
+}
+
+// 伺服器套用一次 reveal:回傳新狀態;非法請求 → null。
+export function serverReveal(state, cells) {
+  if (state.status !== 'playing') return null;
+  const targets = revealTargets(state, cells);
+  if (targets === null) return null;
+  if (!targets.length) return state;
+  return openCells({ ...state, flags: Array(state.open.length).fill(false) }, targets);
+}
+
+// 給前端的霧盤:結束前只有翻開格與數字(-1 = 未知),結束後附雷位。
+export function fogView(state) {
+  const over = state.status === 'win' || state.status === 'lose';
+  return {
+    rows: state.rows, cols: state.cols, mineCount: state.mineCount, status: state.status,
+    open: bitsOf(state.open), numbers: state.open.map((o, i) => (o ? adjacentMines(state, i) : -1)),
+    exploded: state.exploded ?? null, ...(over ? { mines: bitsOf(state.mines) } : {}),
+  };
+}
+
+// 前端:伺服器霧盤 → 遊戲狀態(旗子沿用本機、已翻開格的旗拿掉)。
+// expiredMines:收件期限已過時伺服器交出的整盤雷位 ⇒ 這局改本機照一般規則玩完(expired)。
+export function fromFogView(view, { day, start, flags = null, seconds = 0, moves = 0, expiredMines = null }) {
+  const empty = initState('hard');
+  const n = empty.rows * empty.cols;
+  const open = cellsOf(view.open, n);
+  const mines = view.mines || expiredMines ? cellsOf(view.mines ?? expiredMines, n) : null;
+  const status = ['playing', 'win', 'lose'].includes(view.status) ? view.status : 'playing';
+  const kept = (flags ?? Array(n).fill(false)).map((f, i) => f && !open[i]);
+  const base = { ...empty, mines, open, status, exploded: status === 'lose' ? view.exploded : null,
+    flags: status === 'win' ? mines.slice() : kept, moves, seconds, daily: day, start, server: true };
+  return expiredMines && !view.mines ? { ...base, expired: true } : { ...base, numbers: view.numbers.slice() };
+}
+
+// 前端:這一下要送哪些格給伺服器;不必送 → null(插旗格、chord 不成立、已結束)。
+export function serverRevealCells(state, i) {
+  if (isOver(state) || state.flags[i]) return null;
+  if (!state.open[i]) return [i];
+  const n = state.numbers ? state.numbers[i] : adjacentMines(state, i);
+  const around = neighbors(state.rows, state.cols, i);
+  if (n <= 0 || around.filter((x) => state.flags[x]).length !== n) return null;
+  const targets = around.filter((x) => !state.open[x] && !state.flags[x]);
+  return targets.length ? targets : null;
+}
+
 // 指定地雷位置的進行中盤面(示範與測試用;佈雷規則仍以 placeMines 為準)。
 export function stateWithMines(rows, cols, mineIndexes, difficulty = 'normal') {
   const mines = Array(rows * cols).fill(false);
@@ -252,7 +333,7 @@ export function resultOf(state) {
 // 一格該怎麼顯示:'hidden' | 'flag' | 'mine' | 'exploded' | 'wrong'(插錯的旗)| '0'~'8'。
 // 踩雷後顯示所有雷並標出插錯的旗。
 export function cellView(state, i) {
-  if (state.open[i]) return String(adjacentMines(state, i));
+  if (state.open[i]) return String(state.numbers ? state.numbers[i] : adjacentMines(state, i));
   if (state.status === 'lose') {
     if (i === state.exploded) return 'exploded';
     if (state.flags[i]) return state.mines[i] ? 'flag' : 'wrong';
@@ -266,13 +347,41 @@ export function cellView(state, i) {
 // state 本身即可序列化。
 export function toSave(state) {
   const { difficulty, rows, cols, mineCount, mines, open, flags, status, exploded, moves, seconds } = state;
+  // RS70:伺服器每日盤只存霧盤(數字、旗子、秒數);盤面以伺服器進度為準。
+  if (state.server) return { difficulty, rows, cols, mineCount, mines, open, flags, status, exploded, moves, seconds,
+    ...(state.expired ? { expired: true } : { numbers: state.numbers }), daily: state.daily, start: state.start, server: true };
   return { difficulty, rows, cols, mineCount, mines, open, flags, status, exploded, moves, seconds,
     ...(state.daily ? { daily: state.daily, daily_seed: state.daily_seed, start: state.start,
       solvable: state.solvable, attempts: state.attempts } : {}) };
 }
 
 export function fromSave(saved) {
-  return { ...toSave(saved), mines: saved.mines ? saved.mines.slice() : null, open: saved.open.slice(), flags: saved.flags.slice() };
+  return { ...toSave(saved), mines: saved.mines ? saved.mines.slice() : null, open: saved.open.slice(), flags: saved.flags.slice(),
+    ...(saved.server && !saved.expired ? { numbers: saved.numbers.slice() } : {}) };
+}
+
+// RS70 霧盤存檔:沒有雷位(結束前)、數字只出現在翻開格,其餘欄位同一般存檔規則。
+function isValidFogState(s, d) {
+  const n = d.rows * d.cols;
+  if (s.difficulty !== 'hard' || !/^\d{4}-\d{2}-\d{2}$/.test(s.daily ?? '') || !Number.isInteger(s.start)
+    || s.start < 0 || s.start >= n || !['playing', 'win', 'lose'].includes(s.status)) return false;
+  if (!isBoolArr(s.open, n) || !isBoolArr(s.flags, n) || !isCount(s.moves) || !isCount(s.seconds) || !s.open[s.start]) return false;
+  if (s.open.some((o, i) => o && s.flags[i])) return false;
+  // 收件期限過後伺服器交出整盤,這局改在本機照一般規則玩完(不再有數字表)。
+  if (s.expired !== undefined) {
+    if (s.expired !== true || s.numbers !== undefined || !isBoolArr(s.mines, n) || s.mines.filter(Boolean).length !== d.mines
+      || s.open.some((o, i) => o && s.mines[i])) return false;
+    const cleared = s.open.every((o, i) => o || s.mines[i]);
+    if (s.status === 'playing') return !cleared && s.exploded === null;
+    if (s.status === 'win') return cleared && s.exploded === null;
+    return isCount(s.exploded) && s.exploded < n && s.mines[s.exploded] && !s.flags[s.exploded];
+  }
+  if (!Array.isArray(s.numbers) || s.numbers.length !== n
+    || s.numbers.some((v, i) => (s.open[i] ? !(Number.isInteger(v) && v >= 0 && v <= 8) : v !== -1))) return false;
+  if (s.status === 'playing') return s.mines === null && s.exploded === null;
+  if (!isBoolArr(s.mines, n) || s.mines.filter(Boolean).length !== d.mines || s.open.some((o, i) => o && s.mines[i])) return false;
+  if (s.status === 'win') return s.exploded === null && s.open.every((o, i) => o || s.mines[i]);
+  return isCount(s.exploded) && s.exploded < n && s.mines[s.exploded];
 }
 
 // 存檔 state 格式檢查(匯入驗證與載入防呆;不合格的存檔不還原)。
@@ -283,6 +392,7 @@ export function isValidState(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return false;
   const d = Object.hasOwn(DIFFICULTIES, s.difficulty) ? DIFFICULTIES[s.difficulty] : null;
   if (!d || s.rows !== d.rows || s.cols !== d.cols || s.mineCount !== d.mines) return false;
+  if (s.server !== undefined) return s.server === true && s.daily_seed === undefined && isValidFogState(s, d);
   if (s.daily !== undefined || s.daily_seed !== undefined) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(s.daily ?? '') || !/^[0-9a-f]{16}$/.test(s.daily_seed ?? '')
       || s.difficulty !== 'hard' || !Number.isInteger(s.start) || s.start < 0 || s.start >= d.rows * d.cols

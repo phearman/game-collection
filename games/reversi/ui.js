@@ -2,17 +2,17 @@ import {
   BLACK, DIFFICULTIES, ORDERS, AI_DELAY, PASS_DELAY, initState, newGameState, stepState, aiStepState,
   undoState, canUndo, isPlayerTurn, playerColor, legalMoves, counts, detailFor, resultFor, scoreFor,
   cursorMove, HELP_RULES, demoSteps,
-} from './logic.js?v=96d31cfb';
-import { createProfile } from '../../shared/profile.js?v=96d31cfb';
-import { LocalStore } from '../../shared/stores/local.js?v=96d31cfb';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=96d31cfb';
-import { bindThemeToggle } from '../../shared/theme.js?v=96d31cfb';
-import { play as playSound, music } from '../../shared/sound.js?v=96d31cfb';
-import { setupHelp } from '../../shared/help.js?v=96d31cfb';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=96d31cfb';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=96d31cfb';
-import { confirmQuitBest } from '../../shared/quit.js?v=96d31cfb';
-import { load, save } from '../../shared/storage.js?v=96d31cfb';
+} from './logic.js?v=6c5347ab';
+import { createProfile } from '../../shared/profile.js?v=6c5347ab';
+import { LocalStore } from '../../shared/stores/local.js?v=6c5347ab';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=6c5347ab';
+import { bindThemeToggle } from '../../shared/theme.js?v=6c5347ab';
+import { play as playSound, music } from '../../shared/sound.js?v=6c5347ab';
+import { setupHelp } from '../../shared/help.js?v=6c5347ab';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=6c5347ab';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=6c5347ab';
+import { confirmQuitBest } from '../../shared/quit.js?v=6c5347ab';
+import { load, save } from '../../shared/storage.js?v=6c5347ab';
 
 const GAME_ID = 'reversi';
 const PREF_KEY = `preferences:${GAME_ID}`;

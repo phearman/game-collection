@@ -1,20 +1,20 @@
 // 踩地雷畫面層:狀態、渲染、輸入。規則一律呼叫 logic.js(遊戲)與 shared/profile.js(紀錄),這裡不寫規則。
 import {
   DIFFICULTIES, initState, initDailyState, stateWithMines, revealState, flagState, tickState, scoreFor, resultOf, isOver,
-  remainingMines, cellView, toSave, fromSave, isValidState, confirmModeFor, cellTapAction,
-} from './logic.js?v=96d31cfb';
-import { createProfile } from '../../shared/profile.js?v=96d31cfb';
-import { LocalStore } from '../../shared/stores/local.js?v=96d31cfb';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=96d31cfb';
-import { bindThemeToggle } from '../../shared/theme.js?v=96d31cfb';
-import { play, music } from '../../shared/sound.js?v=96d31cfb';
-import { setupHelp } from '../../shared/help.js?v=96d31cfb';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=96d31cfb';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=96d31cfb';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=96d31cfb';
-import { load, save } from '../../shared/storage.js?v=96d31cfb';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume } from '../../shared/daily.js?v=96d31cfb';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=96d31cfb';
+  remainingMines, cellView, toSave, fromSave, isValidState, confirmModeFor, cellTapAction, fromFogView, serverRevealCells,
+} from './logic.js?v=6c5347ab';
+import { createProfile } from '../../shared/profile.js?v=6c5347ab';
+import { LocalStore } from '../../shared/stores/local.js?v=6c5347ab';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=6c5347ab';
+import { bindThemeToggle } from '../../shared/theme.js?v=6c5347ab';
+import { play, music } from '../../shared/sound.js?v=6c5347ab';
+import { setupHelp } from '../../shared/help.js?v=6c5347ab';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=6c5347ab';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=6c5347ab';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=6c5347ab';
+import { load, save } from '../../shared/storage.js?v=6c5347ab';
+import { dailyRequested, dailySlot, browserDailyClient, prepareServerDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, dailyExpiredText, shouldWarmDaily } from '../../shared/daily.js?v=6c5347ab';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=6c5347ab';
 
 const GAME_ID = 'minesweeper';
 const LONG_PRESS_MS = 400;
@@ -31,10 +31,17 @@ const isDaily = dailyRequested(location.search) || !!practiceDay || !!resumeDay;
 let daily = null, dailyClient = null, dailyError = '';
 let dailyExpired = ''; // IR68:伺服器過了收件時間,這局照一般局記錄、不列排行
 if (isDaily) {
+  // RS70:今天與接回往日都走伺服器盤(Edge),前端拿不到雷位;往日練習照舊以種子在本機產盤。
   try { dailyClient = await browserDailyClient(); daily = practiceDay ? await preparePractice(dailyClient, GAME_ID, practiceDay)
-    : resumeDay ? await prepareResume(dailyClient, GAME_ID, resumeDay) : await prepareDaily(dailyClient, GAME_ID); }
+    : await prepareServerDaily(dailyClient, resumeDay); }
   catch (error) { dailyError = error.message; }
+} else {
+  // IR109:一般模式頁面上也有「今日挑戰」:今天還沒玩完才叫醒每日 Edge(條件同大廳),失敗不影響一般模式。
+  Promise.resolve().then(() => browserDailyClient()).then(async (client) => {
+    try { if (shouldWarmDaily(await client.today())) await client.msWarm(); } finally { client.dispose(); }
+  }).catch(() => {});
 }
+const serverDaily = () => isDaily && !!daily?.server;
 // Select the slot only after the server has confirmed the challenge day.
 const profile = await createProfile({ store: new LocalStore(), saveSlots: daily ? { [GAME_ID]: practiceDay ? practiceSlot(GAME_ID) : dailySlot(GAME_ID, daily.day) } : {} });
 
@@ -81,7 +88,14 @@ function finish(result) {
   render();
   return run(async () => {
     const bestBefore = best;
-    if (isDaily && !daily.practice) {
+    if (isDaily && !daily.practice && serverDaily() && !state.expired && daily.row?.finished_at) {
+      // RS70:成績在翻開那一下已由伺服器寫入(秒數也是伺服器計),這裡只沿用那列。
+      await profile.saveState(GAME_ID, saved);
+      daily.completed = true;
+      result = daily.row.result;
+      snap.seconds = daily.row.seconds;
+      snap.score = scoreFor(result, snap.seconds);
+    } else if (isDaily && !daily.practice) {
       await profile.saveState(GAME_ID, saved);
       try {
         const outcome = await finishDailyOrExpire(dailyClient, daily, GAME_ID, result, null);
@@ -152,6 +166,7 @@ function act(i, kind) {
   profile.input();
   selectedIdx = null;
   if (!state || ended || isOver(state)) return;
+  if (kind !== 'flag' && serverDaily() && !state.expired) { serverAct(i); return; }
   const next = kind === 'flag' ? flagState(state, i) : revealState(state, i);
   if (next === state) { render(); return; }
   play(kind === 'flag' ? 'move' : 'tap');
@@ -165,6 +180,40 @@ function act(i, kind) {
     const saved = toSave(state);
     run(() => profile.saveState(GAME_ID, saved));
   }
+}
+
+// RS70 每日盤:翻開交給伺服器,連點依序排隊送出;旗子只在本機。
+let revealChain = Promise.resolve();
+let revealing = 0;
+function serverAct(i) {
+  revealing++; render();
+  revealChain = revealChain.then(() => serverReveal(i)).catch((e) => console.error(e)).finally(() => { revealing--; render(); });
+}
+async function serverReveal(i) {
+  if (!state || ended || isOver(state) || state.expired) return;
+  const cells = serverRevealCells(state, i); // 插旗格、chord 不成立 ⇒ 不送
+  if (!cells) return;
+  const no = gameNo;
+  let out = null;
+  try { out = await dailyClient.msReveal(daily.day, cells); dailyError = ''; }
+  catch (error) {
+    dailyError = error.message;
+    // 收件期限剛好過了:改拿整盤,這局照一般局玩完(不列排行)。
+    if (error.code === 'DAILY_EXPIRED') out = await dailyClient.msState(daily.day).catch((e) => { dailyError = e.message; return null; });
+  }
+  if (!out || no !== gameNo || ended) return;
+  applyServer(out);
+}
+function applyServer(out) {
+  daily.row = out.row;
+  state = fromFogView(out.view, { day: daily.day, start: out.start, flags: state.flags, seconds: state.seconds,
+    moves: state.moves + 1, expiredMines: out.expired ? out.mines : null });
+  if (out.expired) dailyExpired = dailyExpiredText(daily.day);
+  const result = resultOf(state);
+  play(result ?? 'tap');
+  render();
+  if (result) finish(result);
+  else { const saved = toSave(state); run(() => profile.saveState(GAME_ID, saved)); }
 }
 
 // 指標輸入可先選取;鍵盤沿用原有翻開/插旗模式。
@@ -228,7 +277,7 @@ function render() {
   $('selection-label').textContent = selectedIdx === null ? ''
     : `已選 ${Math.floor(selectedIdx / state.cols) + 1} 列 ${(selectedIdx % state.cols) + 1} 欄`;
   const d = DIFFICULTIES[state.difficulty];
-  $('status').textContent = `💣 剩餘 ${remainingMines(state)} · ${LABELS[state.difficulty]} ${d.cols}×${d.rows} · ${d.mines} 雷${flagMode ? ' · 插旗模式中' : ''}`;
+  $('status').textContent = `💣 剩餘 ${remainingMines(state)} · ${LABELS[state.difficulty]} ${d.cols}×${d.rows} · ${d.mines} 雷${flagMode ? ' · 插旗模式中' : ''}${revealing ? ' · 翻開中…' : ''}`;
   renderOverlay();
   music(!ended && (state.status === 'ready' || state.status === 'playing') && $('overlay').hidden); // RS68:遊玩中播背景音樂(選曲見 ? 玩法);終局後看盤面/切插旗也不重播
 }
@@ -396,11 +445,18 @@ bindThemeToggle($('theme'));
 
 // 載入:有存檔就自動還原(§4.1),否則開新局。
 const saved = isDaily && !daily ? null : await profile.loadSave(GAME_ID);
-if (isDaily && (!daily || daily.row?.cleared || (daily.completed && !matchesDailySave(saved, daily, isValidState)))) {
+// RS70:伺服器盤的存檔只帶旗子與秒數,盤面一律以伺服器回傳的霧盤為準(過了收件期限改本機玩的局除外)。
+const savedMatches = !isDaily || !daily ? false : serverDaily()
+  ? !!saved?.server && saved.daily === daily.day && isValidState(saved) : matchesDailySave(saved, daily, isValidState);
+const serverInitial = () => (savedMatches && saved.expired ? fromSave(saved) : fromFogView(daily.server.view, {
+  day: daily.day, start: daily.server.start, flags: savedMatches ? saved.flags : null, seconds: savedMatches ? saved.seconds : 0,
+  moves: savedMatches ? saved.moves : 0, expiredMines: daily.server.expired ? daily.server.mines : null }));
+if (isDaily && daily?.server?.expired) dailyExpired = dailyExpiredText(daily.day);
+if (isDaily && (!daily || daily.row?.cleared || (daily.completed && !savedMatches))) {
   ended = { closed: true }; $('difficulty').disabled = true;
   showDailyClosed(document, daily, dailyError, { game: GAME_ID, client: dailyClient });
 } else if (isDaily || (saved && !saved.daily && isValidState(saved))) {
-  state = isDaily ? matchesDailySave(saved, daily, isValidState) ? fromSave(saved) : initDailyState(daily) : fromSave(saved);
+  state = isDaily ? serverDaily() ? serverInitial() : savedMatches ? fromSave(saved) : initDailyState(daily) : fromSave(saved);
   confirmMode = confirmModeFor(state.difficulty, coarsePointer, confirmPreference);
   gameNo++;
   focusIdx = Math.floor(state.rows / 2) * state.cols + Math.floor(state.cols / 2);
@@ -446,7 +502,7 @@ setupHelp({
       <li>點已翻開的數字:周圍旗數等於該數字時,一次翻開其餘鄰格(旗插錯會踩雷)。</li>
       <li>翻到地雷就輸。鍵盤:方向鍵移動、Enter 翻開、F 插旗。</li>
       <li><b>勝利</b>:翻開所有不是雷的格子。<b>分數</b> = 10000 − 秒數(越快越高),輸了 0 分。</li>
-      <li>每日盤:全部人同盤同起點,◎ 是自動翻開的安全起點;一天一次,踩雷即結束。成績從開題起算,含離開時間;新遊戲回一般模式,可再回來續玩今日盤。</li>
+      <li>每日盤:全部人同盤同起點,◎ 是自動翻開的安全起點;一天一次,踩雷即結束。每一下由伺服器判定,成績從開題起算,含離開與連線時間;新遊戲回一般模式,可再回來續玩今日盤。</li>
     </ol>`,
   demo: {
     render: demoBoard,

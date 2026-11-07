@@ -1,6 +1,6 @@
-import { DAILY_GRACE_HOURS, dailySlotDeadline } from './daily-slots.js?v=96d31cfb';
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=96d31cfb';
-import { formatDuration } from './duration.js?v=96d31cfb';
+import { DAILY_GRACE_HOURS, dailySlotDeadline } from './daily-slots.js?v=6c5347ab';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=6c5347ab';
+import { formatDuration } from './duration.js?v=6c5347ab';
 
 export const DAILY_GAMES = ['sudoku', 'minesweeper', 'memory'];
 export const DAILY_NAMES = { wordle: 'Wordle', sudoku: '數獨', minesweeper: '踩地雷', memory: '翻翻樂' };
@@ -11,7 +11,7 @@ export const DAILY_FAST_GAME_MIN_SECONDS = 20;
 export const taiwanDay = (stamp) => new Date(Number(stamp) + 8 * 3600000).toISOString().slice(0, 10);
 export const dailyDateLabel = (day) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`;
 export const dailyAbandonConfirm = (day) => `放棄 ${dailyDateLabel(day)} 的挑戰?這局不列入排行、之後也不能再交,但可以改練習這天的題目。`;
-export { dailySlot, legacyDailySlot } from './daily-slots.js?v=96d31cfb';
+export { dailySlot, legacyDailySlot } from './daily-slots.js?v=6c5347ab';
 // IR68:D 日開始的挑戰收到 D+1 台灣中午 12:00,仍計入 D 日。期限只由伺服器(SQL daily_deadline)判定;
 // 這兩個常數是它的鏡像,只給文案與測試用,改期限時兩邊一起改。
 export { DAILY_GRACE_HOURS };
@@ -128,7 +128,7 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
     if (!token) throw new Error(DAILY_LOGIN_NOTICE);
     let response;
     try {
-      response = await request(`${url.replace(/\/$/, '')}/rest/v1/${path}`, {
+      response = await request(`${url.replace(/\/$/, '')}/${path.startsWith('functions/') ? path : `rest/v1/${path}`}`, {
         method: body === undefined ? 'GET' : 'POST', headers: { apikey: key, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(10000), referrerPolicy: 'no-referrer',
       });
@@ -142,8 +142,11 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
           ? `只能練習最近 ${DAILY_PRACTICE_DAYS} 天(不含今天)的題目` : data?.message === 'DAILY_PAST_OPEN'
             ? DAILY_PAST_OPEN_TEXT : data?.message === 'DAILY_PAST_GRACE'
               ? DAILY_PAST_GRACE_TEXT : data?.message === 'DAILY_RESUME_DENIED'
-              ? '那局已完成、已放棄或已過收件時間,不能再接回' : '每日挑戰暫時無法使用，請稍後重試'),
-    { code: ['DAILY_EXPIRED', 'DAILY_GONE', 'DAILY_CLEARED', 'DAILY_PAST_RANGE', 'DAILY_PAST_OPEN', 'DAILY_PAST_GRACE', 'DAILY_RESUME_DENIED'].includes(data?.message) ? data.message : undefined });
+              ? '那局已完成、已放棄或已過收件時間,不能再接回' : data?.message === 'DAILY_REVEAL_LIMIT'
+                ? '今天這局翻開的次數已達上限' : data?.message === 'DAILY_BUSY'
+                  ? '同時有其他分頁在玩這局,請再點一次' : '每日挑戰暫時無法使用，請稍後重試'),
+    { code: ['DAILY_EXPIRED', 'DAILY_GONE', 'DAILY_CLEARED', 'DAILY_PAST_RANGE', 'DAILY_PAST_OPEN', 'DAILY_PAST_GRACE', 'DAILY_RESUME_DENIED',
+      'DAILY_NOT_STARTED', 'DAILY_REVEAL_LIMIT', 'DAILY_BUSY'].includes(data?.message) ? data.message : undefined });
     return data;
   }
   const call = (name, body = {}) => requestDaily(`rpc/${name}`, body);
@@ -178,6 +181,21 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
       if (!DAILY_GAMES.includes(game)) throw new Error('不支援的每日遊戲');
       return call('mark_daily_assisted', { p_game: game, p_day: day });
     },
+    // RS70:每日踩地雷由 Edge 持有盤面;前端只送「翻開哪幾格」,拿回霧盤。
+    msStart: () => requestDaily(MS_EDGE, { action: 'start' }),
+    msState: (day) => requestDaily(MS_EDGE, { action: 'state', day }),
+    msReveal: (day, cells) => requestDaily(MS_EDGE, { action: 'reveal', day, cells }),
+    // IR109:叫醒 Edge(冷啟動約 2 秒在大廳先付掉)。只在登入時送;⛔ 丟錯,失敗、未登入都回 false。
+    msWarm: async () => {
+      try {
+        const token = auth?.session && url && key ? await auth.accessToken() : null;
+        if (!token) return false;
+        const response = await request(`${url.replace(/\/$/, '')}/${MS_EDGE}`, { method: 'POST',
+          headers: { apikey: key, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'warm' }), signal: AbortSignal.timeout(10000), referrerPolicy: 'no-referrer' });
+        return response.ok;
+      } catch { return false; }
+    },
     finish: (game, day, result, guesses, detail = {}) => call('finish_daily', {
       p_game: game, p_result: result, p_guesses: guesses, p_detail: { ...detail, daily: day },
     }),
@@ -186,7 +204,7 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
 }
 export async function browserDailyClient() {
   if (!cloudEnabled) return createDailyClient();
-  const { auth } = await (await import('./auth.js?v=96d31cfb')).getCloudRuntime();
+  const { auth } = await (await import('./auth.js?v=6c5347ab')).getCloudRuntime();
   return createDailyClient({ auth });
 }
 
@@ -199,6 +217,17 @@ export async function prepareDaily(client, game) {
   return { day: seed.day, seed: seed.seed, row, completed: !!row.finished_at || !!row.cleared,
     ...(game === 'memory' ? { resumeRequired: previous?.day === seed.day
       && previous.results.some((r) => r.game_id === game && r.started_at) } : {}) };
+}
+// RS70:每日踩地雷(今天或接回往日)走伺服器盤:Edge start/state 回傳成績列與霧盤,⛔ 種子。
+const MS_EDGE = 'functions/v1/daily-minesweeper';
+export async function prepareServerDaily(client, resumeDay = null) {
+  const out = resumeDay ? await client.msState(resumeDay) : await client.msStart();
+  if (!out?.row || out.row.day !== out.day || (resumeDay && out.day !== resumeDay)) throw new Error('挑戰日期不符,請重新整理');
+  if (resumeDay && (out.row.finished_at || out.row.cleared)) {
+    throw Object.assign(new Error('那局已完成、已放棄或已過收件時間,不能再接回'), { code: 'DAILY_RESUME_DENIED' });
+  }
+  return { day: out.day, seed: null, row: out.row, completed: !!out.row.finished_at || !!out.row.cleared, server: out,
+    ...(resumeDay ? { resumed: true } : {}) };
 }
 // RS91:練習只拿往日種子,⛔ 呼叫 start_daily(不影響今日一天一次、不建每日成績列)。
 export async function preparePractice(client, game, day) {
@@ -241,6 +270,13 @@ export function mountDailyPractice(doc, today) {
   select.onchange = draw; draw();
   practice.hidden = false;
 }
+// IR109:今天的每日踩地雷還沒完成(沒開過、進行中)才值得叫醒 Edge;大廳與一般模式頁面共用。
+export function shouldWarmDaily(today) {
+  if (!Array.isArray(today?.results)) return false;
+  const row = today.results.find((r) => r.game_id === 'minesweeper');
+  return !row?.finished_at && !row?.cleared;
+}
+
 export async function mountDailyLobby(doc, client, createClient = browserDailyClient,
   { now = Date.now, confirm = globalThis.confirm,
     setTimeout = globalThis.setTimeout, clearTimeout = globalThis.clearTimeout } = {}) {
@@ -248,7 +284,7 @@ export async function mountDailyLobby(doc, client, createClient = browserDailyCl
   const message = doc.getElementById('daily-message');
   const openPast = doc.getElementById('daily-open-past');
   let version = 0;
-  let identitySubscribed = false, deadlineTimer;
+  let identitySubscribed = false, deadlineTimer, warmed = false;
   // 以身分/遊戲/日期保存請求狀態,重繪後的新入口仍共用同一筆進行中的放棄。
   const pendingAbandons = new Set();
   const visibleActions = new Map();
@@ -270,6 +306,11 @@ export async function mountDailyLobby(doc, client, createClient = browserDailyCl
       const today = await client.today();
       if (!current()) return;
       message.textContent = `📅 ${dailyDateLabel(today.day)} 挑戰 · 每人每款一天一次`;
+      // IR109:今天的踩地雷還沒玩完 ⇒ 先叫醒 Edge,按下去時已暖;每次開大廳只叫一次,失敗不影響大廳。
+      if (!warmed && shouldWarmDaily(today)) {
+        warmed = true;
+        Promise.resolve().then(() => client.msWarm?.()).catch(() => {});
+      }
       for (const game of DAILY_GAMES) {
         const row = today.results.find((r) => r.game_id === game);
         const link = doc.createElement('a'); link.className = 'btn';
