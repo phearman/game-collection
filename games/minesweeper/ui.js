@@ -2,19 +2,19 @@
 import {
   DIFFICULTIES, initState, initDailyState, stateWithMines, revealState, flagState, tickState, scoreFor, resultOf, isOver,
   remainingMines, cellView, toSave, fromSave, isValidState, confirmModeFor, cellTapAction,
-} from './logic.js?v=b51711e5';
-import { createProfile } from '../../shared/profile.js?v=b51711e5';
-import { LocalStore } from '../../shared/stores/local.js?v=b51711e5';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=b51711e5';
-import { bindThemeToggle } from '../../shared/theme.js?v=b51711e5';
-import { play, music } from '../../shared/sound.js?v=b51711e5';
-import { setupHelp } from '../../shared/help.js?v=b51711e5';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=b51711e5';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=b51711e5';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=b51711e5';
-import { load, save } from '../../shared/storage.js?v=b51711e5';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume } from '../../shared/daily.js?v=b51711e5';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=b51711e5';
+} from './logic.js?v=8a7d5f90';
+import { createProfile } from '../../shared/profile.js?v=8a7d5f90';
+import { LocalStore } from '../../shared/stores/local.js?v=8a7d5f90';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=8a7d5f90';
+import { bindThemeToggle } from '../../shared/theme.js?v=8a7d5f90';
+import { play, music } from '../../shared/sound.js?v=8a7d5f90';
+import { setupHelp } from '../../shared/help.js?v=8a7d5f90';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=8a7d5f90';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=8a7d5f90';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=8a7d5f90';
+import { load, save } from '../../shared/storage.js?v=8a7d5f90';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume } from '../../shared/daily.js?v=8a7d5f90';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from '../../shared/daily-ui.js?v=8a7d5f90';
 
 const GAME_ID = 'minesweeper';
 const LONG_PRESS_MS = 400;
