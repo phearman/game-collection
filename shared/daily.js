@@ -1,6 +1,6 @@
-import { DAILY_GRACE_HOURS, dailySlotDeadline } from './daily-slots.js?v=8a7d5f90';
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=8a7d5f90';
-import { formatDuration } from './duration.js?v=8a7d5f90';
+import { DAILY_GRACE_HOURS, dailySlotDeadline } from './daily-slots.js?v=96d31cfb';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=96d31cfb';
+import { formatDuration } from './duration.js?v=96d31cfb';
 
 export const DAILY_GAMES = ['sudoku', 'minesweeper', 'memory'];
 export const DAILY_NAMES = { wordle: 'Wordle', sudoku: '數獨', minesweeper: '踩地雷', memory: '翻翻樂' };
@@ -11,7 +11,7 @@ export const DAILY_FAST_GAME_MIN_SECONDS = 20;
 export const taiwanDay = (stamp) => new Date(Number(stamp) + 8 * 3600000).toISOString().slice(0, 10);
 export const dailyDateLabel = (day) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`;
 export const dailyAbandonConfirm = (day) => `放棄 ${dailyDateLabel(day)} 的挑戰?這局不列入排行、之後也不能再交,但可以改練習這天的題目。`;
-export { dailySlot, legacyDailySlot } from './daily-slots.js?v=8a7d5f90';
+export { dailySlot, legacyDailySlot } from './daily-slots.js?v=96d31cfb';
 // IR68:D 日開始的挑戰收到 D+1 台灣中午 12:00,仍計入 D 日。期限只由伺服器(SQL daily_deadline)判定;
 // 這兩個常數是它的鏡像,只給文案與測試用,改期限時兩邊一起改。
 export { DAILY_GRACE_HOURS };
@@ -52,6 +52,8 @@ export const DAILY_PRACTICE_NOTE = '練習:不計排行、不影響今日挑戰'
 // RS91/IR74:那天自己的每日局還在收件中 ⇒ 不發練習題;頁面附「繼續那局/放棄那局」兩鈕解開死結。
 export const DAILY_RESUME_NO_SAVE_TEXT = '找不到那局的續玩存檔,請回原本的裝置或分頁繼續;也可以放棄那局';
 export const DAILY_PAST_OPEN_TEXT ='這天的挑戰你還沒完成、仍在收件中(收到隔天中午 12:00)。可以繼續那局,或放棄那局後改練習';
+// RS70 V4:踩地雷全部人同盤,收件期限內只有自己已完成或已放棄的人能練習,其餘等期限過。
+export const DAILY_PAST_GRACE_TEXT = '這天的踩地雷每日盤還在收件中,隔天中午 12:00 後才開放練習';
 // D56(PM 裁 RS91 審查 #2):往日題目答案可查、可重玩 ⇒ 一律當輔助局(XP 打對折、不刷新最佳、不解遊戲專屬成就)。
 export const DAILY_ASSISTED_TEXT = '🧩 輔助局:用了提示,這局不列今日排行';
 export const PRACTICE_ASSIST_TEXT = '🧩 往日練習:不刷新最佳';
@@ -138,9 +140,10 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
         ? '這天的挑戰紀錄已清除,這局不列入排行' : data?.message === 'DAILY_CLEARED'
         ? '今天的挑戰紀錄已清除，請明天再挑戰' : data?.message === 'DAILY_PAST_RANGE'
           ? `只能練習最近 ${DAILY_PRACTICE_DAYS} 天(不含今天)的題目` : data?.message === 'DAILY_PAST_OPEN'
-            ? DAILY_PAST_OPEN_TEXT : data?.message === 'DAILY_RESUME_DENIED'
+            ? DAILY_PAST_OPEN_TEXT : data?.message === 'DAILY_PAST_GRACE'
+              ? DAILY_PAST_GRACE_TEXT : data?.message === 'DAILY_RESUME_DENIED'
               ? '那局已完成、已放棄或已過收件時間,不能再接回' : '每日挑戰暫時無法使用，請稍後重試'),
-    { code: ['DAILY_EXPIRED', 'DAILY_GONE', 'DAILY_CLEARED', 'DAILY_PAST_RANGE', 'DAILY_PAST_OPEN', 'DAILY_RESUME_DENIED'].includes(data?.message) ? data.message : undefined });
+    { code: ['DAILY_EXPIRED', 'DAILY_GONE', 'DAILY_CLEARED', 'DAILY_PAST_RANGE', 'DAILY_PAST_OPEN', 'DAILY_PAST_GRACE', 'DAILY_RESUME_DENIED'].includes(data?.message) ? data.message : undefined });
     return data;
   }
   const call = (name, body = {}) => requestDaily(`rpc/${name}`, body);
@@ -183,7 +186,7 @@ export function createDailyClient({ auth, url = SUPABASE_URL, key = SUPABASE_PUB
 }
 export async function browserDailyClient() {
   if (!cloudEnabled) return createDailyClient();
-  const { auth } = await (await import('./auth.js?v=8a7d5f90')).getCloudRuntime();
+  const { auth } = await (await import('./auth.js?v=96d31cfb')).getCloudRuntime();
   return createDailyClient({ auth });
 }
 

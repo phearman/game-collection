@@ -1,14 +1,14 @@
 // 畫面 C「我的」:等級、成就、各遊戲統計、最近 50 局、匯出/匯入。只顯示 profile.summary(),不寫規則。
-import { createProfile } from '../shared/profile.js?v=8a7d5f90';
-import { LocalStore } from '../shared/stores/local.js?v=8a7d5f90';
-import { bindThemeToggle } from '../shared/theme.js?v=8a7d5f90';
-import { ACHIEVEMENTS, xpBreakdown } from '../shared/progress.js?v=8a7d5f90';
-import { XP_EXAMPLES, signedXp } from '../shared/xp-explain.js?v=8a7d5f90';
-import { cloudEnabled } from '../shared/supabase-config.js?v=8a7d5f90';
-import { bindGlobalMusicSelect } from '../shared/help.js?v=8a7d5f90';
+import { createProfile } from '../shared/profile.js?v=96d31cfb';
+import { LocalStore } from '../shared/stores/local.js?v=96d31cfb';
+import { bindThemeToggle } from '../shared/theme.js?v=96d31cfb';
+import { ACHIEVEMENTS, xpBreakdown } from '../shared/progress.js?v=96d31cfb';
+import { XP_EXAMPLES, signedXp } from '../shared/xp-explain.js?v=96d31cfb';
+import { cloudEnabled } from '../shared/supabase-config.js?v=96d31cfb';
+import { bindGlobalMusicSelect } from '../shared/help.js?v=96d31cfb';
 
 const $ = (id) => document.getElementById(id);
-const accountReady = cloudEnabled ? await (await import('./account.js?v=8a7d5f90')).initAccount() : null;
+const accountReady = cloudEnabled ? await (await import('./account.js?v=96d31cfb')).initAccount() : null;
 const profile = await createProfile({ store: new LocalStore() });
 accountReady?.();
 const RESULT = { win: '勝', lose: '敗', quit: '放棄' };

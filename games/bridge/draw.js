@@ -1,5 +1,5 @@
-import { FIELD_W, FIELD_H, PILLAR_H, FALL_SECONDS, DROP_SECONDS, comboText } from './logic.js?v=8a7d5f90';
-import { skinPalette } from '../stairs/skins.js?v=8a7d5f90';
+import { FIELD_W, FIELD_H, PILLAR_H, FALL_SECONDS, DROP_SECONDS, comboText } from './logic.js?v=96d31cfb';
+import { skinPalette } from '../stairs/skins.js?v=96d31cfb';
 
 export function readPalette(css, skin = 'classic', dark = false) {
   const base = {
