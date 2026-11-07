@@ -1,4 +1,4 @@
-import { parseDailySlot } from './daily-slots.js?v=458f1cc4';
+import { parseDailySlot } from './daily-slots.js?v=0bd777a5';
 // 個人紀錄規則層(RS1):XP、等級、成就、連續天數、遊戲時間、匯入檔驗證。
 // 純函式:不碰 DOM、不碰 localStorage,時間一律由呼叫端傳入(毫秒)。
 // 第二期要搬成伺服器端觸發器,所以規則只能寫在這裡;profile.js 只負責串接。
@@ -137,7 +137,7 @@ export const ACHIEVEMENTS = [
     test: ({ play }) => play?.game_id === 'archery' && (play.detail?.bullseyes ?? 0) >= 3,
   },
   {
-    id: 'peg_genius', name: '孔明棋天才', icon: '🔵', cond: '孔明棋只剩中央 1 顆(不用提示)', game: 'peg',
+    id: 'peg_genius', name: '孔明棋天才', icon: '📍', cond: '孔明棋只剩中央 1 顆(不用提示)', game: 'peg',
     test: ({ play }) => play?.game_id === 'peg' && play.result === 'win' && play.detail?.pegs_left === 1
       && play.detail?.center === true && !play.detail?.hint_used && !play.detail?.assist,
   },
@@ -146,7 +146,7 @@ export const ACHIEVEMENTS = [
     test: ({ play }) => play?.game_id === 'wordle' && play.result === 'win' && (play.detail?.guesses ?? Infinity) <= 2,
   },
   {
-    id: 'ttt_10', name: '井字棋 10 連不敗', icon: '⭕', cond: '井字棋連續 10 局不輸', game: 'tictactoe',
+    id: 'ttt_10', name: '井字棋 10 連不敗', icon: '❌', cond: '井字棋連續 10 局不輸', game: 'tictactoe',
     test: ({ stats }) => (stats.tictactoe?.detail?.unbeaten ?? 0) >= 10,
   },
   { id: 'streak_3', name: '連玩 3 天', icon: '🔥', cond: '連續 3 天完成遊戲', test: ({ profile }) => (profile.streak?.current ?? 0) >= 3 },

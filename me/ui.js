@@ -1,14 +1,15 @@
 // 畫面 C「我的」:等級、成就、各遊戲統計、最近 50 局、匯出/匯入。只顯示 profile.summary(),不寫規則。
-import { createProfile } from '../shared/profile.js?v=458f1cc4';
-import { LocalStore } from '../shared/stores/local.js?v=458f1cc4';
-import { bindThemeToggle } from '../shared/theme.js?v=458f1cc4';
-import { ACHIEVEMENTS, xpBreakdown } from '../shared/progress.js?v=458f1cc4';
-import { XP_EXAMPLES, signedXp } from '../shared/xp-explain.js?v=458f1cc4';
-import { cloudEnabled } from '../shared/supabase-config.js?v=458f1cc4';
-import { bindGlobalMusicSelect } from '../shared/help.js?v=458f1cc4';
+import { createProfile } from '../shared/profile.js?v=0bd777a5';
+import { LocalStore } from '../shared/stores/local.js?v=0bd777a5';
+import { bindThemeToggle } from '../shared/theme.js?v=0bd777a5';
+import { achIcon, iconEl } from '../shared/icons.js?v=0bd777a5';
+import { ACHIEVEMENTS, xpBreakdown } from '../shared/progress.js?v=0bd777a5';
+import { XP_EXAMPLES, signedXp } from '../shared/xp-explain.js?v=0bd777a5';
+import { cloudEnabled } from '../shared/supabase-config.js?v=0bd777a5';
+import { bindGlobalMusicSelect } from '../shared/help.js?v=0bd777a5';
 
 const $ = (id) => document.getElementById(id);
-const accountReady = cloudEnabled ? await (await import('./account.js?v=458f1cc4')).initAccount() : null;
+const accountReady = cloudEnabled ? await (await import('./account.js?v=0bd777a5')).initAccount() : null;
 const profile = await createProfile({ store: new LocalStore() });
 accountReady?.();
 const RESULT = { win: '勝', lose: '敗', quit: '放棄' };
@@ -58,8 +59,8 @@ async function render() {
   $('ach').replaceChildren(...s.achievements.map((a) => {
     const item = node('div', undefined, `ach-item${a.unlocked_at ? '' : ' is-locked'}`);
     item.title = a.cond;
-    const icon = node('div', a.unlocked_at ? a.icon : '🔒', 'ach-icon');
-    icon.setAttribute('aria-hidden', 'true');
+    const look = a.unlocked_at ? achIcon(a.id) : { icon: 'lock' };
+    const icon = iconEl(document, look.icon, { cls: 'ach-icon', cat: look.cat });
     item.append(icon, node('div', a.name, 'ach-name'), node('div', a.unlocked_at ? md(a.unlocked_at) : a.cond, 'ach-note'));
     return item;
   }));

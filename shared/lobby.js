@@ -1,6 +1,7 @@
 // 大廳釘選、精選、分類與排序(RS38 第一期,純前端)。規則見 workbook/plans/rs38-lobby-pin.md §2。
 // 動態內容一律 textContent/屬性;偏好與釘選只存本機(R15;雲端同步列第二期)。
-import { CHANGELOG } from './changelog.js?v=458f1cc4';
+import { CHANGELOG } from './changelog.js?v=0bd777a5';
+import { iconEl } from './icons.js?v=0bd777a5';
 
 export const CATEGORIES = [
   { id: 'puzzle', label: '益智' },
@@ -119,8 +120,7 @@ export function mountLobby({ doc, games, recent, saves = new Set(), storage = de
     const link = node('a', `card${active ? ' is-active' : ''}`);
     link.href = `games/${g.id}/`;
     const head = node('div', 'card-head');
-    const icon = node('span', 'card-icon', g.icon);
-    icon.setAttribute('aria-hidden', 'true');
+    const icon = iconEl(doc, g.id, { cls: 'card-icon', cat: g.category });
     const tags = node('span', 'card-tags');
     if (saves.has(g.id)) tags.append(node('span', 'tag is-resume', '繼續'));
     if (note && pinned) tags.append(node('span', 'tag is-pinned', '已釘選'));
@@ -157,8 +157,7 @@ export function mountLobby({ doc, games, recent, saves = new Set(), storage = de
     link.href = `games/${s.game}/?${s.query}`;
     link.dataset.shortcut = s.id;
     const head = node('div', 'card-head');
-    const icon = node('span', 'card-icon', s.icon);
-    icon.setAttribute('aria-hidden', 'true');
+    const icon = iconEl(doc, s.id, { cls: 'card-icon', cat: g?.category });
     head.append(icon, node('span', 'card-tags'));
     const title = node('p', 'card-title');
     if (g?.code) title.append(node('span', 'card-code', `${g.code}${g.version ? ` v${g.version}` : ''}`));

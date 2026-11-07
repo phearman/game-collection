@@ -1,6 +1,6 @@
-import { load, save } from './storage.js?v=458f1cc4';
-import { mountSoundToggle } from './sound.js?v=458f1cc4';
-import { mountSkinToggle } from './skin.js?v=458f1cc4';
+import { load, save } from './storage.js?v=0bd777a5';
+import { mountSoundToggle } from './sound.js?v=0bd777a5';
+import { mountSkinToggle } from './skin.js?v=0bd777a5';
 
 const root = document.documentElement;
 
@@ -12,7 +12,10 @@ function current() {
 
 function label(btn) {
   const dark = current() === 'dark';
-  btn.textContent = dark ? '☀' : '☾';
+  // RS7:☾ 在多數字型像字母 C ⇒ 改線條圖示(icons.css 的 gi-sun / gi-moon)
+  const glyph = btn.ownerDocument.createElement('span');
+  glyph.className = `gi gi-${dark ? 'sun' : 'moon'}`;
+  btn.replaceChildren(glyph);
   btn.setAttribute('aria-label', dark ? '切換為淺色' : '切換為深色');
   btn.title = dark ? '切換為淺色' : '切換為深色';
 }

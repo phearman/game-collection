@@ -1,4 +1,5 @@
-@import url("skins.css?v=458f1cc4");
+@import url("skins.css?v=0bd777a5");
+@import url("icons.css?v=0bd777a5");
 :root {
   --bg: #f6f5f1;
   --surface: #ffffff;
@@ -9,6 +10,9 @@
   --border: rgba(0, 0, 0, 0.12);
   --accent: #185fa5;
   --accent-bg: #e6f1fb;
+  /* RS7 分類色:c=線條、t=圖示底 */
+  --c-puzzle: #185fa5; --c-word: #6d3fb0; --c-board: #2f7d4f; --c-action: #c0571d; --c-sport: #b3263b; --c-badge: #a8730a;
+  --t-puzzle: #e6f1fb; --t-word: #efe8fa; --t-board: #e3f3ea; --t-action: #fbeadf; --t-sport: #f9e3e7; --t-badge: #fbf0d6;
   --radius: 8px;
   --font: system-ui, -apple-system, "Segoe UI", "Microsoft JhengHei", "PingFang TC", sans-serif;
   --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -26,6 +30,8 @@
     --border: rgba(255, 255, 255, 0.14);
     --accent: #85b7eb;
     --accent-bg: #0c447c;
+    --c-puzzle: #85b7eb; --c-word: #b99af0; --c-board: #7fcf9f; --c-action: #f0a070; --c-sport: #f08a9b; --c-badge: #e8c060;
+    --t-puzzle: #12335a; --t-word: #33235a; --t-board: #173d28; --t-action: #4a2812; --t-sport: #4d1822; --t-badge: #47360c;
     color-scheme: dark;
   }
 }
@@ -40,6 +46,8 @@
   --border: rgba(255, 255, 255, 0.14);
   --accent: #85b7eb;
   --accent-bg: #0c447c;
+  --c-puzzle: #85b7eb; --c-word: #b99af0; --c-board: #7fcf9f; --c-action: #f0a070; --c-sport: #f08a9b; --c-badge: #e8c060;
+  --t-puzzle: #12335a; --t-word: #33235a; --t-board: #173d28; --t-action: #4a2812; --t-sport: #4d1822; --t-badge: #47360c;
   color-scheme: dark;
 }
 
@@ -110,7 +118,18 @@ body {
 a.card:hover { border-color: var(--accent); }
 .card.is-active { border: 2px solid var(--accent); padding: 15px 17px; }
 .card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.card-icon { font-size: 26px; line-height: 1; }
+.card-icon { width: 40px; height: 40px; border-radius: 10px; display: inline-grid; place-items: center; background: var(--t, var(--surface-sub)); color: var(--c, var(--text)); flex: none; }
+.card-icon .gi { width: 26px; height: 26px; }
+/* RS7 線條圖示(icons.css 給每個 gi-{id} 的遮罩) */
+.gi { display: inline-block; width: 1.2em; height: 1.2em; vertical-align: -0.2em; background-color: currentColor; -webkit-mask-position: center; mask-position: center; -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+.cat-puzzle { --c: var(--c-puzzle); --t: var(--t-puzzle); }
+.cat-word { --c: var(--c-word); --t: var(--t-word); }
+.cat-board { --c: var(--c-board); --t: var(--t-board); }
+.cat-action { --c: var(--c-action); --t: var(--t-action); }
+.cat-sport { --c: var(--c-sport); --t: var(--t-sport); }
+.cat-badge { --c: var(--c-badge); --t: var(--t-badge); }
+/* 高對比模式會改寫 background-color,遮罩圖示會不見 ⇒ 改用系統文字色 */
+@media (forced-colors: active) { .gi { forced-color-adjust: none; background-color: CanvasText; } }
 .card-title { font-size: 16px; font-weight: 600; margin: 10px 0 2px; }
 .card-desc { font-size: 14px; color: var(--text-sub); margin: 0; }
 .card-meta { font-size: 12px; color: var(--text-muted); margin: 6px 0 0; }

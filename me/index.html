@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>我的紀錄 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=458f1cc4">
+  <link rel="stylesheet" href="../shared/style.css?v=0bd777a5">
   <style>
     .me-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; }
     .me-level { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -22,11 +22,12 @@
     .me h2 { font-size: 16px; margin: 20px 0 8px; }
     .ach { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
     .ach-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 6px; text-align: center; min-width: 0; }
-    .ach-icon { font-size: 24px; line-height: 1.2; }
+    .ach-icon { width: 36px; height: 36px; margin: 0 auto 2px; border-radius: 10px; display: grid; place-items: center; background: var(--t, var(--surface)); color: var(--c, var(--text-muted)); }
+    .ach-icon .gi { width: 22px; height: 22px; }
     .ach-name { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
     .ach-note { font-size: 11px; color: var(--text-muted); overflow-wrap: anywhere; }
     .ach-item.is-locked { background: var(--surface-sub); color: var(--text-muted); }
-    .ach-item.is-locked .ach-icon { filter: grayscale(1); opacity: 0.5; }
+    .ach-item.is-locked .ach-icon { opacity: 0.6; }
     .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
     .me table { border-collapse: collapse; width: 100%; font-size: 14px; white-space: nowrap; }
     .me th, .me td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); }
@@ -173,6 +174,6 @@
       <button class="btn" type="button" data-act="confirm">確認覆蓋</button>
     </div>
   </dialog>
-  <script type="module" src="ui.js?v=458f1cc4"></script>
+  <script type="module" src="ui.js?v=0bd777a5"></script>
 </body>
 </html>
