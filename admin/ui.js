@@ -1,11 +1,11 @@
-import { createReportsClient, initReportsPanel } from './reports.js?v=0bd777a5';
-import { appendGroupProjectControl, groupModeSelect, GROUP_MODES } from './line.js?v=0bd777a5';
-import { cloudEnabled } from '../shared/supabase-config.js?v=0bd777a5';
-import { GAMES } from '../shared/games.js?v=0bd777a5';
-import { createPendingGroupsClient } from './line.js?v=0bd777a5';
-import { createJokesClient, initJokesPanel } from './jokes.js?v=0bd777a5';
-import { createTipsClient, initTipsPanel } from './tips.js?v=0bd777a5';
-import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=0bd777a5';
+import { createReportsClient, initReportsPanel } from './reports.js?v=d031a463';
+import { appendGroupProjectControl, groupModeSelect, GROUP_MODES } from './line.js?v=d031a463';
+import { cloudEnabled } from '../shared/supabase-config.js?v=d031a463';
+import { GAMES } from '../shared/games.js?v=d031a463';
+import { createPendingGroupsClient } from './line.js?v=d031a463';
+import { createJokesClient, initJokesPanel } from './jokes.js?v=d031a463';
+import { createTipsClient, initTipsPanel } from './tips.js?v=d031a463';
+import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=d031a463';
 
 // 注入 runtime/client 供測試；未通過管理者檢查不讀取回饋。
 export async function initAdmin({ doc = globalThis.document, view = doc.defaultView ?? globalThis.window,
@@ -58,7 +58,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
       const option = node('option', label); option.value = value; select.append(option);
     }
   };
-  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=0bd777a5')).getCloudRuntime() : null);
+  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=d031a463')).getCloudRuntime() : null);
   if (!rt?.auth.session) {
     hideData();
     $('access').textContent = '登入後才能查看回饋後台'; $('login').hidden = false;
@@ -194,12 +194,14 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
     const message = node('p'); message.setAttribute('role', 'status');
     const mode=groupModeSelect(doc,group.mode ?? 'leisure');
     const project=node('select'); project.setAttribute('aria-label','核准時綁定專案'); project.hidden=true;
-    project.append(node('option','先不綁')); project.value='';
+    // IR112:option 沒設 value 時瀏覽器用文字當值,專案載入後會送出「先不綁」⇒ 一律明設 ''
+    const unbound=() => { const option=node('option','先不綁'); option.value=''; return option; };
+    project.append(unbound()); project.value='';
     if (group.source_type === 'group') container.append(mode);
     if (!approved && group.source_type === 'group') container.append(project);
     mode.addEventListener('change',async () => {
       if (approved || !authorized || rt.auth.session?.user.id !== userId) return;
-      project.hidden=mode.value==='leisure'; project.replaceChildren(node('option','先不綁')); project.value='';
+      project.hidden=mode.value==='leisure'; project.replaceChildren(unbound()); project.value='';
       if (project.hidden) return;
       const stamp=groupEpoch; mode.disabled=true;
       try {
@@ -373,7 +375,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
 }
 
 if (typeof document !== 'undefined') {
-  const { bindThemeToggle } = await import('../shared/theme.js?v=0bd777a5');
+  const { bindThemeToggle } = await import('../shared/theme.js?v=d031a463');
   bindThemeToggle(document.getElementById('theme'));
   initAdmin().catch(() => {
     for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel', 'tips-panel', 'reports-panel']) document.getElementById(id).hidden = true;

@@ -2,16 +2,16 @@ import {
   SIZE, PEG, CENTER, isHole, initState, tapState, undoState, canUndo, hintState, jumpsFrom, pegCount,
   resultFor, gradeFor, scoreFor, detailFor, newGameResult, findHint, cursorMove,
   HELP_RULES, demoSteps,
-} from './logic.js?v=0bd777a5';
-import { createProfile } from '../../shared/profile.js?v=0bd777a5';
-import { LocalStore } from '../../shared/stores/local.js?v=0bd777a5';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=0bd777a5';
-import { bindThemeToggle } from '../../shared/theme.js?v=0bd777a5';
-import { play as playSound, music } from '../../shared/sound.js?v=0bd777a5';
-import { setupHelp } from '../../shared/help.js?v=0bd777a5';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=0bd777a5';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=0bd777a5';
-import { confirmQuitBest } from '../../shared/quit.js?v=0bd777a5';
+} from './logic.js?v=d031a463';
+import { createProfile } from '../../shared/profile.js?v=d031a463';
+import { LocalStore } from '../../shared/stores/local.js?v=d031a463';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=d031a463';
+import { bindThemeToggle } from '../../shared/theme.js?v=d031a463';
+import { play as playSound, music } from '../../shared/sound.js?v=d031a463';
+import { setupHelp } from '../../shared/help.js?v=d031a463';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=d031a463';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=d031a463';
+import { confirmQuitBest } from '../../shared/quit.js?v=d031a463';
 
 const GAME_ID = 'peg';
 const $ = (id) => document.getElementById(id);

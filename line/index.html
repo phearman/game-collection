@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="遊戲集錦 LINE 小幫手使用說明：開遊戲、傳回饋、綁定成績、加入群組排行與查天氣的指令及對話範例。">
   <title>LINE 小幫手使用說明 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=0bd777a5">
-  <link rel="stylesheet" href="style.css?v=0bd777a5">
+  <link rel="stylesheet" href="../shared/style.css?v=d031a463">
+  <link rel="stylesheet" href="style.css?v=d031a463">
 </head>
 <body>
   <main class="page line-guide">
@@ -57,15 +57,17 @@
         <article class="command-card" aria-labelledby="feedback-title">
           <h3 id="feedback-title">💬 意見回饋</h3>
           <dl class="command-list">
-            <div data-command="直接私訊" data-scopes="user"><dt>直接私訊文字<span class="command-scope">私訊</span></dt><dd>直接告訴我們想法，送出就會記錄為回饋；一般問候「早安」「午安」「晚安」不收。</dd></div>
+            <div data-command="直接私訊" data-scopes="user"><dt>直接私訊文字<span class="command-scope">私訊</span></dt><dd>直接打字時，小幫手會先問你要當回饋送出、回報問題、問小集、看功能或不用，按了才記錄；10 分鐘沒按就失效。2 分鐘內連打的幾句會合成一張卡。「早安」「謝謝」「好」「OK」這類問候與短回應不回也不收（正在等你按卡時，短回應會併進那段話）。</dd></div>
             <div data-command="回饋" data-scopes="user group"><dt><code>#回饋 內容</code><span class="command-scope">兩者</span></dt><dd>群組用 #回饋 加內容，或 @ 小幫手後傳「回饋 內容」才會收取。每天最多 20 則文字回饋；目前不收圖片、貼圖或語音。</dd></div>
-            <div data-command="取消" data-scopes="user"><dt><code>取消</code> / <code>#取消</code><span class="command-scope">私訊</span></dt><dd>不想繼續回饋時，整則傳「取消」。這則取消訊息不會記錄；不會刪除已送出的回饋。</dd></div>
+            <div data-command="取消" data-scopes="user"><dt><code>取消</code> / <code>#取消</code><span class="command-scope">私訊</span></dt><dd>不想繼續回饋時，整則傳「取消」；剛剛那張「要做什麼」的卡也會一起作廢。這則取消訊息不會記錄；不會刪除已送出的回饋。</dd></div>
             <div data-command="收回" data-scopes="user group"><dt>收回原訊息<span class="command-scope">兩者</span></dt><dd>長按原本送出的回饋，選 LINE 的「收回」；收到收回通知後，就會刪除那則回饋。只在自己手機上「刪除」訊息不會撤回。</dd></div>
           </dl>
           <figure class="example">
-            <figcaption>私訊直接送意見；群組請用 #回饋 加內容</figcaption>
+            <figcaption>私訊打字先選要做什麼；群組請用 #回饋 加內容</figcaption>
             <ol class="chat">
               <li class="player"><div class="bubble"><span class="speaker">小美 · 私訊</span>希望有更多益智遊戲！</div></li>
+              <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>你想把這段話做什麼？［📝 當回饋送出］［🐞 回報問題］［💡 問小集］［📖 看功能］［✖ 不用］</div></li>
+              <li class="player"><div class="bubble"><span class="speaker">小美 · 私訊</span>（按 📝 當回饋送出）</div></li>
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>已收到你的回饋，謝謝！送錯了可以長按訊息「收回」，這則回饋會一起刪除。</div></li>
               <li class="player"><div class="bubble"><span class="speaker">小明 · 群組</span>#回饋 希望有更多益智遊戲！</div></li>
               <li class="bot"><div class="bubble"><span class="speaker">遊戲集錦回饋</span>✅ 已記錄</div></li>
@@ -150,7 +152,7 @@
             <div data-command="截止" data-scopes="group user"><dt><code>#截止 n 時間</code><span class="command-scope">群組／私訊</span></dt><dd>發起人確認後可延後、提前或補設揪團或投票的截止，須晚於現在且在 30 天內。例：#截止 1 明天 18:00、#截止 1 2小時。舊卡按鈕依新的截止判斷。</dd></div>
             <div data-command="我的投票" data-scopes="user"><dt><code>#我的投票</code> / <code>#我的揪團</code><span class="command-scope">私訊</span></dt><dd>兩個指令效果相同：按群組列出本人發起、進行中的揪團（🙋）和投票（🗳），每次最多 10 筆。可結算、取消或改截止，投票另可加選項（揪團沒有選項）；加選項後請在 10 分鐘內直接輸入 1～15 字，再確認選項文字。期間輸入其他 # 指令不會清除等待，仍可在確認卡按「算了」。私訊打號碼遇到多群同號時先選群組。操作完成會推播一則群組公告；同一群組 6 小時內只推播一次，推播失敗或 6 小時內已推播過時，群組下次有人說話（一般聊天也算）就會公告。</dd></div>
             <div data-command="結果" data-scopes="group"><dt><code>#結果 n</code><span class="command-scope">群組</span></dt><dd>查看指定團號的投票結果；記名列各選項的人，匿名只列票數。截止後第一次互動公布最終結果，不主動推播。</dd></div>
-            <div data-command="行事曆" data-scopes="user group"><dt><code>#行事曆 [下週|本月|M/D]</code><span class="command-scope">兩者</span></dt><dd>看未來 7 天的約、提醒與交辦；私訊須公事同意，群組只列本群並附揪團報名截止，休閒群也可用。最多 15 件、群組最多 7 天，不計公事查詢次數。</dd></div>
+            <div data-command="行事曆" data-scopes="user group"><dt><code>#行事曆 [下週|本月|M/D|群組|群名]</code><span class="command-scope">兩者</span></dt><dd>看未來 7 天的約、提醒與交辦；私訊須公事同意，群組只列本群並附揪團報名截止，休閒群也可用。私訊傳 #行事曆 群組 可選一個群看該群全部行程，或直接打群名（如 #行事曆 家庭 下週），只列你在群裡用過小集的群，並先向 LINE 確認你仍在群裡；只有你和小集的群視為私人群，用法同私訊。最多 15 件、群組最多 7 天，不計公事查詢次數。</dd></div>
           </dl>
           <p class="guide-note">生活指令（含新聞）每人每天共 30 次，私訊與群組合計，台灣午夜重算；失敗也計次。#單字 免費不限次，不計入生活次數。不主動推播。</p>
           <ol class="chat" aria-label="單字與 AI 說明範例">
@@ -280,7 +282,7 @@
       <details><summary>小幫手怎麼沒回應？</summary><p>先確認好友已加入、訊息有送出。群組需要遊戲集錦管理者核准；遊戲與生活指令前要有 #，或在群組用 LINE 的 @ 選到小幫手再接指令。綁定、解除綁定和取消請改用私訊。一般聊天、@ 其他人與貼圖不會當作指令回覆；可傳 #功能 認識小幫手。生活指令達每日上限或服務暫時失敗時，請依提示稍後再試。</p></details>
       <details><summary>綁定時要登入哪個帳號？</summary><p>用平常在遊戲集錦保存紀錄的 Google 或 GitHub 帳號。登入後核對 LINE 與網站名稱，再按「確認綁定」。未登入遊玩只存在裝置上的紀錄，需先在網站登入並完成紀錄合併，才有雲端成績可查。綁定連結過期就回私訊重傳 #綁定。</p></details>
       <details><summary>怎麼刪除我的回饋？傳「取消」可以嗎？</summary><p>請在 LINE 長按原訊息選「收回」，收到收回事件後會刪除那則回饋。取消只表示這次不繼續回饋，不會刪掉先前送出的意見。無法收回時可請管理者協助；LINE 回饋不顯示在網站「我的紀錄」。</p></details>
-      <details><summary>會不會讀取或記錄我的聊天？</summary><p>小幫手會接收所在對話的訊息事件，但一般群組聊天不保存、不記錄內容。私訊的一般文字會當作回饋保存，請不要傳個人資料；遊戲、說明等指令不當回饋，天氣會記住私訊選的縣市。詳細資料用途請看<a href="../privacy/">隱私權政策</a>。</p></details>
+      <details><summary>會不會讀取或記錄我的聊天？</summary><p>小幫手會接收所在對話的訊息事件，但一般群組聊天不保存、不記錄內容。私訊的一般文字會先問你要做什麼，按了才保存（沒按的內容 10 分鐘後失效），請不要傳個人資料；遊戲、說明等指令不當回饋，天氣會記住私訊選的縣市。詳細資料用途請看<a href="../privacy/">隱私權政策</a>。</p></details>
       <details><summary>使用小幫手要不要錢？</summary><p>目前免費，玩遊戲也不需要付費；使用 LINE 與開啟網站會用到自己的網路流量。回饋與生活指令各有每日次數上限。</p></details>
       <details><summary>已綁定，為什麼排行看不到我？</summary><p>還要在想參加的已核准群組傳 #加入排行，各群分開加入。指定遊戲排行需有該遊戲的雲端最佳分數，且卡片只顯示前 10 名。#退出排行 只退出目前群組；#解除綁定 會退出所有群組。</p></details>
       <details><summary>天氣怎麼一直是高雄？新聞為什麼只有標題？</summary><p>第一次查天氣或在群組省略縣市時預設高雄市。可傳 #天氣 台北 指定縣市，私訊下次會沿用；群組不改私人偏好。新聞來源為中央通訊社生活新聞，只列標題與原站連結，不轉載內文；請點原站連結閱讀完整報導。</p></details>
@@ -328,6 +330,6 @@ SOFTWARE.</p>
     </section>
     <footer class="guide-footer"><a href="../privacy/">隱私權政策</a><a href="../">回大廳</a></footer>
   </main>
-  <script type="module" src="ui.js?v=0bd777a5"></script>
+  <script type="module" src="ui.js?v=d031a463"></script>
 </body>
 </html>
