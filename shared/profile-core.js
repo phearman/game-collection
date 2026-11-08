@@ -1,15 +1,15 @@
-import { parseDailySlot } from './daily-slots.js?v=d031a463';
+import { parseDailySlot } from './daily-slots.js?v=e7763a6a';
 // 個人紀錄 API 核心(RS1):規則一律呼叫 progress.js,這裡只串接 store。
 // 不載入各遊戲的 logic.js(IR46):大廳只讀摘要,直接用本檔;要讀存檔或匯入的頁面用 profile.js(帶各遊戲存檔檢查)。
-import { GAMES } from './games.js?v=d031a463';
-import { LocalStore, filterImportSaves } from './stores/local.js?v=d031a463';
-import { failureReason, allInOrder } from './stores/errors.js?v=d031a463';
-import { showStorageWarning } from './settle.js?v=d031a463';
-import { cloudEnabled } from './supabase-config.js?v=d031a463';
+import { GAMES } from './games.js?v=e7763a6a';
+import { LocalStore, filterImportSaves } from './stores/local.js?v=e7763a6a';
+import { failureReason, allInOrder } from './stores/errors.js?v=e7763a6a';
+import { showStorageWarning } from './settle.js?v=e7763a6a';
+import { cloudEnabled } from './supabase-config.js?v=e7763a6a';
 import {
   emptyProfile, migrateLegacyBest, applyFinish, applyUnlock, levelProgress, ACHIEVEMENTS, ACHIEVEMENT_XP, recentOrder,
   timerInit, timerEvent, timerSeconds, validateImport, isValidGameSave, pushPlay, exportData, exportFileName, iso, PLAYS_LIMIT,
-} from './progress.js?v=d031a463';
+} from './progress.js?v=e7763a6a';
 
 // randomUUID 只在安全來源(https / localhost)可用;其他情況退回 getRandomValues 組 v4 UUID。
 function uuid() {
@@ -46,7 +46,7 @@ export async function createProfile({
     await store.cleanupDailySlots(slotDays.at(-1));
   }
   if (cloudEnabled && win && store instanceof LocalStore && !store.storage) {
-    const { selectCloudStore, createCloudProfile } = await import('./auth.js?v=d031a463');
+    const { selectCloudStore, createCloudProfile } = await import('./auth.js?v=e7763a6a');
     store = await selectCloudStore(store);
     if (store.cloud) return createCloudProfile({ store, now, gameList, doc, win, stateValidators, saveSlots }, createProfile);
   }

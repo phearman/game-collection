@@ -1,7 +1,7 @@
 // RS55 後台「小常識」頁籤:批次匯入(預設待審)、狀態篩選清單、核准/退回/下架。規則以 migration 0031 為準。
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=d031a463';
-import { element } from '../shared/feedback.js?v=d031a463';
-import { normalizeJokeBody } from './joke-import.js?v=d031a463';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../shared/supabase-config.js?v=e7763a6a';
+import { element } from '../shared/feedback.js?v=e7763a6a';
+import { normalizeJokeBody } from './joke-import.js?v=e7763a6a';
 
 export const TIP_CATEGORIES = Object.freeze(['生活', '健康', '飲食', '自然', '動物', '天文', '人體', '語文', '歷史']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

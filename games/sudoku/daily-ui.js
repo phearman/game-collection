@@ -1,5 +1,5 @@
-import { dailyScore, dailyDateLabel, dailyFinishedLater, dailyPracticeRequested, dailyResumeRequested } from '../../shared/daily.js?v=d031a463';
-import { showDailyBanner, appendDailySummary as appendSharedSummary, appendResumeActions } from '../../shared/daily-ui.js?v=d031a463';
+import { dailyScore, dailyDateLabel, dailyFinishedLater, dailyPracticeRequested, dailyResumeRequested } from '../../shared/daily.js?v=e7763a6a';
+import { showDailyBanner, appendDailySummary as appendSharedSummary, appendResumeActions } from '../../shared/daily-ui.js?v=e7763a6a';
 
 export { showDailyBanner };
 

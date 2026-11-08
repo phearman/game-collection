@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=d031a463';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js?v=e7763a6a';
 
 export const LINK_STATUS = {
   invalid: '綁定連結無效或已被替換,請重新私訊 #綁定。',

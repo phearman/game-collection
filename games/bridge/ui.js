@@ -1,17 +1,17 @@
 import { FIELD_W, FIELD_H, DT, DIFFICULTIES, initState, stepState, pauseState, resumeState,
-  canPress, isAnimating, checkpointFor, toSave, fromSave, finishInfo, statusText, HELP_RULES, demoSteps } from './logic.js?v=d031a463';
-import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js?v=d031a463';
-import { createProfile } from '../../shared/profile.js?v=d031a463';
-import { LocalStore } from '../../shared/stores/local.js?v=d031a463';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=d031a463';
-import { bindThemeToggle } from '../../shared/theme.js?v=d031a463';
-import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=d031a463';
-import { setupHelp } from '../../shared/help.js?v=d031a463';
-import { play, music } from '../../shared/sound.js?v=d031a463';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=d031a463';
-import { confirmQuitBest } from '../../shared/quit.js?v=d031a463';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=d031a463';
-import { load, save } from '../../shared/storage.js?v=d031a463';
+  canPress, isAnimating, checkpointFor, toSave, fromSave, finishInfo, statusText, HELP_RULES, demoSteps } from './logic.js?v=e7763a6a';
+import { drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js?v=e7763a6a';
+import { createProfile } from '../../shared/profile.js?v=e7763a6a';
+import { LocalStore } from '../../shared/stores/local.js?v=e7763a6a';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=e7763a6a';
+import { bindThemeToggle } from '../../shared/theme.js?v=e7763a6a';
+import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=e7763a6a';
+import { setupHelp } from '../../shared/help.js?v=e7763a6a';
+import { play, music } from '../../shared/sound.js?v=e7763a6a';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=e7763a6a';
+import { confirmQuitBest } from '../../shared/quit.js?v=e7763a6a';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=e7763a6a';
+import { load, save } from '../../shared/storage.js?v=e7763a6a';
 
 const GAME_ID = 'bridge';
 const PREF_KEY = 'difficulty:bridge';
