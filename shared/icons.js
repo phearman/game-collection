@@ -1,7 +1,7 @@
 // RS7 線條圖示:網站畫面用 shared/icons/*.svg(CSS 遮罩,樣式在 icons.css)。
 // LINE 與純文字處(成就提示、我的紀錄表格)仍用 games.js / progress.js 的 emoji。
 // ⛔ innerHTML:圖示是一個空 <span class="gi gi-{id}">,外框 <span class="… cat-{分類}"> 給顏色。
-import { GAMES } from './games.js?v=e7763a6a';
+import { GAMES } from './games.js?v=d120d480';
 
 // 成就 id → 圖示 id;遊戲專屬成就沿用該遊戲圖示與分類色,通用成就用金色(badge)。
 export const ACH_ICON = {
