@@ -1,4 +1,4 @@
-import { initState, answerState, currentQuestion, cellsOf, questionScore } from './logic.js?v=1c80d3b7';
+import { initState, answerState, currentQuestion, cellsOf, questionScore } from './logic.js?v=c5addad0';
 
 export const HELP_RULES = [
   '一局 10 題,從 6 個候選字中選字填空。',
