@@ -5,18 +5,18 @@ import {
   tally, movesOf, finishInfo, classifyGesture, normalizeShots, toSave, fromSave, isValidState,
   ROLES, roleOf, kickerTally, aimAt, nudgeAim, chooseCurve, chargeShot, releaseShot, cancelCharge,
   CURVES, CURVE_NAMES, POWER_HALF_MS, kickFlightMs, KICKER_WIN_GOALS, windLevel,
-} from './logic.js?v=c5addad0';
-import { FIELD_H, aimFromPoint, drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js?v=c5addad0';
-import { createProfile } from '../../shared/profile.js?v=c5addad0';
-import { LocalStore } from '../../shared/stores/local.js?v=c5addad0';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=c5addad0';
-import { bindThemeToggle } from '../../shared/theme.js?v=c5addad0';
-import { play, music } from '../../shared/sound.js?v=c5addad0';
-import { setupHelp } from '../../shared/help.js?v=c5addad0';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=c5addad0';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=c5addad0';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=c5addad0';
-import { load, save } from '../../shared/storage.js?v=c5addad0';
+} from './logic.js?v=c687ae3e';
+import { FIELD_H, aimFromPoint, drawScene, readPalette, createFx, fxEvents, fxUpdate, fxBusy } from './draw.js?v=c687ae3e';
+import { createProfile } from '../../shared/profile.js?v=c687ae3e';
+import { LocalStore } from '../../shared/stores/local.js?v=c687ae3e';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=c687ae3e';
+import { bindThemeToggle } from '../../shared/theme.js?v=c687ae3e';
+import { play, music, ambience, ambienceCue, crowdReaction } from '../../shared/sound.js?v=c687ae3e';
+import { setupHelp } from '../../shared/help.js?v=c687ae3e';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=c687ae3e';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=c687ae3e';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=c687ae3e';
+import { load, save } from '../../shared/storage.js?v=c687ae3e';
 
 const GAME_ID = 'keeper';
 const DIFF_KEY = 'difficulty:keeper'; // 上次選的難度(開新局用)
@@ -185,6 +185,7 @@ function tick(now) {
     const shotResult = state.log.at(-1);
     if (roleOf(state) === 'keeper') play(shotResult === 'save' ? 'save' : 'lose');
     else if (shotResult === 'goal') play('goal');
+    ambienceCue(crowdReaction(roleOf(state), shotResult)); // RS69 群眾歡呼/惋惜
     if (state.phase === 'over') finish(finishInfo(state));
     else if (state.actions > 0) {
       const saved = toSave(state);
@@ -235,6 +236,9 @@ function draw() {
 
 function render() {
   music(!confirmingQuit && !state.paused && state.phase !== 'ready' && state.phase !== 'over'); // RS68:遊玩中播背景音樂(選曲見 ? 玩法);準備/暫停/結束即淡出
+  // RS69 球場環境音:遊玩中群眾低鳴,助跑到球飛行時屏息漸大;最後一球的歡呼/惋惜播完才淡出;準備/暫停/確認框即停
+  const crowdOn = !confirmingQuit && !state.paused && state.phase !== 'ready';
+  ambience(crowdOn && 'crowd', { mood: ['runup', 'flight', 'charge'].includes(state.phase) ? 'tense' : 'calm', finale: state.phase === 'over' });
   const kicker = roleOf(state) === 'kicker';
   const t = kicker ? kickerTally(state) : tally(state.log, state.weather);
   $('score').textContent = t.score.toLocaleString();

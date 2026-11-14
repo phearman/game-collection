@@ -1,19 +1,19 @@
 // 畫面層:事件、固定步長迴圈與紀錄串接;規則只呼叫 logic.js。
 import {
-  W, H, DT, TRACK_LEN, DIFFICULTIES, MODES, initState, stepState, pauseState, resumeState,
+  W, H, DT, TRACK_LEN, MAX_SPEED, DIFFICULTIES, MODES, initState, stepState, pauseState, resumeState,
   overlayFor, playerOf, ranking, resultFor, toSave, fromSave, isValidGhost, ghostFor, betterGhost, ghostAt,
   ghostLead, leadLabel,
-} from './logic.js?v=c5addad0';
-import { drawScene, sceneView, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=c5addad0';
-import { createProfile } from '../../shared/profile.js?v=c5addad0';
-import { LocalStore } from '../../shared/stores/local.js?v=c5addad0';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=c5addad0';
-import { bindThemeToggle } from '../../shared/theme.js?v=c5addad0';
-import { play, music } from '../../shared/sound.js?v=c5addad0';
-import { setupHelp } from '../../shared/help.js?v=c5addad0';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=c5addad0';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=c5addad0';
-import { load, save } from '../../shared/storage.js?v=c5addad0';
+} from './logic.js?v=c687ae3e';
+import { drawScene, sceneView, readPalette, createFx, fxEvents, fxUpdate, fxBusy, endingDone } from './draw.js?v=c687ae3e';
+import { createProfile } from '../../shared/profile.js?v=c687ae3e';
+import { LocalStore } from '../../shared/stores/local.js?v=c687ae3e';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=c687ae3e';
+import { bindThemeToggle } from '../../shared/theme.js?v=c687ae3e';
+import { play, music, ambience } from '../../shared/sound.js?v=c687ae3e';
+import { setupHelp } from '../../shared/help.js?v=c687ae3e';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=c687ae3e';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=c687ae3e';
+import { load, save } from '../../shared/storage.js?v=c687ae3e';
 
 const GAME_ID = 'moto2';
 const SAVE_EVERY = 30;
@@ -219,6 +219,11 @@ let statusSignature = '';
 function render() {
   if (!state) return;
   music(playing()); // RS68:遊玩中播背景音樂(選曲見 ? 玩法);暫停/結束/換關即淡出
+  // RS69 引擎聲:速度越快音越高、按油門/衝刺變亮變大;溫度 80 以上開始斷續咳嗽,過熱停車時咳到底;暫停/結束/換關即淡出
+  const rider = playerOf(state), gas = [...held.values()];
+  ambience(playing() && 'engine', {
+    speed: rider.speed / MAX_SPEED, throttle: gas.includes('throttle') || gas.includes('sprint'), heat: rider.heat, overheat: rider.overheat > 0,
+  });
   $('score').textContent = state.over ? resultFor(state).score.toLocaleString() : '0';
   $('best').textContent = best.toLocaleString();
   $('mode').value = state.mode; $('difficulty').value = state.difficulty;

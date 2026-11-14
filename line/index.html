@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="遊戲集錦 LINE 小幫手使用說明：開遊戲、傳回饋、綁定成績、加入群組排行與查天氣的指令及對話範例。">
   <title>LINE 小幫手使用說明 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=c5addad0">
-  <link rel="stylesheet" href="style.css?v=c5addad0">
+  <link rel="stylesheet" href="../shared/style.css?v=c687ae3e">
+  <link rel="stylesheet" href="style.css?v=c687ae3e">
 </head>
 <body>
   <main class="page line-guide">
@@ -152,7 +152,9 @@
             <div data-command="截止" data-scopes="group user"><dt><code>#截止 n 時間</code><span class="command-scope">群組／私訊</span></dt><dd>發起人確認後可延後、提前或補設揪團或投票的截止，須晚於現在且在 30 天內。例：#截止 1 明天 18:00、#截止 1 2小時。舊卡按鈕依新的截止判斷。</dd></div>
             <div data-command="我的投票" data-scopes="user"><dt><code>#我的投票</code> / <code>#我的揪團</code><span class="command-scope">私訊</span></dt><dd>兩個指令效果相同：按群組列出本人發起、進行中的揪團（🙋）和投票（🗳），每次最多 10 筆。可結算、取消或改截止，投票另可加選項（揪團沒有選項）；加選項後請在 10 分鐘內直接輸入 1～15 字，再確認選項文字。期間輸入其他 # 指令不會清除等待，仍可在確認卡按「算了」。私訊打號碼遇到多群同號時先選群組。操作完成會推播一則群組公告；同一群組 6 小時內只推播一次，推播失敗或 6 小時內已推播過時，群組下次有人說話（一般聊天也算）就會公告。</dd></div>
             <div data-command="結果" data-scopes="group"><dt><code>#結果 n</code><span class="command-scope">群組</span></dt><dd>查看指定團號的投票結果；記名列各選項的人，匿名只列票數。截止後第一次互動公布最終結果，不主動推播。</dd></div>
-            <div data-command="行事曆" data-scopes="user group"><dt><code>#行事曆 [下週|本月|M/D|群組|群名]</code><span class="command-scope">兩者</span></dt><dd>看未來 7 天的約、提醒與交辦；私訊須公事同意，群組只列本群並附揪團報名截止，休閒群也可用。私訊傳 #行事曆 群組 可選一個群看該群全部行程，或直接打群名（如 #行事曆 家庭 下週），只列你在群裡用過小集的群，並先向 LINE 確認你仍在群裡；只有你和小集的群視為私人群，用法同私訊。最多 15 件、群組最多 7 天，不計公事查詢次數。</dd></div>
+            <div data-command="行事曆" data-scopes="user group"><dt><code>#行事曆 [下週|本月|M/D|群組|群名]</code><span class="command-scope">兩者</span></dt><dd>看未來 7 天的約、提醒與交辦；私訊須公事同意，群組只列本群並附揪團報名截止，休閒群也可用。私訊傳 #行事曆 群組 可選一個群看該群全部行程，或直接打群名（如 #行事曆 家庭 下週），只列你在群裡用過小集的群，並先向 LINE 確認你仍在群裡；只有你和小集的群視為私人群，用法同私訊。最多 15 件、群組最多 7 天，不計公事查詢次數。<br>📅 Google：私訊或私人群打 #連結行事曆 連結後，#行事曆 下面多一段你的 Google 行程（時間與標題；別人分享標私人或只給忙碌的顯示「忙碌」），#行事曆 設定 選要看哪幾本、加行程寫到哪一本；一般群組不帶 Google。約、提醒、交辦卡片上按「📅 加到 Google」直接寫進你自己的那本日曆（群組裡按，結果私訊給你）。</dd></div>
+            <div data-command="連結行事曆" data-scopes="user"><dt><code>#連結行事曆</code><span class="command-scope">私訊</span></dt><dd>按連結到 Google 同意「看日曆清單」與「讀寫行程」兩項（會顯示「尚未驗證」，按「繼續」）；只勾一項會提醒你重新連結。讀到的行程不保存，網址 10 分鐘內有效。</dd></div>
+            <div data-command="解除行事曆" data-scopes="user"><dt><code>#解除行事曆</code><span class="command-scope">私訊</span></dt><dd>確認後向 Google 取消授權並刪除我們保存的授權碼；照片的 Google 雲端硬碟連結不受影響。</dd></div>
           </dl>
           <p class="guide-note">生活指令（含新聞）每人每天共 30 次，私訊與群組合計，台灣午夜重算；失敗也計次。#單字 免費不限次，不計入生活次數。不主動推播。</p>
           <ol class="chat" aria-label="單字與 AI 說明範例">
@@ -184,6 +186,10 @@
             <li class="bot"><div class="bubble"><span class="speaker">小集</span>📔 2019 年 11/2~11/8｜高中一年級(15 歲)（示意）<br>📝 11/4 第一次段考,數學 92<br>左右滑看每一年的這一週</div></li>
             <li class="player"><div class="bubble"><span class="speaker">小美</span>#人生階段 大學 5</div></li>
             <li class="bot"><div class="bubble"><span class="speaker">小集</span>好了,大學改成 5 年（示意）<br>2022~2027 大學|2027 起 出社會</div></li>
+            <li class="player"><div class="bubble"><span class="speaker">小美 · 私訊</span>#連結行事曆</div></li>
+            <li class="bot"><div class="bubble"><span class="speaker">小集</span>連結 Google 行事曆（示意）<br>🔗 連結 Google 行事曆 ↗<br>✅ 已連結。#行事曆 會多一段「📅 Google」</div></li>
+            <li class="player"><div class="bubble"><span class="speaker">小美 · 私訊</span>#解除行事曆</div></li>
+            <li class="bot"><div class="bubble"><span class="speaker">小集</span>確定要解除 Google 行事曆連結嗎?（示意）<br>解除 · 取消</div></li>
             <li class="player"><div class="bubble"><span class="speaker">小美</span>#週末去哪 台南</div></li>
             <li class="bot"><div class="bubble"><span class="speaker">小集</span>🎪 臺南市 · 11/14(六)~11/15(日)（示意）<br>這個週末有 18 個活動 · 🤖 小集推薦 3 個<br>[表演] 活動名稱 · 📍 場館 · 看詳情<br>看更多 · 下週末 · 全部/親子/展覽/表演/戶外節慶</div></li>
             <li class="player"><div class="bubble"><span class="speaker">小美</span>#問 明天高雄會下雨嗎</div></li>
@@ -330,6 +336,6 @@ SOFTWARE.</p>
     </section>
     <footer class="guide-footer"><a href="../privacy/">隱私權政策</a><a href="../">回大廳</a></footer>
   </main>
-  <script type="module" src="ui.js?v=c5addad0"></script>
+  <script type="module" src="ui.js?v=c687ae3e"></script>
 </body>
 </html>

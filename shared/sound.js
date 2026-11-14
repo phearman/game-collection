@@ -238,6 +238,44 @@ const LABEL = {
   sfx: ['🔊', '只有音效(點一下靜音)'],
   off: ['🔇', '靜音(點一下開啟音效與音樂)'],
 };
+// ---- 環境音(RS69)：球場群眾低鳴、機車引擎。只合成，不載入音檔 ----
+// 跟「音效」開關：🎵/🔊 有聲、🔇 停；分頁隱藏或對話框開著也停。同一頁同時只有一種環境音。
+// 音量走自己的匯流排(AMBIENCE_LEVEL)，峰值壓在單一音效的一半以下 ⇒ ⛔ 蓋過音效。
+export const AMBIENCE_LEVEL = 0.8;
+const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, Number.isFinite(x) ? x : lo));
+// 引擎：鋸齒波(爆發聲)+半頻方波(厚度)過低通；油門開 ⇒ 低通打開、聲音變亮變大。
+// speed=目前速度÷最高速(衝刺可超過 1，夾在 0~1.3)；heat=0~100，≥ 80 開始「咳嗽」抖動，過熱停車時抖到底。
+export const ENGINE = Object.freeze({
+  idle: 46, top: 150, rev: 14, gainIdle: 0.16, gainTop: 0.22, cutIdle: 700, cutTop: 2000, heatWarn: 80, sputterHz: 9, sub: 0.5,
+});
+export function engineTone({ speed = 0, throttle = false, heat = 0, overheat = false } = {}) {
+  const v = clamp(speed, 0, 1.3), load = throttle && !overheat ? 1 : 0;
+  const freq = overheat ? ENGINE.idle * 0.85 : ENGINE.idle + (ENGINE.top - ENGINE.idle) * v ** 0.8 + ENGINE.rev * load;
+  const drive = overheat ? 0 : Math.min(1, 0.6 * Math.min(v, 1) + 0.4 * load);
+  const sputter = overheat ? 1 : clamp((heat - ENGINE.heatWarn) / (100 - ENGINE.heatWarn), 0, 1);
+  return {
+    freq,
+    gain: ENGINE.gainIdle + (ENGINE.gainTop - ENGINE.gainIdle) * drive,
+    cutoff: ENGINE.cutIdle + (ENGINE.cutTop - ENGINE.cutIdle) * drive,
+    sputter,
+  };
+}
+// 群眾：棕色雜訊迴圈過低通。calm=平常低鳴、tense=助跑到球飛行時屏息漸大；
+// 撲救/進球的起伏用 crowdSwell：cheer=歡呼(亮、大)、groan=惋惜(暗、小)，起音→維持→慢慢落回低鳴。
+export const CROWD = Object.freeze({
+  calm: Object.freeze({ gain: 0.26, cutoff: 1300 }),
+  tense: Object.freeze({ gain: 0.34, cutoff: 1600 }),
+  cheer: Object.freeze({ gain: 0.6, cutoff: 3200, rise: 0.15, hold: 0.7, fall: 2.2 }),
+  groan: Object.freeze({ gain: 0.42, cutoff: 800, rise: 0.25, hold: 0.5, fall: 1.6 }),
+});
+export const crowdTone = (mood) => CROWD[mood === 'tense' ? 'tense' : 'calm'];
+export const crowdSwell = (kind) => (kind === 'cheer' || kind === 'groan' ? CROWD[kind] : null);
+// G8 結果 → 群眾反應(站在玩家這邊)：守門員撲到/對方踢偏=歡呼、被進球=惋惜；踢球員進球=歡呼、沒進=惋惜。
+export const crowdReaction = (role, result) => {
+  const good = role === 'kicker' ? result === 'goal' : result !== 'goal';
+  return good ? 'cheer' : 'groan';
+};
+
 const pageGame = (env) => /\/games\/([^/]+)\//.exec(env.location?.pathname ?? '')?.[1];
 
 // 可注入瀏覽器環境，測試不用真正的音訊裝置或全域 DOM。
@@ -535,6 +573,7 @@ export function createSound(env = globalThis) {
     if (want && !track) {
       try { startTrack(want); } catch { track = null; }
     }
+    syncAmbience(); // RS69 環境音跟同一批時機(解鎖、分頁、對話框、開關)一起重算
   }
   // 頁面告訴音效模組「現在該不該有背景音樂」；重複呼叫無副作用。
   // true=依本遊戲選曲(預設曲/指定曲/關閉)；字串=指定曲庫曲名(試聽、測試用)。
@@ -556,6 +595,134 @@ export function createSound(env = globalThis) {
     t.at = when - t.next * t.step;
   }
 
+  // ---- 環境音(RS69)：持續音，參數用短斜坡平滑變化；停止時淡出再斷開 ----
+  let ambWant = null, amb = null; // ambWant={ name, params }；amb=正在出聲的環境音
+  const AMB_FADE_IN = 0.3, AMB_FADE_OUT = 0.25, AMB_GLIDE = 0.08;
+  // 從「當下實際值」平滑趨近目標(⛔ 讀 param.value 當起點：排程中各瀏覽器回報不一，會跳音)。
+  // time≈到達 98% 的秒數；不支援 setTargetAtTime 的環境直接設值。
+  const glide = (param, value, at, time = AMB_GLIDE) => {
+    param.cancelScheduledValues?.(at);
+    if (param.setTargetAtTime) param.setTargetAtTime(value, at, time / 4);
+    else param.setValueAtTime(value, at);
+  };
+  let crowdBuffer = null;
+  function crowdNoise() { // 棕色雜訊 3 秒(固定種子)：白雜訊積分 ⇒ 低頻多、像遠處人聲嗡嗡
+    if (!crowdBuffer) {
+      const rate = context.sampleRate || 44100;
+      crowdBuffer = context.createBuffer(1, Math.floor(rate * 3), rate);
+      const data = crowdBuffer.getChannelData(0);
+      let seed = 7, last = 0;
+      for (let i = 0; i < data.length; i++) {
+        seed = (seed * 16807) % 2147483647;
+        last = (last + 0.02 * (seed / 1073741823.5 - 1)) / 1.02;
+        data[i] = last * 3.5;
+      }
+    }
+    return crowdBuffer;
+  }
+  function buildAmbience(name) {
+    const now = context.currentTime, bus = context.createGain(), gain = context.createGain();
+    const filter = context.createBiquadFilter(), sources = [], extra = [];
+    bus.gain.setValueAtTime(0, now);
+    bus.gain.linearRampToValueAtTime(AMBIENCE_LEVEL, now + AMB_FADE_IN);
+    filter.type = 'lowpass';
+    filter.connect(gain); gain.connect(bus); bus.connect(output);
+    if (name === 'engine') {
+      const saw = context.createOscillator(), sub = context.createOscillator(), subGain = context.createGain();
+      saw.type = 'sawtooth'; sub.type = 'square';
+      subGain.gain.setValueAtTime(ENGINE.sub, now);
+      saw.connect(filter); sub.connect(subGain); subGain.connect(filter);
+      // 過熱咳嗽：低頻方波調變輸出音量，深度 0=平順、1=斷斷續續
+      const lfo = context.createOscillator(), depth = context.createGain();
+      lfo.type = 'square'; lfo.frequency.setValueAtTime(ENGINE.sputterHz, now);
+      depth.gain.setValueAtTime(0, now);
+      lfo.connect(depth); depth.connect(gain.gain);
+      sources.push(saw, sub, lfo); extra.push(subGain, depth);
+      return { name, bus, gain, filter, sources, extra, saw, sub, depth, last: null };
+    }
+    const source = context.createBufferSource(), lfo = context.createOscillator(), depth = context.createGain();
+    source.buffer = crowdNoise(); source.loop = true;
+    source.connect(filter);
+    lfo.type = 'sine'; lfo.frequency.setValueAtTime(0.13, now); // 慢慢起伏，聽不出 3 秒迴圈
+    depth.gain.setValueAtTime(0.07, now);
+    lfo.connect(depth); depth.connect(gain.gain);
+    sources.push(source, lfo); extra.push(depth);
+    return { name, bus, gain, filter, sources, extra, depth, last: null, swellUntil: 0 };
+  }
+  function tuneAmbience(a, params, force = false) {
+    const now = context.currentTime;
+    if (a.name === 'engine') {
+      const t = engineTone(params), l = a.last;
+      if (!force && l && Math.abs(t.freq - l.freq) < 0.5 && Math.abs(t.gain - l.gain) < 0.004 && Math.abs(t.sputter - l.sputter) < 0.02) return;
+      glide(a.saw.frequency, t.freq, now); glide(a.sub.frequency, t.freq / 2, now);
+      glide(a.filter.frequency, t.cutoff, now); glide(a.gain.gain, t.gain * (1 - t.sputter * 0.5), now);
+      glide(a.depth.gain, t.gain * t.sputter * 0.5, now);
+      a.last = t;
+      return;
+    }
+    if (now < a.swellUntil) return; // 歡呼/惋惜還沒落回去，⛔ 被平常低鳴蓋掉
+    const t = crowdTone(params?.mood);
+    if (!force && a.last === t) return;
+    glide(a.gain.gain, t.gain, now, 0.6); glide(a.filter.frequency, t.cutoff, now, 0.6);
+    a.last = t;
+  }
+  function startAmbience(name, params) {
+    const a = buildAmbience(name);
+    const now = context.currentTime;
+    for (const s of a.sources) s.start(now);
+    amb = a;
+    tuneAmbience(a, params, true);
+  }
+  function stopAmbience() {
+    const a = amb;
+    if (!a) return;
+    amb = null;
+    try {
+      const now = context.currentTime;
+      glide(a.bus.gain, 0, now, AMB_FADE_OUT);
+      for (const s of a.sources) { try { s.stop(now + AMB_FADE_OUT * 1.5); } catch { /* 已停止 */ } } // 多等半拍:趨近曲線到 0.3% 才停,無喀聲
+    } catch { /* 停止失敗不影響遊戲 */ }
+    const done = () => { for (const n of [...a.sources, ...a.extra, a.filter, a.gain, a.bus]) { try { n.disconnect(); } catch { /* 已斷開 */ } } };
+    if ((env.setTimeout?.(done, AMB_FADE_OUT * 1500 + 50) ?? null) === null) done();
+  }
+  let finaleTimer = null;
+  function syncAmbience() {
+    let name = ambWant?.name ?? null;
+    // finale:最後一球的歡呼/惋惜播完才淡出(結算畫面不留群眾聲);沒在起伏就直接停
+    if (name && ambWant.params?.finale) {
+      const left = amb?.name === name ? amb.swellUntil - context.currentTime : 0;
+      if (left <= 0) name = null;
+      else if (finaleTimer === null) finaleTimer = env.setTimeout?.(() => { finaleTimer = null; syncAmbience(); }, left * 1000 + 30) ?? null;
+    }
+    const want = name && audible() && !modalOpen() && output && context.state === 'running' && context.createBiquadFilter ? name : null;
+    if (amb && amb.name !== want) stopAmbience();
+    if (!want) return;
+    try {
+      if (!amb) startAmbience(want, ambWant.params);
+      else tuneAmbience(amb, ambWant.params);
+    } catch { amb = null; }
+  }
+  // 頁面每格告訴音效模組要哪種環境音：ambience('engine', { speed, throttle, heat, overheat })、
+  // ambience('crowd', { mood: 'calm' | 'tense', finale })；null/false=停(暫停、結束、換關)。重複呼叫只在參數有變時調整。
+  function ambience(name, params = {}) {
+    ambWant = name === 'engine' || name === 'crowd' ? { name, params } : null;
+    syncAmbience();
+  }
+  // 群眾起伏(進球/撲救那一刻)：'cheer' 歡呼、'groan' 惋惜；沒在播群眾聲時不做事。
+  function ambienceCue(kind) {
+    const s = crowdSwell(kind), a = amb;
+    if (!s || !a || a.name !== 'crowd') return;
+    try {
+      const now = context.currentTime, base = crowdTone(ambWant?.params?.mood);
+      for (const [param, peak, rest] of [[a.gain.gain, s.gain, base.gain], [a.filter.frequency, s.cutoff, base.cutoff]]) {
+        glide(param, peak, now, s.rise);
+        glide(param, rest, now + s.rise + s.hold, s.fall);
+      }
+      a.swellUntil = now + s.rise + s.hold + s.fall;
+      a.last = base;
+    } catch { /* 音訊失敗不影響遊戲 */ }
+  }
+
   function bindSoundToggle(btn) {
     if (buttons.has(btn)) return;
     buttons.add(btn); label(btn);
@@ -565,7 +732,7 @@ export function createSound(env = globalThis) {
     });
   }
   return {
-    play, music, musicTempo, tempo: () => tempo, bindSoundToggle, setEnabled, setMode, mode, musicChoice, setMusicChoice, globalMusicChoice, setGlobalMusicChoice, songFor,
+    play, music, ambience, ambienceCue, isAmbient: () => amb?.name ?? null, musicTempo, tempo: () => tempo, bindSoundToggle, setEnabled, setMode, mode, musicChoice, setMusicChoice, globalMusicChoice, setGlobalMusicChoice, songFor,
     setTheme: (id) => { theme = Object.hasOwn(THEMES, id) ? THEMES[id] : null; },
     isEnabled: () => sfxOn, isMusicPlaying: () => !!track,
   };
@@ -575,6 +742,8 @@ const sound = createSound();
 export const play = sound.play;
 export const music = sound.music;
 export const musicTempo = sound.musicTempo;
+export const ambience = sound.ambience;
+export const ambienceCue = sound.ambienceCue;
 export const bindSoundToggle = sound.bindSoundToggle;
 export const musicChoice = sound.musicChoice;
 export const setMusicChoice = sound.setMusicChoice;
