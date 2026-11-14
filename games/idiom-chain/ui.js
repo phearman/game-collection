@@ -1,18 +1,18 @@
 import {
   STEPS, initState, currentWord, cardsOf, chooseState, nextState, tickState, totalErrors, scoreFor,
   resultOf, hasActed, settlementOf, lookupUrl, toSave, isValidState, stepsDone,
-} from './logic.js?v=c687ae3e';
-import { HELP_RULES, HELP_SOURCE, demoSteps, renderDemo } from './help.js?v=c687ae3e';
-import { createProfile } from '../../shared/profile.js?v=c687ae3e';
-import { LocalStore } from '../../shared/stores/local.js?v=c687ae3e';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=c687ae3e';
-import { bindThemeToggle } from '../../shared/theme.js?v=c687ae3e';
-import { play, music } from '../../shared/sound.js?v=c687ae3e';
-import { setupHelp } from '../../shared/help.js?v=c687ae3e';
-import { formatDuration } from '../../shared/duration.js?v=c687ae3e';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=c687ae3e';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=c687ae3e';
-import { confirmQuitBest } from '../../shared/quit.js?v=c687ae3e';
+} from './logic.js?v=1eaeb7ae';
+import { HELP_RULES, HELP_SOURCE, demoSteps, renderDemo } from './help.js?v=1eaeb7ae';
+import { createProfile } from '../../shared/profile.js?v=1eaeb7ae';
+import { LocalStore } from '../../shared/stores/local.js?v=1eaeb7ae';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=1eaeb7ae';
+import { bindThemeToggle } from '../../shared/theme.js?v=1eaeb7ae';
+import { play, music } from '../../shared/sound.js?v=1eaeb7ae';
+import { setupHelp } from '../../shared/help.js?v=1eaeb7ae';
+import { formatDuration } from '../../shared/duration.js?v=1eaeb7ae';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=1eaeb7ae';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=1eaeb7ae';
+import { confirmQuitBest } from '../../shared/quit.js?v=1eaeb7ae';
 
 const GAME_ID = 'idiom-chain';
 const $ = (id) => document.getElementById(id);

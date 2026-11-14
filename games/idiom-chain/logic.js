@@ -1,6 +1,6 @@
 // G17 成語接龍:純規則,不碰 DOM、儲存或時鐘;隨機數可注入(R3)。
 // R1:詞表直接沿用 G16(⛔ 另做一份、⛔ 改 G16 的檔案)。
-import { WORDS } from '../idiom/words.js?v=c687ae3e';
+import { WORDS } from '../idiom/words.js?v=1eaeb7ae';
 
 export const STEPS = 10;            // R3:起手詞 + 10 步
 export const CHOICES = 4;           // R4:每步 4 張卡
