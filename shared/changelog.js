@@ -1,5 +1,12 @@
 export const CHANGELOG = [
   {
+    date: '2026-11-15', title: 'LINE 早安、午安、晚安也列出 Google 行程',
+    items: [
+      { scope: '全站', kind: '新增', text: '已連結 Google 行事曆的人,私訊 #早安、#午安、#晚安 時,Google 上的行程會和小集事項依時間排在一起;Google 讀太慢時只會多一行「暫時讀不到」' },
+      { scope: '全站', kind: '改善', text: '#功能、#說明 與小集說明頁補上 #連結行事曆 的用法;隱私權頁說明問候也會讀取已連結的 Google 行程' },
+    ],
+  },
+  {
     date: '2026-11-14', title: 'LINE 行事曆可以連 Google',
     items: [
       { scope: '全站', kind: '新增', text: '私訊打 #連結行事曆 可連結自己的 Google 日曆,之後 #行事曆 會一併列出 Google 上的行程(只在私訊與私人群顯示);打 #解除行事曆 可隨時取消' },

@@ -2,18 +2,18 @@ import {
   DIFFICULTIES, initState, currentQuestion, questionDone, answerState, nextState, tickState,
   cellsOf, totalErrors, scoreFor, resultOf, hasActed, settlementOf, lookupUrl, toSave, isValidState,
   isComicList, comicFor, comicUrl, roundSize, comicPool, setFromSearch, COMICS_SET, COMICS_UNAVAILABLE, SET_PARAM,
-} from './logic.js?v=1eaeb7ae';
-import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=1eaeb7ae';
-import { createProfile } from '../../shared/profile.js?v=1eaeb7ae';
-import { LocalStore } from '../../shared/stores/local.js?v=1eaeb7ae';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=1eaeb7ae';
-import { bindThemeToggle } from '../../shared/theme.js?v=1eaeb7ae';
-import { play, music } from '../../shared/sound.js?v=1eaeb7ae';
-import { setupHelp } from '../../shared/help.js?v=1eaeb7ae';
-import { formatDuration } from '../../shared/duration.js?v=1eaeb7ae';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=1eaeb7ae';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=1eaeb7ae';
-import { confirmQuitBest } from '../../shared/quit.js?v=1eaeb7ae';
+} from './logic.js?v=bf2d7f1e';
+import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=bf2d7f1e';
+import { createProfile } from '../../shared/profile.js?v=bf2d7f1e';
+import { LocalStore } from '../../shared/stores/local.js?v=bf2d7f1e';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=bf2d7f1e';
+import { bindThemeToggle } from '../../shared/theme.js?v=bf2d7f1e';
+import { play, music } from '../../shared/sound.js?v=bf2d7f1e';
+import { setupHelp } from '../../shared/help.js?v=bf2d7f1e';
+import { formatDuration } from '../../shared/duration.js?v=bf2d7f1e';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=bf2d7f1e';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=bf2d7f1e';
+import { confirmQuitBest } from '../../shared/quit.js?v=bf2d7f1e';
 
 // One promise per page, including failures and timeouts. Importing never blocks render().
 export function createComicsLoader() {
