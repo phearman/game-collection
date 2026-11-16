@@ -1,19 +1,21 @@
-import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, assistState, autoCandState, fromSave, clearBoardState } from './logic.js?v=bf2d7f1e';
-import { createProfile } from '../../shared/profile.js?v=bf2d7f1e';
-import { formatDuration } from '../../shared/duration.js?v=bf2d7f1e';
-import { LocalStore } from '../../shared/stores/local.js?v=bf2d7f1e';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=bf2d7f1e';
-import { bindThemeToggle } from '../../shared/theme.js?v=bf2d7f1e';
-import { play as playSound, music } from '../../shared/sound.js?v=bf2d7f1e';
-import { setupHelp } from '../../shared/help.js?v=bf2d7f1e';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=bf2d7f1e';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=bf2d7f1e';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=bf2d7f1e';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume } from '../../shared/daily.js?v=bf2d7f1e';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=bf2d7f1e';
+import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, wrongCells, assistState, autoCandState, fromSave, clearBoardState } from './logic.js?v=68aa0773';
+import { createProfile } from '../../shared/profile.js?v=68aa0773';
+import { formatDuration } from '../../shared/duration.js?v=68aa0773';
+import { LocalStore } from '../../shared/stores/local.js?v=68aa0773';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=68aa0773';
+import { bindThemeToggle } from '../../shared/theme.js?v=68aa0773';
+import { play as playSound, music } from '../../shared/sound.js?v=68aa0773';
+import { setupHelp } from '../../shared/help.js?v=68aa0773';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=68aa0773';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=68aa0773';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=68aa0773';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume } from '../../shared/daily.js?v=68aa0773';
+import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=68aa0773';
 
 const GAME_ID = 'sudoku';
 const ASSIST_TEXT = '使用提示後本局變成輔助局:不刷新最佳、XP 打對折。要繼續嗎?';
+// RS134:檢查也算輔助局(沿 RS86),確認文字只換開頭的動作。
+const CHECK_TEXT = '按了檢查,本局變成輔助局:不刷新最佳、XP 打對折。要繼續嗎?';
 const ASSIST_DAILY_TEXT = '使用提示或自動候選後,這局今日挑戰變成輔助局:不列今日排行、不刷新最佳、XP 打對折(連續天數照算)。要繼續嗎?';
 const $ = (id) => document.getElementById(id);
 const visible = () => document.visibilityState !== 'hidden';
@@ -53,6 +55,9 @@ let restarting = false;
 let profileStarted = false;
 let activeHint = null;
 let pendingAssist = null;
+// RS134:檢查標記=格號→當時的錯數字;那格改掉就不再標。checkNote 顯示在狀態列,下一次填寫就收起。
+let checkMarks = new Map();
+let checkNote = '';
 let queue = Promise.resolve();
 const run = (fn) => { queue = queue.then(fn).catch((error) => console.error(error)); return queue; };
 const cells = Array.from({ length: 81 }, (_, i) => {
@@ -92,7 +97,8 @@ function render() {
   const bad = new Set(conflicts(state.board));
   const locked = !!ended || restarting || !!state.result;
   cells.forEach((cell, i) => {
-    cell.className = `cell${state.puzzle[i] ? ' given' : ''}${i === cursor ? ' selected' : ''}${bad.has(i) ? ' conflict' : ''}${activeHint?.related.includes(i) ? ' hint-related' : ''}${activeHint?.index === i ? ' hint-target' : ''}`;
+    const wrong = !state.result && checkMarks.get(i) === state.board[i];
+    cell.className = `cell${state.puzzle[i] ? ' given' : ''}${i === cursor ? ' selected' : ''}${bad.has(i) ? ' conflict' : ''}${wrong ? ' check-wrong' : ''}${activeHint?.related.includes(i) ? ' hint-related' : ''}${activeHint?.index === i ? ' hint-target' : ''}`;
     const shown = state.autoCand ? candidates(state.board, i) : state.notes[i];
     cell.replaceChildren();
     if (state.board[i]) cell.textContent = state.board[i];
@@ -104,7 +110,7 @@ function render() {
       }
       cell.append(pencil);
     }
-    cell.setAttribute('aria-label', `第 ${Math.floor(i / 9) + 1} 列第 ${i % 9 + 1} 格，${state.board[i] || '空格'}${state.puzzle[i] ? '，題目給定' : ''}${shown.length ? `，${state.autoCand ? '候選' : '筆記'} ${shown.join('、')}` : ''}${bad.has(i) ? '，衝突' : ''}${activeHint?.index === i ? '，提示格' : ''}`);
+    cell.setAttribute('aria-label', `第 ${Math.floor(i / 9) + 1} 列第 ${i % 9 + 1} 格，${state.board[i] || '空格'}${state.puzzle[i] ? '，題目給定' : ''}${shown.length ? `，${state.autoCand ? '候選' : '筆記'} ${shown.join('、')}` : ''}${bad.has(i) ? '，衝突' : ''}${wrong ? '，檢查：填錯' : ''}${activeHint?.index === i ? '，提示格' : ''}`);
     cell.setAttribute('aria-disabled', String(locked || !!state.puzzle[i]));
     cell.tabIndex = !locked && i === cursor ? 0 : -1;
   });
@@ -123,6 +129,9 @@ function render() {
   $('clear').disabled = locked || !!state.puzzle[cursor];
   // RS108:今日挑戰也開放提示與自動候選;用過即輔助局、不列今日排行。
   $('hint-button').disabled = locked;
+  // RS134:今日挑戰(含往日練習、接回)不出現檢查鈕;HTML 預設 hidden,一般局才由這裡打開。
+  $('check-button').hidden = isDaily;
+  $('check-button').disabled = locked;
   $('auto-cand').disabled = locked;
   $('assist-rank-note').hidden = !rankedDaily();
   $('auto-cand').checked = state.autoCand;
@@ -132,7 +141,7 @@ function render() {
   $('hint-apply').textContent = activeHint?.type === 'wrong' ? '清除這格' : '填入答案';
   $('hint-apply').disabled = locked;
   numbers.forEach((btn) => { btn.disabled = locked || !!state.puzzle[cursor]; });
-  $('status').textContent = restarting ? '正在產生唯一解題目…' : state.result ? '本局已完成' : bad.size ? `${bad.size} 格有衝突，紅色 ! 格可修改` : state.puzzle[cursor] ? '這是題目給定格，請選空格' : noteMode ? '筆記模式：再按同一數字可移除' : '選一格，再填入數字';
+  $('status').textContent = restarting ? '正在產生唯一解題目…' : state.result ? '本局已完成' : checkNote ? checkNote : bad.size ? `${bad.size} 格有衝突，紅色 ! 格可修改` : state.puzzle[cursor] ? '這是題目給定格，請選空格' : noteMode ? '筆記模式：再按同一數字可移除' : '選一格，再填入數字';
   renderTime();
   if (isDaily) showDailyBanner(document, daily, dailyError || dailyExpired);
   $('overlay').hidden = !state.result;
@@ -216,14 +225,14 @@ function play(value, index = cursor, asNote = noteMode) {
   if (next === state) return;
   playSound('tap');
   if (next.result === 'win' && !state.result) playSound('win');
-  state = next; activeHint = null; afterChange();
+  state = next; activeHint = null; checkNote = ''; afterChange();
 }
 function undo() {
   if (ended || restarting) return;
   input();
   const next = undoState(state);
   if (next === state) return;
-  state = next; activeHint = null; afterChange();
+  state = next; activeHint = null; checkNote = ''; afterChange();
 }
 function toggleNotes() {
   if (ended || restarting || state.result) return;
@@ -240,6 +249,13 @@ function useAssist(kind) {
     try { Promise.resolve(dailyClient.markAssisted(GAME_ID, daily.day)).catch(() => {}); } catch {}
   }
   if (kind === 'hint') activeHint = nextHint(state);
+  else if (kind === 'check') {
+    // RS134:只標錯格、不給答案;不限次數,每次重算。
+    const wrong = wrongCells(state);
+    checkMarks = new Map(wrong.map((i) => [i, state.board[i]]));
+    activeHint = null;
+    checkNote = wrong.length ? `檢查:${wrong.length} 格填錯了,已用紅框 ✗ 標出(不顯示答案)` : '檢查:目前都正確';
+  }
   else state = autoCandState(state, true);
   persist(); render();
 }
@@ -248,7 +264,7 @@ function requestAssist(kind) {
   if (kind === 'hint' && activeHint) { activeHint = null; render(); return; }
   if (state.assist) { useAssist(kind); return; }
   pendingAssist = kind;
-  $('assist-text').textContent = rankedDaily() ? ASSIST_DAILY_TEXT : ASSIST_TEXT;
+  $('assist-text').textContent = kind === 'check' ? CHECK_TEXT : rankedDaily() ? ASSIST_DAILY_TEXT : ASSIST_TEXT;
   $('assist-dlg').showModal();
 }
 let confirmingQuit = false;
@@ -271,7 +287,7 @@ async function newGame(difficulty = state?.difficulty ?? 'normal') {
   else if (!ended) await run(() => profile.discardSave(GAME_ID));
   await queue;
   state = initState(difficulty);
-  ended = null; noteMode = false; activeHint = null; cursor = Math.max(0, state.puzzle.indexOf(0)); profileStarted = false;
+  ended = null; noteMode = false; activeHint = null; checkMarks = new Map(); checkNote = ''; cursor = Math.max(0, state.puzzle.indexOf(0)); profileStarted = false;
   best = await difficultyBest(difficulty);
   restarting = false; render(); persist(); cells[cursor].focus();
 }
@@ -327,6 +343,7 @@ $('notes').addEventListener('click', toggleNotes);
 $('clear').addEventListener('click', () => play(0));
 $('difficulty').addEventListener('change', () => newGame($('difficulty').value));
 $('hint-button').addEventListener('click', () => requestAssist('hint'));
+$('check-button').addEventListener('click', () => { if (!isDaily) requestAssist('check'); });
 $('auto-cand').addEventListener('change', () => {
   const on = $('auto-cand').checked;
   $('auto-cand').checked = state.autoCand;
@@ -373,6 +390,7 @@ if (state?.clock) startProfile();
 if (isDaily && state) { startProfile(); await persist(); }
 if (isDaily && !state) {
   $('difficulty').disabled = true; $('hint-button').disabled = true; $('auto-cand').disabled = true;
+  $('check-button').hidden = true; // r1 M1:關閉頁沒有 state,render 不會跑
   $('number-pad').hidden = true; $('tools')?.setAttribute('hidden', '');
   showDailyClosed(document, daily, dailyError, { game: GAME_ID, client: dailyClient });
 }
@@ -381,12 +399,12 @@ if (state?.result) finish('win');
 setupHelp({
   gameId: GAME_ID, title: '數獨玩法', mountAfter: document.querySelector('.navigation .btn'),
   rules: `<ol>
-    <li>列欄宮各含1–9，給定格不可改。</li>
+    <li>列欄宮各含1–9，給定格不能動。</li>
     <li>引導學習給定 46、有自動候選；入門給定 56。</li>
-    <li>點格／方向鍵選格，1–9填入，0清空；N筆記。</li>
-    <li>衝突標紅，填入清相關筆記；💡 提示附理由。</li>
-    <li>引導學習或用提示、候選為輔助局：不刷新最佳、XP對折、不列今日榜。最佳分難度，入門不列總最佳。</li>
-    <li>首次輸入計時，重開記退出；填滿無衝突勝，分數=max(1,10000−秒)。每日挑戰成績從開題起算，含離開時間；本局只計遊玩時間，可清空重來。</li>
+    <li>點格／方向鍵選格，1–9填，0清；N筆記。</li>
+    <li>衝突標紅，填入清相關筆記；💡 提示附理由；檢查標錯格不給答案。</li>
+    <li>引導學習及提示、檢查、候選皆輔助局：不刷新最佳、XP對折、不列今日榜。最佳分難度，入門不列總最佳。</li>
+    <li>首次輸入計時，重開記退出；填滿無衝突勝，分=max(1,10000−秒)。每日成績從開題起算含離開時間；本局只計遊玩時間。</li>
   </ol>`,
   demo: { steps: demoSteps().map((s, i) => ({ ...s, kind: ['fail', 'fail', undefined, 'ok'][i] })), render: (frame) => {
     const board = frame.board ?? frame;

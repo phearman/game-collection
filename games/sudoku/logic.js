@@ -1,6 +1,6 @@
 // 數獨規則與狀態轉移：純函式；亂數、時間均由呼叫端注入。
-import { timerInit, timerEvent } from '../../shared/progress.js?v=bf2d7f1e';
-import { seedRng } from '../../shared/seed-rng.js?v=bf2d7f1e';
+import { timerInit, timerEvent } from '../../shared/progress.js?v=68aa0773';
+import { seedRng } from '../../shared/seed-rng.js?v=68aa0773';
 
 export const SIZE = 9;
 // beginner=入門(RS77,給定 56、自己想);easy=引導學習(原入門,給定 46、預設自動候選),內部鍵不改以相容舊存檔與雲端紀錄。
@@ -135,6 +135,14 @@ export function nextHint(state) {
   let at = 0;
   for (let j = 1; j < empty.length; j++) if (options[j].length < options[at].length) at = j;
   return hint('answer', empty[at], '這一步需要進階推理,直接告訴你一格答案');
+}
+
+// RS134:「檢查」只回填錯的格號(玩家填、與正解不符);⛔ 回傳正解、空格與給定格不算錯。
+export function wrongCells(state) {
+  if (!isBoard(state?.puzzle) || !isBoard(state?.board)) return [];
+  const solution = solve(state.puzzle);
+  if (!solution) return [];
+  return indices.filter((i) => !state.puzzle[i] && state.board[i] && state.board[i] !== solution[i]);
 }
 
 export function assistState(state) {

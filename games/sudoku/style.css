@@ -25,6 +25,9 @@ h1 { font-size: 22px; margin: 0; }
 .cell.conflict { color: #b42318; background: #ffe4df; }
 .cell.conflict::after { content: '!'; position: absolute; top: 1px; right: 2px; font-size: 9px; font-weight: 700; }
 .cell.hint-related { background: var(--accent-bg); }
+/* RS134:檢查標出的錯格=紅框+右下 ✗(不只靠顏色) */
+.cell.check-wrong { z-index: 1; color: #b42318; box-shadow: inset 0 0 0 3px #d92d20; }
+.cell.check-wrong::before { content: '✗'; position: absolute; bottom: 0; right: 2px; font-size: 10px; font-weight: 700; line-height: 1; color: #d92d20; }
 .cell.hint-target { z-index: 1; box-shadow: inset 0 0 0 3px var(--accent); }
 .cell:focus-visible { z-index: 1; outline: 3px solid var(--accent); outline-offset: -3px; }
 .pencil { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); height: 100%; padding: 2px; font-size: clamp(8px, 2.4vw, 11px); color: var(--text-sub); }
@@ -51,5 +54,9 @@ button:disabled { opacity: 0.55; cursor: default; }
 .demo-board .cell { display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: default; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .cell.conflict { color: #ffb4a9; background: #602620; }
+  :root:not([data-theme="light"]) .cell.check-wrong { color: #ffb4a9; box-shadow: inset 0 0 0 3px #ff8a7a; }
+  :root:not([data-theme="light"]) .cell.check-wrong::before { color: #ff8a7a; }
 }
 :root[data-theme="dark"] .cell.conflict { color: #ffb4a9; background: #602620; }
+:root[data-theme="dark"] .cell.check-wrong { color: #ffb4a9; box-shadow: inset 0 0 0 3px #ff8a7a; }
+:root[data-theme="dark"] .cell.check-wrong::before { color: #ff8a7a; }
