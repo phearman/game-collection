@@ -1,4 +1,4 @@
-import { initState, chooseState, currentWord, answerOf, currentChoices, cardsOf, stepScore } from './logic.js?v=68aa0773';
+import { initState, chooseState, currentWord, answerOf, currentChoices, cardsOf, stepScore } from './logic.js?v=26dc3795';
 
 const esc = (value) => String(value).replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
 
