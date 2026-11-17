@@ -1,8 +1,9 @@
 export const CHANGELOG = [
   {
-    date: '2026-11-17', title: 'LINE 可以直接加行程到 Google',
+    date: '2026-11-17', title: 'LINE 可以直接加、改、刪 Google 行程',
     items: [
       { scope: '全站', kind: '新增', text: '已連結 Google 行事曆的人,私訊打 #加行程 明天下午3點 看牙醫,小集先回確認卡,按「✅ 加入」才寫進你的 Google 日曆;可改時長,重按不會重複' },
+      { scope: '全站', kind: '新增', text: '#行事曆 列出的 Google 行程前面會有 G1、G2 代號(30 分鐘內有效),打 #改行程 G2 明天 下午4點 或 #刪行程 G2,小集先回確認卡,按下才改或刪;重複行程請到 Google 日曆改' },
     ],
   },
   {

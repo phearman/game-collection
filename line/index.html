@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="遊戲集錦 LINE 小幫手使用說明：開遊戲、傳回饋、綁定成績、加入群組排行與查天氣的指令及對話範例。">
   <title>LINE 小幫手使用說明 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=26dc3795">
-  <link rel="stylesheet" href="style.css?v=26dc3795">
+  <link rel="stylesheet" href="../shared/style.css?v=5bbc7a34">
+  <link rel="stylesheet" href="style.css?v=5bbc7a34">
 </head>
 <body>
   <main class="page line-guide">
@@ -156,6 +156,8 @@
             <div data-command="連結行事曆" data-scopes="user"><dt><code>#連結行事曆</code><span class="command-scope">私訊</span></dt><dd>按連結到 Google 同意「看日曆清單」與「讀寫行程」兩項（會顯示「尚未驗證」，按「繼續」）；只勾一項會提醒你重新連結。讀到的行程不保存，網址 10 分鐘內有效。</dd></div>
             <div data-command="空檔" data-scopes="user"><dt><code>#空檔 [某天]</code><span class="command-scope">私訊</span></dt><dd>列出那天 09:00–21:00 之間 30 分鐘以上的空檔（某天寫法同 #行事曆，沒寫是今天）。算進 #行事曆 設定 勾選的 Google 日曆和你在小集的約，別人分享只給忙碌的也算佔用；整天的行程與 Google 上標「有空」的行程不算。要先 #連結行事曆；一般群組請私訊小集。</dd></div>
             <div data-command="加行程" data-scopes="user"><dt><code>#加行程 時間 標題</code><span class="command-scope">私訊</span></dt><dd>先回確認卡（時間、日曆、提醒前 30 分），按「✅ 加入」才寫進 #行事曆 設定 選的那本 Google 日曆；「✏ 改時長」可選 30 分鐘、1 小時、2 小時或整天。日期寫法同 #行事曆 某天（沒寫是今天），時間寫上午/下午/晚上 X 點、X 點半或 15:00，可寫「到 5點」當結束；沒寫結束是 1 小時，只寫日期是整天，看不懂的時間不猜。確認卡 10 分鐘內有效、只有你能按，重按不會重複加。要先 #連結行事曆；一般群組請私訊小集。</dd></div>
+            <div data-command="改行程" data-scopes="user"><dt><code>#改行程 代號 新時間</code><span class="command-scope">私訊</span></dt><dd>先打 #行事曆（或 #行事曆 某天），你能編輯的 Google 行程前面會有 G1、G2… 代號（列出後 30 分鐘有效）。小集回確認卡（原本 → 改成），按「✅ 改」才改。時間寫法同 #加行程；沒寫日期是原本那天，只寫日期保留原本的時刻，沒寫結束保留原本的時長。只改時間不改標題；重複行程請到 Google 日曆改；唯讀或別人分享的日曆不能改。</dd></div>
+            <div data-command="刪行程" data-scopes="user"><dt><code>#刪行程 代號</code><span class="command-scope">私訊</span></dt><dd>用 #行事曆 列出的代號刪掉 Google 上那一筆：小集回確認卡，按「🗑 刪除」才刪。確認卡 10 分鐘內有效、只有你能按；Google 上剛被改過就不動，請重打 #行事曆。重複行程請到 Google 日曆刪。</dd></div>
             <div data-command="解除行事曆" data-scopes="user"><dt><code>#解除行事曆</code><span class="command-scope">私訊</span></dt><dd>確認後向 Google 取消授權並刪除我們保存的授權碼；照片的 Google 雲端硬碟連結不受影響。</dd></div>
           </dl>
           <p class="guide-note">生活指令（含新聞）每人每天共 30 次，私訊與群組合計，台灣午夜重算；失敗也計次。#單字 免費不限次，不計入生活次數。不主動推播。</p>
@@ -195,6 +197,12 @@
             <li class="player"><div class="bubble"><span class="speaker">小美 · 私訊</span>#加行程 明天下午3點 看牙醫</div></li>
             <li class="bot"><div class="bubble"><span class="speaker">小集</span>要加這筆到 Google 嗎?（示意）<br>📅 11/17(二)15:00–16:00 看牙醫<br>📂 日曆:主要<br>⏰ 提醒:前 30 分<br>✅ 加入 · ✏ 改時長 · 取消</div></li>
             <li class="bot"><div class="bubble"><span class="speaker">小集</span>已加到 Google「主要」:11/17 15:00 看牙醫（示意）</div></li>
+            <li class="player"><div class="bubble"><span class="speaker">小美 · 私訊</span>#行事曆 明天</div></li>
+            <li class="bot"><div class="bubble"><span class="speaker">小集</span>📅 11/18(三)（示意）<br>G1 10:00–11:00 [Google] 週會(主要)<br>G2 15:00–16:00 [Google] 看牙醫(主要)<br>(改:#改行程 G1 明天 下午4點 ／ 刪:#刪行程 G1)</div></li>
+            <li class="player"><div class="bubble"><span class="speaker">小美 · 私訊</span>#刪行程 G2</div></li>
+            <li class="bot"><div class="bubble"><span class="speaker">小集</span>確定刪除 Google 上這筆嗎?（示意）<br>🗑 11/18(三)15:00 看牙醫(主要)<br>🗑 刪除 · 取消</div></li>
+            <li class="player"><div class="bubble"><span class="speaker">小美 · 私訊</span>#改行程 G1 明天 下午4點</div></li>
+            <li class="bot"><div class="bubble"><span class="speaker">小集</span>要改 Google 上這筆的時間嗎?（示意）<br>📅 原本:11/18(三)10:00–11:00 週會(主要)<br>➡ 改成:11/18(三)16:00–17:00<br>✅ 改 · 取消</div></li>
             <li class="player"><div class="bubble"><span class="speaker">小美 · 私訊</span>#解除行事曆</div></li>
             <li class="bot"><div class="bubble"><span class="speaker">小集</span>確定要解除 Google 行事曆連結嗎?（示意）<br>解除 · 取消</div></li>
             <li class="player"><div class="bubble"><span class="speaker">小美</span>#週末去哪 台南</div></li>
@@ -343,6 +351,6 @@ SOFTWARE.</p>
     </section>
     <footer class="guide-footer"><a href="../privacy/">隱私權政策</a><a href="../">回大廳</a></footer>
   </main>
-  <script type="module" src="ui.js?v=26dc3795"></script>
+  <script type="module" src="ui.js?v=5bbc7a34"></script>
 </body>
 </html>
