@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="遊戲集錦 LINE 小幫手使用說明：開遊戲、傳回饋、綁定成績、加入群組排行與查天氣的指令及對話範例。">
   <title>LINE 小幫手使用說明 · 遊戲集錦</title>
-  <link rel="stylesheet" href="../shared/style.css?v=5bbc7a34">
-  <link rel="stylesheet" href="style.css?v=5bbc7a34">
+  <link rel="stylesheet" href="../shared/style.css?v=71f19e26">
+  <link rel="stylesheet" href="style.css?v=71f19e26">
 </head>
 <body>
   <main class="page line-guide">
@@ -152,7 +152,7 @@
             <div data-command="截止" data-scopes="group user"><dt><code>#截止 n 時間</code><span class="command-scope">群組／私訊</span></dt><dd>發起人確認後可延後、提前或補設揪團或投票的截止，須晚於現在且在 30 天內。例：#截止 1 明天 18:00、#截止 1 2小時。舊卡按鈕依新的截止判斷。</dd></div>
             <div data-command="我的投票" data-scopes="user"><dt><code>#我的投票</code> / <code>#我的揪團</code><span class="command-scope">私訊</span></dt><dd>兩個指令效果相同：按群組列出本人發起、進行中的揪團（🙋）和投票（🗳），每次最多 10 筆。可結算、取消或改截止，投票另可加選項（揪團沒有選項）；加選項後請在 10 分鐘內直接輸入 1～15 字，再確認選項文字。期間輸入其他 # 指令不會清除等待，仍可在確認卡按「算了」。私訊打號碼遇到多群同號時先選群組。操作完成會推播一則群組公告；同一群組 6 小時內只推播一次，推播失敗或 6 小時內已推播過時，群組下次有人說話（一般聊天也算）就會公告。</dd></div>
             <div data-command="結果" data-scopes="group"><dt><code>#結果 n</code><span class="command-scope">群組</span></dt><dd>查看指定團號的投票結果；記名列各選項的人，匿名只列票數。截止後第一次互動公布最終結果，不主動推播。</dd></div>
-            <div data-command="行事曆" data-scopes="user group"><dt><code>#行事曆 [下週|本月|M/D|群組|群名]</code><span class="command-scope">兩者</span></dt><dd>看未來 7 天的約、提醒與交辦；私訊須公事同意，群組只列本群並附揪團報名截止，休閒群也可用。私訊傳 #行事曆 群組 可選一個群看該群全部行程，或直接打群名（如 #行事曆 家庭 下週），只列你在群裡用過小集的群，並先向 LINE 確認你仍在群裡；只有你和小集的群視為私人群，用法同私訊。最多 15 件、群組最多 7 天，不計公事查詢次數。<br>📅 Google：私訊或私人群打 #連結行事曆 連結後，#行事曆 下面多一段你的 Google 行程（時間與標題；別人分享標私人或只給忙碌的顯示「忙碌」），#行事曆 設定 選要看哪幾本、加行程寫到哪一本；一般群組不帶 Google。查某一天（如 #行事曆 明天、#行事曆 下週五、#行事曆 11月21日）時，小集事項和 Google 行程會排成同一張清單。約、提醒、交辦卡片上按「📅 加到 Google」直接寫進你自己的那本日曆（群組裡按，結果私訊給你）。</dd></div>
+            <div data-command="行事曆" data-scopes="user group"><dt><code>#行事曆 [下週|本月|M/D|群組|群名]</code><span class="command-scope">兩者</span></dt><dd>看未來 7 天的約、提醒與交辦；私訊須公事同意，群組只列本群並附揪團報名截止，休閒群也可用。私訊傳 #行事曆 群組 可選一個群看該群全部行程，或直接打群名（如 #行事曆 家庭 下週），只列你在群裡用過小集的群，並先向 LINE 確認你仍在群裡；只有你和小集的群視為私人群，用法同私訊。最多 15 件、群組最多 7 天，不計公事查詢次數。<br>📅 Google：私訊或私人群打 #連結行事曆 連結後，#行事曆 下面多一段你的 Google 行程（時間與標題；別人分享標私人或只給忙碌的顯示「忙碌」），#行事曆 設定 選要看哪幾本、加行程寫到哪一本；一般群組不帶 Google。查某一天（如 #行事曆 明天、#行事曆 下週五、#行事曆 11月21日）時，小集事項和 Google 行程會排成同一張清單。約、提醒、交辦卡片上按「📅 加到 Google」直接寫進你自己的那本日曆（群組裡按，結果私訊給你）。<br>⏰ 每日行程提醒：私訊 #行事曆 提醒 開，每天早上（預設 07:30，可用 #行事曆 提醒 7:00 改，05:00–11:00、以 5 分鐘為單位）私訊你今天的行程；沒有行程那天不推，#行事曆 提醒 關 就停。</dd></div>
             <div data-command="連結行事曆" data-scopes="user"><dt><code>#連結行事曆</code><span class="command-scope">私訊</span></dt><dd>按連結到 Google 同意「看日曆清單」與「讀寫行程」兩項（會顯示「尚未驗證」，按「繼續」）；只勾一項會提醒你重新連結。讀到的行程不保存，網址 10 分鐘內有效。</dd></div>
             <div data-command="空檔" data-scopes="user"><dt><code>#空檔 [某天]</code><span class="command-scope">私訊</span></dt><dd>列出那天 09:00–21:00 之間 30 分鐘以上的空檔（某天寫法同 #行事曆，沒寫是今天）。算進 #行事曆 設定 勾選的 Google 日曆和你在小集的約，別人分享只給忙碌的也算佔用；整天的行程與 Google 上標「有空」的行程不算。要先 #連結行事曆；一般群組請私訊小集。</dd></div>
             <div data-command="加行程" data-scopes="user"><dt><code>#加行程 時間 標題</code><span class="command-scope">私訊</span></dt><dd>先回確認卡（時間、日曆、提醒前 30 分），按「✅ 加入」才寫進 #行事曆 設定 選的那本 Google 日曆；「✏ 改時長」可選 30 分鐘、1 小時、2 小時或整天。日期寫法同 #行事曆 某天（沒寫是今天），時間寫上午/下午/晚上 X 點、X 點半或 15:00，可寫「到 5點」當結束；沒寫結束是 1 小時，只寫日期是整天，看不懂的時間不猜。確認卡 10 分鐘內有效、只有你能按，重按不會重複加。要先 #連結行事曆；一般群組請私訊小集。</dd></div>
@@ -351,6 +351,6 @@ SOFTWARE.</p>
     </section>
     <footer class="guide-footer"><a href="../privacy/">隱私權政策</a><a href="../">回大廳</a></footer>
   </main>
-  <script type="module" src="ui.js?v=5bbc7a34"></script>
+  <script type="module" src="ui.js?v=71f19e26"></script>
 </body>
 </html>

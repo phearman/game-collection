@@ -1,6 +1,6 @@
-import { createAuth } from '../../shared/auth.js?v=5bbc7a34';
-import { createLineLinkClient, LINK_STATUS } from '../../shared/line-link.js?v=5bbc7a34';
-import { displayName } from '../../shared/feedback.js?v=5bbc7a34';
+import { createAuth } from '../../shared/auth.js?v=71f19e26';
+import { createLineLinkClient, LINK_STATUS } from '../../shared/line-link.js?v=71f19e26';
+import { displayName } from '../../shared/feedback.js?v=71f19e26';
 
 export async function initLinkPage({ doc = globalThis.document, auth = createAuth(),
   client = createLineLinkClient({ auth }), location = globalThis.location, history = globalThis.history } = {}) {
@@ -66,7 +66,7 @@ export async function initLinkPage({ doc = globalThis.document, auth = createAut
 }
 
 if (globalThis.document) {
-  const { bindThemeToggle } = await import('../../shared/theme.js?v=5bbc7a34');
+  const { bindThemeToggle } = await import('../../shared/theme.js?v=71f19e26');
   bindThemeToggle(document.getElementById('theme'));
   initLinkPage().catch(() => { document.getElementById('link-message').textContent = '帳號功能暫時無法使用,請稍後重試'; });
 }
