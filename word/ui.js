@@ -1,6 +1,6 @@
-import { bindThemeToggle } from '../shared/theme.js?v=71f19e26';
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from '../shared/supabase-config.js?v=71f19e26';
-import { parseWord, parseAiSource, wordModel } from './word-page.js?v=71f19e26';
+import { bindThemeToggle } from '../shared/theme.js?v=956db6d5';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from '../shared/supabase-config.js?v=956db6d5';
+import { parseWord, parseAiSource, wordModel } from './word-page.js?v=956db6d5';
 
 bindThemeToggle(document.getElementById('theme'));
 const word = parseWord(location.search);
