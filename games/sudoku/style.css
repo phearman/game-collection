@@ -60,3 +60,5 @@ button:disabled { opacity: 0.55; cursor: default; }
 :root[data-theme="dark"] .cell.conflict { color: #ffb4a9; background: #602620; }
 :root[data-theme="dark"] .cell.check-wrong { color: #ffb4a9; box-shadow: inset 0 0 0 3px #ff8a7a; }
 :root[data-theme="dark"] .cell.check-wrong::before { color: #ff8a7a; }
+/* IR118 今日挑戰開始閘門 */
+.daily-start { display: grid; gap: 10px; justify-items: start; }

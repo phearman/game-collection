@@ -1,16 +1,16 @@
-import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, wrongCells, assistState, autoCandState, fromSave, clearBoardState } from './logic.js?v=5a61ecca';
-import { createProfile } from '../../shared/profile.js?v=5a61ecca';
-import { formatDuration } from '../../shared/duration.js?v=5a61ecca';
-import { LocalStore } from '../../shared/stores/local.js?v=5a61ecca';
-import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=5a61ecca';
-import { bindThemeToggle } from '../../shared/theme.js?v=5a61ecca';
-import { play as playSound, music } from '../../shared/sound.js?v=5a61ecca';
-import { setupHelp } from '../../shared/help.js?v=5a61ecca';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=5a61ecca';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=5a61ecca';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=5a61ecca';
-import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume } from '../../shared/daily.js?v=5a61ecca';
-import { showDailyBanner, showDailyClosed, appendDailySummary } from './daily-ui.js?v=5a61ecca';
+import { initState, initDailyState, isValidState, stepState, undoState, cursorMove, conflicts, clueCount, secondsFor, detailFor, finishDifficultyFor, clockState, resumeState, demoSteps, candidates, nextHint, wrongCells, assistState, autoCandState, fromSave, clearBoardState } from './logic.js?v=5752836e';
+import { createProfile } from '../../shared/profile.js?v=5752836e';
+import { formatDuration } from '../../shared/duration.js?v=5752836e';
+import { LocalStore } from '../../shared/stores/local.js?v=5752836e';
+import { ACHIEVEMENTS, resultOnNewGame } from '../../shared/progress.js?v=5752836e';
+import { bindThemeToggle } from '../../shared/theme.js?v=5752836e';
+import { play as playSound, music } from '../../shared/sound.js?v=5752836e';
+import { setupHelp } from '../../shared/help.js?v=5752836e';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=5752836e';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=5752836e';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=5752836e';
+import { dailyRequested, dailySlot, browserDailyClient, prepareDaily, matchesDailySave, finishDailyOrExpire, dailyPlayDetail, dailyPracticeRequested, practiceSlot, preparePractice, PRACTICE_ASSIST_TEXT, dailyResumeRequested, prepareResume, dailyNeedsStart } from '../../shared/daily.js?v=5752836e';
+import { showDailyBanner, showDailyClosed, appendDailySummary, showDailyStartGate } from './daily-ui.js?v=5752836e';
 
 const GAME_ID = 'sudoku';
 const ASSIST_TEXT = '使用提示後本局變成輔助局:不刷新最佳、XP 打對折。要繼續嗎?';
@@ -28,9 +28,15 @@ let daily = null;
 let dailyClient = null;
 let dailyError = '';
 let dailyExpired = ''; // IR68:伺服器過了收件時間,這局照一般局記錄、不列排行
+// IR118:今天還沒開過 ⇒ 先出閘門,按「開始」才 seed + start;已開過/已完成照現行直接接回。
+async function prepareTodayDaily(client) {
+  const today = await client.today();
+  if (!dailyNeedsStart(today, GAME_ID)) return prepareDaily(client, GAME_ID);
+  return showDailyStartGate(document, today.day, () => prepareDaily(client, GAME_ID));
+}
 if (isDaily) {
   try { dailyClient = await browserDailyClient(); daily = practiceDay ? await preparePractice(dailyClient, GAME_ID, practiceDay)
-    : resumeDay ? await prepareResume(dailyClient, GAME_ID, resumeDay) : await prepareDaily(dailyClient, GAME_ID); }
+    : resumeDay ? await prepareResume(dailyClient, GAME_ID, resumeDay) : await prepareTodayDaily(dailyClient); }
   catch (error) { dailyError = error.message; }
 }
 // Select the slot only after the server has confirmed the challenge day.
@@ -404,7 +410,7 @@ setupHelp({
     <li>點格／方向鍵選格，1–9填，0清；N筆記。</li>
     <li>衝突標紅，填入清相關筆記；💡 提示附理由；檢查標錯格不給答案。</li>
     <li>引導學習及提示、檢查、候選皆輔助局：不刷新最佳、XP對折、不列今日榜。最佳分難度，入門不列總最佳。</li>
-    <li>首次輸入計時，重開記退出；填滿無衝突勝，分=max(1,10000−秒)。每日成績從開題起算含離開時間；本局只計遊玩時間。</li>
+    <li>首次輸入計時，重開記退出；填滿無衝突勝，分=max(1,10000−秒)。今日挑戰按開始起算含離開時間；本局只計遊玩時間。</li>
   </ol>`,
   demo: { steps: demoSteps().map((s, i) => ({ ...s, kind: ['fail', 'fail', undefined, 'ok'][i] })), render: (frame) => {
     const board = frame.board ?? frame;
