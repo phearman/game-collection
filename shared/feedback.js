@@ -1,5 +1,5 @@
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=956db6d5';
-import { GAMES } from './games.js?v=956db6d5';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, cloudEnabled } from './supabase-config.js?v=5a61ecca';
+import { GAMES } from './games.js?v=5a61ecca';
 
 export const KINDS = { problem: '問題', suggestion: '建議', other: '其他' };
 export const STATUSES = { new: '新的', triage: '評估中', need_info: '需要更多資訊', planned: '已排工項',
@@ -138,11 +138,13 @@ export function createFeedbackClient({ auth, url = SUPABASE_URL, key = SUPABASE_
       const sources = new Map();
       const lineIds = rows.filter((row) => row.channel === 'line').map((row) => row.id);
       for (let i = 0; i < lineIds.length; i += 100) {
-        const query = new URLSearchParams({ select: 'feedback_id,source_type,display_name',
+        const query = new URLSearchParams({ select: 'feedback_id,source_type,display_name,auto_answer_kind,auto_answer',
           feedback_id: `in.(${lineIds.slice(i, i + 100).join(',')})` });
         for (const source of (await call(`feedback_line_sources?${query}`)) ?? []) sources.set(source.feedback_id, source);
       }
+      // RS135 R7: what 小集 already answered on a private #回饋 (keyword / AI).
       return rows.map((row) => ({ ...row, source_type: sources.get(row.id)?.source_type,
+        auto_answer_kind: sources.get(row.id)?.auto_answer_kind ?? null, auto_answer: sources.get(row.id)?.auto_answer ?? null,
         display_name: row.channel === 'line' ? displayName(sources.get(row.id)?.display_name)
           : names.get(row.user_id) ?? '玩家' }));
     },
@@ -219,7 +221,7 @@ export async function openFeedback({ gameId = 'lobby', meHref = 'me/', doc = glo
   doc.body.append(dialog);
   dialog.showModal();
   try {
-    const rt = runtime ?? (cloudEnabled ? await (await import('./auth.js?v=956db6d5')).getCloudRuntime() : null);
+    const rt = runtime ?? (cloudEnabled ? await (await import('./auth.js?v=5a61ecca')).getCloudRuntime() : null);
     if (!dialog.open) return;
     if (!rt?.auth.session) {
       message.textContent = LOGIN_NOTICE;

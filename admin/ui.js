@@ -1,11 +1,13 @@
-import { createReportsClient, initReportsPanel } from './reports.js?v=956db6d5';
-import { appendGroupProjectControl, groupModeSelect, GROUP_MODES } from './line.js?v=956db6d5';
-import { cloudEnabled } from '../shared/supabase-config.js?v=956db6d5';
-import { GAMES } from '../shared/games.js?v=956db6d5';
-import { createPendingGroupsClient } from './line.js?v=956db6d5';
-import { createJokesClient, initJokesPanel } from './jokes.js?v=956db6d5';
-import { createTipsClient, initTipsPanel } from './tips.js?v=956db6d5';
-import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=956db6d5';
+import { createReportsClient, initReportsPanel } from './reports.js?v=5a61ecca';
+import { appendGroupProjectControl, groupModeSelect, GROUP_MODES } from './line.js?v=5a61ecca';
+import { cloudEnabled } from '../shared/supabase-config.js?v=5a61ecca';
+import { GAMES } from '../shared/games.js?v=5a61ecca';
+import { createPendingGroupsClient } from './line.js?v=5a61ecca';
+import { createJokesClient, initJokesPanel } from './jokes.js?v=5a61ecca';
+import { createTipsClient, initTipsPanel } from './tips.js?v=5a61ecca';
+import { createFeedbackClient, KINDS, STATUSES, STATUS_FIELDS, DEVICES, CHANNELS, LINE_SOURCES, validateFeedbackUpdate, filterFeedback, feedbackCSV, displayName, element } from '../shared/feedback.js?v=5a61ecca';
+// RS135 R7: private #回饋 already answered by 小集.
+const AUTO_ANSWER = { keyword: '關鍵字', ai: 'AI' };
 
 // 注入 runtime/client 供測試；未通過管理者檢查不讀取回饋。
 export async function initAdmin({ doc = globalThis.document, view = doc.defaultView ?? globalThis.window,
@@ -58,7 +60,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
       const option = node('option', label); option.value = value; select.append(option);
     }
   };
-  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=956db6d5')).getCloudRuntime() : null);
+  const rt = runtime ?? (cloudEnabled ? await (await import('../shared/auth.js?v=5a61ecca')).getCloudRuntime() : null);
   if (!rt?.auth.session) {
     hideData();
     $('access').textContent = '登入後才能查看回饋後台'; $('login').hidden = false;
@@ -101,7 +103,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
         ['feedback-author', '送出者與來源', author],
         ['feedback-game', '遊戲', isLine ? '—' : game],
         ['feedback-kind', '類型', KINDS[row.kind] ?? row.kind],
-        ['body', '內容', row.body],
+        ['body', '內容', row.auto_answer ? `${row.body}\n— 小集已自動回答(${AUTO_ANSWER[row.auto_answer_kind] ?? row.auto_answer_kind}):${row.auto_answer}` : row.body],
         ['feedback-device', '裝置', isLine ? '—' : DEVICES[row.device] ?? row.device],
         ['feedback-version', '版本', isLine ? '—' : row.app_version],
       ]) {
@@ -172,7 +174,8 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
           const updated = await client.update(row.id, status.value, note.value, fields);
           if (savedEpoch !== epoch || rt.auth.session?.user.id !== userId) return;
           const index = rows.findIndex((r) => r.id === row.id);
-          if (index >= 0) rows[index] = { ...updated, display_name: row.display_name, source_type: row.source_type };
+          if (index >= 0) rows[index] = { ...updated, display_name: row.display_name, source_type: row.source_type,
+            auto_answer_kind: row.auto_answer_kind, auto_answer: row.auto_answer };
           message.textContent = '已儲存';
           if (history.open) await loadHistory();
           // 改狀態後讓篩選結果一致；無篩選時保留儲存提示與焦點。
@@ -375,7 +378,7 @@ export async function initAdmin({ doc = globalThis.document, view = doc.defaultV
 }
 
 if (typeof document !== 'undefined') {
-  const { bindThemeToggle } = await import('../shared/theme.js?v=956db6d5');
+  const { bindThemeToggle } = await import('../shared/theme.js?v=5a61ecca');
   bindThemeToggle(document.getElementById('theme'));
   initAdmin().catch(() => {
     for (const id of ['admin-tabs', 'admin-content', 'line-groups-panel', 'jokes-panel', 'tips-panel', 'reports-panel']) document.getElementById(id).hidden = true;

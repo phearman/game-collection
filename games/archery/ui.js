@@ -5,20 +5,20 @@ import {
   shoot, stepState, nextArrow, simulate, scoreFor, resultFor, detailFor, toSave, fromSave, isValidState,
   completedResult, isPerfectRound, resultOnRestart, initialPause, isPaused, changePause,
   HELP_RULES, demoAims,
-} from './logic.js?v=956db6d5';
-import { drawScene, readPalette, flashOpacity } from './draw.js?v=956db6d5';
-import { createProfile } from '../../shared/profile.js?v=956db6d5';
-import { LocalStore } from '../../shared/stores/local.js?v=956db6d5';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=956db6d5';
-import { bindThemeToggle } from '../../shared/theme.js?v=956db6d5';
-import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=956db6d5';
-import { skinPalette } from './skins.js?v=956db6d5';
-import { play, music } from '../../shared/sound.js?v=956db6d5';
-import { setupHelp } from '../../shared/help.js?v=956db6d5';
-import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=956db6d5';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=956db6d5';
-import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=956db6d5';
-import { load, save } from '../../shared/storage.js?v=956db6d5';
+} from './logic.js?v=5a61ecca';
+import { drawScene, readPalette, flashOpacity } from './draw.js?v=5a61ecca';
+import { createProfile } from '../../shared/profile.js?v=5a61ecca';
+import { LocalStore } from '../../shared/stores/local.js?v=5a61ecca';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=5a61ecca';
+import { bindThemeToggle } from '../../shared/theme.js?v=5a61ecca';
+import { currentSkin, isDark, SKIN_EVENT } from '../../shared/skin.js?v=5a61ecca';
+import { skinPalette } from './skins.js?v=5a61ecca';
+import { play, music } from '../../shared/sound.js?v=5a61ecca';
+import { setupHelp } from '../../shared/help.js?v=5a61ecca';
+import { appendXpBreakdown, bestLine } from '../../shared/xp-explain.js?v=5a61ecca';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=5a61ecca';
+import { needsQuitBestConfirm, confirmQuitBest } from '../../shared/quit.js?v=5a61ecca';
+import { load, save } from '../../shared/storage.js?v=5a61ecca';
 
 const GAME_ID = 'archery';
 const DIFF_KEY = 'difficulty:archery';
