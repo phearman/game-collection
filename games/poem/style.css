@@ -1,0 +1,100 @@
+/* G18 古詩動畫(DV27)。畫面顏色=下面這組變數,深淺色各一套(R9);375px 無橫捲(R11)。 */
+:root {
+  --ink: #3a2f28; --sky: #cfe8ff; --sky-dusk: #ffd8b0; --sun: #ffc93c; --sun-dusk: #ff8a4c; --cloud: #ffffff;
+  --grass: #9fd38a; --floor: #e2c9a0; --path: #e8d3a6; --leaf: #4f9a4a; --wood: #a86a3d; --wall: #f6e7cf;
+  --roof: #c4553b; --hill: #6fae7c; --hill-far: #8cc3a0; --wall-city: #c9b8a0; --yard: #e8d28c;
+  --skin: #ffdcbc; --hair: #3a2f28; --white-hair: #f2f2f2; --hat: #6b4b2e;
+  --shirt-kid: #ff9f68; --shirt-grandpa: #6c8fd6; --shirt-chen: #8a6fc9; --cup: #e9e1d2;
+  --paper: #fffaf0; --hen: #fff3e0; --comb: #e0463c; --bowl: #d9a35b; --millet: #f2cf4a; --bud: #f2c230;
+  --lantern: #e5483a; --lantern-cap: #c9962c; --lantern-text: #fff4c2;
+}
+:root[data-theme="dark"] {
+  --ink: #120e0b; --sky: #2b4a6b; --sky-dusk: #6b4152; --sun: #e8b630; --sun-dusk: #e07040; --cloud: #c9d4e2;
+  --grass: #4d7a45; --floor: #7a6248; --path: #9a8560; --leaf: #2f6b30; --wood: #7a4a2a; --wall: #5a4c3d;
+  --roof: #9a3d2a; --hill: #3f6e4a; --hill-far: #557f63; --wall-city: #7c6e5c; --yard: #8f7b45;
+  --skin: #f0c8a4; --hair: #1a1410; --white-hair: #e6e6e6; --hat: #4a3320;
+  --shirt-kid: #d87a48; --shirt-grandpa: #4c6bb0; --shirt-chen: #6a52a3; --cup: #cfc6b4;
+  --paper: #e9e1cf; --hen: #e9dcc6; --comb: #c43a30; --bowl: #b5833f; --millet: #d6b23a; --bud: #d6aa22;
+  --lantern: #c23a2e; --lantern-cap: #a87b22; --lantern-text: #fff1b0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #120e0b; --sky: #2b4a6b; --sky-dusk: #6b4152; --sun: #e8b630; --sun-dusk: #e07040; --cloud: #c9d4e2;
+    --grass: #4d7a45; --floor: #7a6248; --path: #9a8560; --leaf: #2f6b30; --wood: #7a4a2a; --wall: #5a4c3d;
+    --roof: #9a3d2a; --hill: #3f6e4a; --hill-far: #557f63; --wall-city: #7c6e5c; --yard: #8f7b45;
+    --skin: #f0c8a4; --hair: #1a1410; --white-hair: #e6e6e6; --hat: #4a3320;
+    --shirt-kid: #d87a48; --shirt-grandpa: #4c6bb0; --shirt-chen: #6a52a3; --cup: #cfc6b4;
+    --paper: #e9e1cf; --hen: #e9dcc6; --comb: #c43a30; --bowl: #b5833f; --millet: #d6b23a; --bud: #d6aa22;
+    --lantern: #c23a2e; --lantern-cap: #a87b22; --lantern-text: #fff1b0;
+  }
+}
+.topbar { gap: 6px; }
+.topbar .btn { white-space: nowrap; padding: 6px 10px; }
+.stats { display: flex; gap: 6px; align-items: stretch; min-width: 0; }
+.stats .stat { min-width: 0; padding: 2px 6px; }
+.poem-title { margin: 12px 0 8px; font-size: 22px; text-align: center; }
+.poem-title small { font-size: 14px; color: var(--text-sub); font-weight: 400; }
+.tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 12px; }
+.tabs .btn { min-width: 0; padding: 6px 2px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tabs .btn[aria-selected="true"] { border-color: var(--accent); background: var(--accent-bg); font-weight: 700; }
+.panel { min-width: 0; }
+.stage { display: block; width: 100%; padding: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: none; cursor: pointer; }
+.scene-art { display: block; width: 100%; height: auto; }
+.caption { min-height: 48px; margin: 10px 0 4px; font-size: 17px; line-height: 1.6; overflow-wrap: anywhere; }
+.poem-lines { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: center; margin: 6px 0 10px; font-size: 18px; letter-spacing: 2px; }
+.poem-lines span { color: var(--text-muted); }
+.poem-lines span.on { color: var(--text); font-weight: 700; background: var(--accent-bg); border-radius: 4px; padding: 0 4px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.row .btn { min-height: 44px; }
+.count { font-size: 14px; color: var(--text-sub); }
+.speak-row { justify-content: center; margin-top: 12px; }
+.card { padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); text-align: center; overflow-wrap: anywhere; }
+.card-icon { font-size: 40px; }
+.card-word { margin: 4px 0; font-size: 40px; font-weight: 700; letter-spacing: 4px; }
+.card-zhuyin { font-size: 18px; color: var(--text-sub); }
+.card-meaning { font-size: 17px; }
+.card-note { font-size: 13px; color: var(--text-sub); }
+.card-line { font-size: 14px; color: var(--text-muted); }
+.pictures { display: grid; gap: 14px; }
+.picture { padding: 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.picture-art { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 6px; }
+.picture-art .scene-art { border-radius: 8px; }
+.picture-lines { display: grid; gap: 4px; margin-top: 8px; }
+.picture-line { display: flex; justify-content: center; gap: 2px; flex-wrap: wrap; }
+.char { min-width: 40px; min-height: 44px; padding: 0; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--text); font: inherit; font-size: 24px; }
+.char.has-card { border-color: var(--border); background: var(--surface-sub); cursor: pointer; }
+.char:disabled { cursor: default; }
+.quiz-art .scene-art { border: 1px solid var(--border); border-radius: 12px; }
+.quiz-line { margin: 10px 0 4px; font-size: 30px; letter-spacing: 6px; text-align: center; }
+#quiz-status { min-height: 28px; text-align: center; }
+.choices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+.choices .btn { min-height: 56px; padding: 4px; font-size: 30px; }
+.choices .btn.wrong { border-color: #d53d43; color: #b2222a; background: #ffe5e6; }
+:root[data-theme="dark"] .choices .btn.wrong { color: #ffb3b6; background: #591b22; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .choices .btn.wrong { color: #ffb3b6; background: #591b22; } }
+.choices .btn.right { border-color: var(--accent); background: var(--accent-bg); }
+#quiz-next { width: 100%; min-height: 44px; }
+.result-card { padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow-wrap: anywhere; }
+.review p { margin: 4px 0; }
+.hint { font-size: 13px; color: var(--text-sub); text-align: center; }
+.demo { max-width: 320px; margin: auto; text-align: center; }
+[hidden] { display: none !important; }
+
+/* R3 進場動畫;reduced-motion 只留淡入。 */
+.scene-art { animation: fade-in 0.6s ease-out both; }
+.drift { animation: drift 8s ease-in-out infinite alternate; }
+.walk { animation: walk 3s ease-out both; }
+.bob { animation: bob 1.6s ease-in-out infinite alternate; transform-box: fill-box; }
+.rise { animation: rise 1s ease-out both; }
+.swing { animation: swing 1.2s ease-out both; transform-box: fill-box; transform-origin: right center; }
+.fade-in-late { animation: fade-in 0.8s 0.4s ease-out both; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes drift { from { translate: 0 0; } to { translate: 24px 0; } }
+@keyframes walk { from { translate: -60px 12px; } to { translate: 0 0; } }
+@keyframes bob { from { translate: 0 0; } to { translate: 0 -4px; } }
+@keyframes rise { from { translate: 0 20px; opacity: 0; } to { translate: 0 0; opacity: 1; } }
+@keyframes swing { from { scale: 0.2 1; } to { scale: 1 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .drift, .walk, .bob, .rise, .swing { animation: none; }
+  .fade-in-late { animation: fade-in 0.6s ease-out both; }
+}

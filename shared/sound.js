@@ -178,7 +178,7 @@ export const DEFAULT_SONG = 'bright';
 export const GAME_MUSIC = Object.freeze({
   '2048': 'bright', minesweeper: 'mystery', wordle: 'ponder', tictactoe: 'bright', sudoku: 'ponder',
   snake: 'action', stairs: 'adventure', keeper: 'action', moto: 'race', moto2: 'race',
-  memory: 'warm', reversi: 'zen', bridge: 'zen', archery: 'warm', peg: 'ponder',
+  memory: 'warm', reversi: 'zen', bridge: 'zen', archery: 'warm', peg: 'ponder', poem: 'zen',
 });
 
 const NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };

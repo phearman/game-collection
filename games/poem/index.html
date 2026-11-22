@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>古詩動畫 · 遊戲集錦</title>
+  <link rel="stylesheet" href="../../shared/style.css?v=d8fded1c">
+  <link rel="stylesheet" href="style.css?v=d8fded1c">
+</head>
+<body>
+  <main class="page page-narrow">
+    <header class="topbar">
+      <a class="btn" href="../../" aria-label="回到大廳" title="回到大廳"><span aria-hidden="true">←</span><span class="topbar-label">大廳</span></a>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">最佳</div><div class="stat-value" id="best">0</div></div>
+        <button class="btn" id="theme" type="button"></button>
+      </div>
+    </header>
+    <h1 class="poem-title">過故人莊 <small>唐・孟浩然</small></h1>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="段落"></nav>
+
+    <section class="panel" id="panel-story" role="tabpanel" aria-label="故事">
+      <button class="stage" id="stage" type="button" aria-label="下一幕"></button>
+      <p class="caption" id="caption" aria-live="polite"></p>
+      <p class="poem-lines" id="story-lines"></p>
+      <div class="row">
+        <button class="btn" id="prev-scene" type="button">◀ 上一幕</button>
+        <span id="scene-count" class="count"></span>
+        <button class="btn" id="next-scene" type="button">下一幕 ▶</button>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-cards" role="tabpanel" aria-label="詞卡" hidden>
+      <div class="card" id="card"></div>
+      <div class="row">
+        <button class="btn" id="prev-card" type="button">◀</button>
+        <span id="card-count" class="count"></span>
+        <button class="btn" id="next-card" type="button">▶</button>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-pictures" role="tabpanel" aria-label="四圖四句" hidden>
+      <p class="hint">點詩句裡的字,看那個字的詞卡。</p>
+      <div class="pictures" id="pictures"></div>
+    </section>
+
+    <section class="panel" id="panel-quiz" role="tabpanel" aria-label="看圖填空" hidden>
+      <div id="quiz-play">
+        <p id="quiz-progress"></p>
+        <div class="quiz-art" id="quiz-art"></div>
+        <p class="quiz-line" id="quiz-line"></p>
+        <p id="quiz-status" role="status" aria-live="polite"></p>
+        <div class="choices" id="choices" aria-label="選項"></div>
+        <button class="btn" id="quiz-next" type="button" hidden>下一題 →</button>
+      </div>
+      <div class="result-card" id="quiz-result" hidden>
+        <h2 id="result-title"></h2>
+        <div id="result-info" aria-live="polite"></div>
+        <div id="review"></div>
+        <button class="btn" id="again" type="button">再玩一次</button>
+      </div>
+    </section>
+
+    <div class="row speak-row"><button class="btn" id="speak" type="button" hidden>🔊 朗讀</button></div>
+  </main>
+  <dialog class="help card-dialog" id="card-dlg" aria-labelledby="card-dlg-title">
+    <h2 class="help-title" id="card-dlg-title">詞卡</h2>
+    <div class="card" id="card-dlg-body"></div>
+    <div class="confirm-actions"><button class="btn" type="button" id="card-dlg-close" autofocus>知道了</button></div>
+  </dialog>
+  <script type="module" src="ui.js?v=d8fded1c"></script>
+</body>
+</html>
