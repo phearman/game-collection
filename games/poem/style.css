@@ -1,4 +1,5 @@
-/* G18 古詩動畫(DV27)。畫面顏色=下面這組變數,深淺色各一套(R9);375px 無橫捲(R11)。 */
+/* G18 古詩動畫(DV27)。畫面顏色=下面這組變數,深淺色各一套(R9);375px 無橫捲(R11)。
+   IR120:深色改「傍晚/燈光」明亮配色,描邊中深灰 #3a302a,對所有填色 ≥ 3:1(tests/poem.test.js 機械檢查)。 */
 :root {
   --ink: #3a2f28; --sky: #cfe8ff; --sky-dusk: #ffd8b0; --sun: #ffc93c; --sun-dusk: #ff8a4c; --cloud: #ffffff;
   --grass: #9fd38a; --floor: #e2c9a0; --path: #e8d3a6; --leaf: #4f9a4a; --wood: #a86a3d; --wall: #f6e7cf;
@@ -9,23 +10,23 @@
   --lantern: #e5483a; --lantern-cap: #c9962c; --lantern-text: #fff4c2;
 }
 :root[data-theme="dark"] {
-  --ink: #120e0b; --sky: #2b4a6b; --sky-dusk: #6b4152; --sun: #e8b630; --sun-dusk: #e07040; --cloud: #c9d4e2;
-  --grass: #4d7a45; --floor: #7a6248; --path: #9a8560; --leaf: #2f6b30; --wood: #7a4a2a; --wall: #5a4c3d;
-  --roof: #9a3d2a; --hill: #3f6e4a; --hill-far: #557f63; --wall-city: #7c6e5c; --yard: #8f7b45;
-  --skin: #f0c8a4; --hair: #1a1410; --white-hair: #e6e6e6; --hat: #4a3320;
-  --shirt-kid: #d87a48; --shirt-grandpa: #4c6bb0; --shirt-chen: #6a52a3; --cup: #cfc6b4;
-  --paper: #e9e1cf; --hen: #e9dcc6; --comb: #c43a30; --bowl: #b5833f; --millet: #d6b23a; --bud: #d6aa22;
-  --lantern: #c23a2e; --lantern-cap: #a87b22; --lantern-text: #fff1b0;
+  --ink: #3a302a; --sky: #8fb2d6; --sky-dusk: #d9a08e; --sun: #f2c14e; --sun-dusk: #f0915f; --cloud: #e4e9f0;
+  --grass: #86b874; --floor: #cfae84; --path: #d8c294; --leaf: #6aa65e; --wood: #b9845a; --wall: #dcc4a2;
+  --roof: #d0704f; --hill: #79b085; --hill-far: #97c3a7; --wall-city: #c2b098; --yard: #d8c27e;
+  --skin: #f0c8a4; --hair: #4a3c33; --white-hair: #f2f2f2; --hat: #a87650;
+  --shirt-kid: #f59a64; --shirt-grandpa: #86a5e2; --shirt-chen: #a68ed8; --cup: #e9e1d2;
+  --paper: #f3ead8; --hen: #f3e6cf; --comb: #e0574c; --bowl: #d9a35b; --millet: #ecca4c; --bud: #f0c234;
+  --lantern: #e0584a; --lantern-cap: #d6a53a; --lantern-text: #fff4c2;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ink: #120e0b; --sky: #2b4a6b; --sky-dusk: #6b4152; --sun: #e8b630; --sun-dusk: #e07040; --cloud: #c9d4e2;
-    --grass: #4d7a45; --floor: #7a6248; --path: #9a8560; --leaf: #2f6b30; --wood: #7a4a2a; --wall: #5a4c3d;
-    --roof: #9a3d2a; --hill: #3f6e4a; --hill-far: #557f63; --wall-city: #7c6e5c; --yard: #8f7b45;
-    --skin: #f0c8a4; --hair: #1a1410; --white-hair: #e6e6e6; --hat: #4a3320;
-    --shirt-kid: #d87a48; --shirt-grandpa: #4c6bb0; --shirt-chen: #6a52a3; --cup: #cfc6b4;
-    --paper: #e9e1cf; --hen: #e9dcc6; --comb: #c43a30; --bowl: #b5833f; --millet: #d6b23a; --bud: #d6aa22;
-    --lantern: #c23a2e; --lantern-cap: #a87b22; --lantern-text: #fff1b0;
+    --ink: #3a302a; --sky: #8fb2d6; --sky-dusk: #d9a08e; --sun: #f2c14e; --sun-dusk: #f0915f; --cloud: #e4e9f0;
+    --grass: #86b874; --floor: #cfae84; --path: #d8c294; --leaf: #6aa65e; --wood: #b9845a; --wall: #dcc4a2;
+    --roof: #d0704f; --hill: #79b085; --hill-far: #97c3a7; --wall-city: #c2b098; --yard: #d8c27e;
+    --skin: #f0c8a4; --hair: #4a3c33; --white-hair: #f2f2f2; --hat: #a87650;
+    --shirt-kid: #f59a64; --shirt-grandpa: #86a5e2; --shirt-chen: #a68ed8; --cup: #e9e1d2;
+    --paper: #f3ead8; --hen: #f3e6cf; --comb: #e0574c; --bowl: #d9a35b; --millet: #ecca4c; --bud: #f0c234;
+    --lantern: #e0584a; --lantern-cap: #d6a53a; --lantern-text: #fff4c2;
   }
 }
 .topbar { gap: 6px; }
@@ -88,13 +89,20 @@
 .rise { animation: rise 1s ease-out both; }
 .swing { animation: swing 1.2s ease-out both; transform-box: fill-box; transform-origin: right center; }
 .fade-in-late { animation: fade-in 0.8s 0.4s ease-out both; }
+/* IR119:第 6 幕筷子上下、熱氣飄;第 7 幕愛心與閃光一閃一閃。 */
+.chop { animation: chop 0.7s ease-in-out infinite alternate; }
+.steam { animation: steam 1.8s ease-in-out infinite; }
+.twinkle { animation: twinkle 1.2s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes drift { from { translate: 0 0; } to { translate: 24px 0; } }
 @keyframes walk { from { translate: -60px 12px; } to { translate: 0 0; } }
 @keyframes bob { from { translate: 0 0; } to { translate: 0 -4px; } }
 @keyframes rise { from { translate: 0 20px; opacity: 0; } to { translate: 0 0; opacity: 1; } }
 @keyframes swing { from { scale: 0.2 1; } to { scale: 1 1; } }
+@keyframes chop { from { translate: 0 0; } to { translate: 0 4px; } }
+@keyframes steam { 0% { translate: 0 0; opacity: 0.9; } 100% { translate: 0 -4px; opacity: 0.2; } }
+@keyframes twinkle { from { scale: 0.8; } to { scale: 1.15; } }
 @media (prefers-reduced-motion: reduce) {
-  .drift, .walk, .bob, .rise, .swing { animation: none; }
+  .drift, .walk, .bob, .rise, .swing, .chop, .steam, .twinkle { animation: none; }
   .fade-in-late { animation: fade-in 0.6s ease-out both; }
 }

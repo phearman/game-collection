@@ -2,17 +2,17 @@
 import {
   POEM, SECTIONS, SECTION_LABELS, SCENES, PICTURES, CARDS, initQuiz, currentQuestion, quizDone, answerQuiz, nextQuestion,
   blankedLine, missedQuestions, scoreOf, settlementOf, cardForChar, sectionFrom, clampScene, clampCard,
-} from './logic.js?v=d8fded1c';
-import { sceneSvg } from './art.js?v=d8fded1c';
-import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=d8fded1c';
-import { createProfile } from '../../shared/profile.js?v=d8fded1c';
-import { LocalStore } from '../../shared/stores/local.js?v=d8fded1c';
-import { ACHIEVEMENTS } from '../../shared/progress.js?v=d8fded1c';
-import { bindThemeToggle } from '../../shared/theme.js?v=d8fded1c';
-import { play, music } from '../../shared/sound.js?v=d8fded1c';
-import { setupHelp } from '../../shared/help.js?v=d8fded1c';
-import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=d8fded1c';
-import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=d8fded1c';
+} from './logic.js?v=5ccf94d7';
+import { sceneSvg } from './art.js?v=5ccf94d7';
+import { HELP_RULES, demoSteps, renderDemo } from './help.js?v=5ccf94d7';
+import { createProfile } from '../../shared/profile.js?v=5ccf94d7';
+import { LocalStore } from '../../shared/stores/local.js?v=5ccf94d7';
+import { ACHIEVEMENTS } from '../../shared/progress.js?v=5ccf94d7';
+import { bindThemeToggle } from '../../shared/theme.js?v=5ccf94d7';
+import { play, music } from '../../shared/sound.js?v=5ccf94d7';
+import { setupHelp } from '../../shared/help.js?v=5ccf94d7';
+import { xpBreakdownHtml, bestLineHtml } from '../../shared/xp-explain.js?v=5ccf94d7';
+import { settlePlay, DUPLICATE_FINISH_TEXT } from '../../shared/settle.js?v=5ccf94d7';
 
 const GAME_ID = 'poem';
 const VIEW_KEY = 'poem:view'; // R2:本機記住上次的段落、幕與詞卡(只是閱讀位置,⛔ 進存檔與雲端)

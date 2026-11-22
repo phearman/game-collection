@@ -1,4 +1,4 @@
-import { initQuiz, answerQuiz, currentQuestion, blankedLine, seededRng, POEM } from './logic.js?v=d8fded1c';
+import { initQuiz, answerQuiz, currentQuestion, blankedLine, seededRng, POEM } from './logic.js?v=5ccf94d7';
 
 export const HELP_RULES = [
   '分四段:①故事 ②詞卡 ③四圖四句 ④看圖填空,上方頁籤可直接跳段,會記住上次看到哪一段。',

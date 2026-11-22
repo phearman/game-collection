@@ -18,14 +18,46 @@ function person(x, y, kind, { s = 1, cls = '', arm = 'down', cup = false } = {})
     : kind === 'chen' ? `<path d="M-17-38 q17-16 34 0z" fill="var(--hat)" ${stroke}/>` : `<path d="M-15-36 q15-12 30 0" fill="none" stroke="var(--white-hair)" stroke-width="5"/>`;
   const beard = kind === 'kid' ? '' : `<path d="M-7-18 q7 10 14 0" fill="var(--white-hair)" ${stroke}/>`;
   const body = kind === 'kid' ? '--shirt-kid' : kind === 'chen' ? '--shirt-chen' : '--shirt-grandpa';
-  const armPath = arm === 'up' ? 'M10-4 l12-14' : 'M10-4 l8 12';
+  const armPath = arm === 'none' ? '' : arm === 'up' ? 'M10-4 l12-14' : 'M10-4 l8 12';
   const cupShape = cup ? `<rect x="18" y="-26" width="8" height="10" fill="var(--cup)" ${stroke}/>` : '';
   return `<g class="${cls}" transform="translate(${x} ${y}) scale(${s})">
     <path d="M-14 0 q14-22 28 0 v14 h-28z" fill="var(${body})" ${stroke}/>
-    <path d="${armPath}" fill="none" ${stroke}/>${cupShape}
+    ${armPath ? `<path d="${armPath}" fill="none" ${stroke}/>` : ''}${cupShape}
     <circle cx="0" cy="-26" r="16" fill="var(--skin)" ${stroke}/>${hair}
     <circle cx="-5" cy="-27" r="1.8" fill="var(--ink)"/><circle cx="5" cy="-27" r="1.8" fill="var(--ink)"/>
     <path d="M-4-20 q4 3 8 0" fill="none" stroke="var(--ink)" stroke-width="1.8"/>${beard}
+  </g>`;
+}
+
+// IR119 第 6 幕:小禾坐小凳子,左手捧飯碗(冒熱氣)、右手拿筷子往嘴邊送,嘴邊有飯粒;筷子上下動(.chop)。
+function kidEating(x, y, s = 0.85) {
+  const finger = (d) => `<path d="${d}" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/>`;
+  return `<g class="kid-eating" transform="translate(${x} ${y}) scale(${s})">
+    <g class="stool"><rect x="-18" y="13" width="36" height="6" rx="2" fill="var(--wood)" ${stroke}/><path d="M-13 19 v12 M13 19 v12" ${stroke}/></g>
+    ${person(0, 0, 'kid', { arm: 'none' })}
+    <path d="M-11-3 q-8 6-4 11" fill="none" ${stroke}/>
+    <g class="bowl"><path d="M-17 2 h20 q-1 10-10 10 q-9 0-10-10z" fill="var(--bowl)" ${stroke}/><ellipse cx="-7" cy="2" rx="10" ry="3" fill="var(--millet)" ${stroke}/>
+      <g class="steam">${finger('M-11-3 q-3-4 0-8')}${finger('M-6-4 q-3-4 0-8')}${finger('M-1-3 q-3-4 0-8')}</g></g>
+    <path d="M11-3 q8-6 3-15" fill="none" ${stroke}/>
+    <g class="chopsticks chop"><path d="M14-18 L-1-21 M14-16 L-1-18" stroke="var(--wood)" stroke-width="2.5" stroke-linecap="round"/></g>
+    <g class="rice"><ellipse cx="-7" cy="-15" rx="1.6" ry="1.1" fill="var(--cloud)" stroke="var(--ink)" stroke-width="0.8"/><ellipse cx="6" cy="-14" rx="1.6" ry="1.1" fill="var(--cloud)" stroke="var(--ink)" stroke-width="0.8"/></g>
+  </g>`;
+}
+
+// IR119 第 7 幕:勾小指特寫圓框(兩隻拳頭、小指互勾)+愛心與閃光(.twinkle)。
+function pinkyCloseup(x, y, r = 36) {
+  const pinky = (d) => `<path d="${d}" fill="none" stroke="var(--ink)" stroke-width="8" stroke-linecap="round"/><path d="${d}" fill="none" stroke="var(--skin)" stroke-width="4.5" stroke-linecap="round"/>`;
+  const sparkle = (sx, sy) => `<path class="twinkle" d="M${sx} ${sy - 6} L${sx + 1.5} ${sy - 1.5} L${sx + 6} ${sy} L${sx + 1.5} ${sy + 1.5} L${sx} ${sy + 6} L${sx - 1.5} ${sy + 1.5} L${sx - 6} ${sy} L${sx - 1.5} ${sy - 1.5}z" fill="var(--sun)" stroke="var(--ink)" stroke-width="1.2"/>`;
+  return `<g class="pinky-closeup" transform="translate(${x} ${y})">
+    <circle r="${r}" fill="var(--paper)" ${stroke}/>
+    <g class="pinky-hook">
+      <rect x="-30" y="-2" width="20" height="16" rx="7" fill="var(--skin)" ${stroke}/>
+      <rect x="10" y="-2" width="20" height="16" rx="7" fill="var(--skin)" ${stroke}/>
+      <path d="M-24 4 v6 M-18 4 v6 M18 4 v6 M24 4 v6" stroke="var(--ink)" stroke-width="1.5" stroke-linecap="round"/>
+      ${pinky('M-12 2 q4-14 12-10 q4 3 0 8')}${pinky('M12 4 q-4 12-12 8 q-4-3 0-8')}
+    </g>
+    <path class="heart twinkle" d="M${r - 14} ${-r + 10} c-4-6-12-2-8 4 l8 7 8-7 c4-6-4-10-8-4z" fill="var(--comb)" stroke="var(--ink)" stroke-width="1.2"/>
+    ${sparkle(-r + 12, -r + 14)}${sparkle(-r + 6, r - 14)}
   </g>`;
 }
 
@@ -66,11 +98,14 @@ const ART = {
     <ellipse cx="186" cy="112" rx="16" ry="8" fill="var(--hen)" ${stroke}/>
     <g class="bob">${person(70, 150, 'grandpa', { s: 1.05, arm: 'up', cup: true })}</g>
     <g class="bob">${person(250, 150, 'chen', { s: 1.05, arm: 'up', cup: true })}</g>
-    ${person(160, 186, 'kid', { s: 0.7 })}`,
-  farewell: () => `${sky(true)}${sun(270, 120, true)}${cloud(40, 30, 0.7)}${ground(150)}${house(250, 150, 1)}
-    ${[0, 1, 2].map((i) => `<g transform="translate(${196 + i * 16} 150)"><path d="M0 0 v-14" stroke="var(--leaf)" stroke-width="3"/><circle cx="0" cy="-18" r="5" fill="var(--bud)" ${stroke}/></g>`).join('')}
-    ${person(96, 150, 'grandpa', { s: 1.05, arm: 'up' })}${person(150, 150, 'chen', { s: 1.05, arm: 'up' })}
-    <circle class="bob" cx="123" cy="114" r="4" fill="var(--sun-dusk)"/>${person(50, 170, 'kid', { s: 0.7 })}`,
+    ${kidEating(160, 165, 1.05)}`,
+  farewell: () => `${sky(true)}${sun(300, 120, true)}${cloud(20, 24, 0.6)}${ground(150)}${house(282, 150, 0.8)}
+    ${[0, 1, 2].map((i) => `<g transform="translate(${236 + i * 12} 150)"><path d="M0 0 v-14" stroke="var(--leaf)" stroke-width="3"/><circle cx="0" cy="-18" r="5" fill="var(--bud)" ${stroke}/></g>`).join('')}
+    ${person(118, 150, 'grandpa', { s: 1.05, arm: 'none' })}${person(202, 150, 'chen', { s: 1.05, arm: 'none' })}
+    <path d="M128 146 q14-2 26-12" fill="none" ${stroke}/><path d="M192 146 q-14-2-26-12" fill="none" ${stroke}/>
+    <circle cx="156" cy="133" r="5" fill="var(--skin)" ${stroke}/><circle cx="164" cy="133" r="5" fill="var(--skin)" ${stroke}/>
+    <path d="M160 126 V100" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 3"/>
+    ${pinkyCloseup(160, 60)}${person(50, 170, 'kid', { s: 0.7 })}`,
 };
 
 export const ART_KEYS = Object.freeze(Object.keys(ART));
